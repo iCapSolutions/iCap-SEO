@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  php-lint:
+    name: PHP Lint (Plugin)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Lint plugin PHP files
+        run: |
+          set -e
+          find wordpress-plugin/icap-seo -name "*.php" -print0 | while IFS= read -r -d '' file; do
+            php -l "$file"
+          done
