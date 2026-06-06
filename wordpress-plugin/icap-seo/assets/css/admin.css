@@ -1,0 +1,32 @@
+.icap-seo-wrap .icap-seo-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.icap-seo-logo {
+    width: 28px;
+    height: 28px;
+}
+
+.icap-seo-content {
+    margin-top: 16px;
+}
+
+.icap-seo-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.icap-seo-card {
+    background: #ffffff;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.icap-seo-card h3 {
+    margin: 0 0 8px;
+}
