@@ -23,6 +23,11 @@ iCap SEO is a WordPress plugin + cloud service foundation for multi-site SEO sco
 2. Activate **iCap SEO** from WordPress admin.
 3. Open **iCap SEO** in the dashboard menu.
 
+## Validation
+- GitHub Actions runs PHP lint checks for plugin files on pull requests and pushes to `main`.
+- Local equivalent command (if PHP is installed):
+  - `find wordpress-plugin/icap-seo -name "*.php" -exec php -l {} \;`
+
 ## Roadmap (high-level)
 1. Plugin base and onboarding UI.
 2. Site registration and cloud API handshake.
