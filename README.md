@@ -18,15 +18,12 @@ Repository: https://github.com/iCapSolutions/iCap-SEO (public)
 - Placeholder cards/content for future SEO scoring + recommendations.
 - Service client contract stubs (no live cloud calls yet).
 ## Installation
-### Method 1: WordPress admin upload (ZIP)
-1. Download the repository ZIP from GitHub:
-   - https://github.com/iCapSolutions/iCap-SEO/archive/refs/heads/main.zip
-   - (tar.gz alternative) https://github.com/iCapSolutions/iCap-SEO/archive/refs/heads/main.tar.gz
-2. Unzip it locally.
-3. Re-zip only the plugin directory contents from:
-   - `iCap-SEO-main/wordpress-plugin/icap-seo`
-4. In WordPress admin, go to **Plugins → Add New → Upload Plugin**.
-5. Upload your `icap-seo.zip` file, install, and activate.
+### Official method: Install from GitHub Release ZIP
+1. Open Releases:
+   - https://github.com/iCapSolutions/iCap-SEO/releases
+2. Download `icap-seo.zip` from the latest release assets.
+3. In WordPress admin, go to **Plugins → Add New → Upload Plugin**.
+4. Upload `icap-seo.zip`, install, and activate.
 
 ### Method 2: Git clone + manual copy
 ```sh
@@ -41,6 +38,14 @@ git clone https://github.com/iCapSolutions/iCap-SEO.git
 cp -R /path/to/iCap-SEO/wordpress-plugin/icap-seo /var/www/html/wp-content/plugins/
 ```
 Then activate **iCap SEO** in the WordPress Plugins page.
+
+## Maintainer release packaging
+Build release zip (maintainers):
+```sh
+scripts/build-plugin-zip.sh
+```
+Output:
+- `dist/icap-seo.zip`
 
 ## Quick start after install
 1. Activate **iCap SEO** from WordPress admin.
