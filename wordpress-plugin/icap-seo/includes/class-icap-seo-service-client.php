@@ -36,9 +36,9 @@ class ICap_SEO_Service_Client
         $updated = array_merge($current, $partial_settings);
         update_option(self::SETTINGS_OPTION_KEY, $updated);
     }
-    public function get_site_score_snapshot(): array
+    public function get_site_score_snapshot(bool $allow_live_fetch = true): array
     {
-        $scores = $this->get_content_scores_overview();
+        $scores = $this->get_content_scores_overview($allow_live_fetch);
 
         if (!empty($scores)) {
             $sum = 0;
@@ -72,25 +72,21 @@ class ICap_SEO_Service_Client
         ];
     }
 
+    public function is_api_connection_configured_public(): bool
+    {
+        return $this->is_api_connection_configured();
+    }
+
     public function get_content_score_for_post(int $post_id): array
     {
         $scores_index = $this->get_content_scores_index();
         if (isset($scores_index[$post_id])) {
             return $scores_index[$post_id];
         }
-        $icap_score_value = 60 + ($post_id % 35);
-        $rank_math_value = 55 + ($post_id % 40);
-        $delta = $icap_score_value - $rank_math_value;
-        $delta_prefix = $delta > 0 ? '+' : '';
-
-        return [
-            'icap_score' => sprintf('%d/100', $icap_score_value),
-            'rank_math_score' => sprintf('%d/100', $rank_math_value),
-            'rank_math_delta' => sprintf('%s%d', $delta_prefix, $delta),
-        ];
+        return $this->build_placeholder_score_data($post_id);
     }
 
-    public function get_content_scores_overview(): array
+    public function get_content_scores_overview(bool $allow_live_fetch = true): array
     {
         $settings = $this->get_connection_settings();
         $site_id = $settings['site_id'];
@@ -103,17 +99,19 @@ class ICap_SEO_Service_Client
             }
         }
 
-        $api_rows = $this->fetch_content_scores_from_api();
-        if (!empty($api_rows)) {
-            $this->update_connection_settings([
-                'last_sync_at' => current_time('mysql'),
-            ]);
+        if ($allow_live_fetch) {
+            $api_rows = $this->fetch_content_scores_from_api();
+            if (!empty($api_rows)) {
+                $this->update_connection_settings([
+                    'last_sync_at' => current_time('mysql'),
+                ]);
 
-            if ($cache_key !== '') {
-                set_transient($cache_key, $api_rows, self::CONTENT_SCORES_CACHE_TTL_SECONDS);
+                if ($cache_key !== '') {
+                    set_transient($cache_key, $api_rows, self::CONTENT_SCORES_CACHE_TTL_SECONDS);
+                }
+
+                return $api_rows;
             }
-
-            return $api_rows;
         }
         $posts = get_posts([
             'post_type' => ['post', 'page'],
@@ -126,7 +124,7 @@ class ICap_SEO_Service_Client
         $rows = [];
 
         foreach ($posts as $post) {
-            $score_data = $this->get_content_score_for_post((int) $post->ID);
+            $score_data = $this->build_placeholder_score_data((int) $post->ID);
             $icap_score_numeric = (int) str_replace('/100', '', $score_data['icap_score']);
             $rows[] = [
                 'id' => (int) $post->ID,
@@ -203,10 +201,19 @@ class ICap_SEO_Service_Client
         return $result;
     }
 
-    public function get_scan_status(?string $scan_id = null): array
+    public function get_scan_status(?string $scan_id = null, bool $allow_live_fetch = true): array
     {
         $settings = $this->get_connection_settings();
         $resolved_scan_id = $scan_id ?: $settings['last_scan_id'];
+        if (!$allow_live_fetch) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'live_fetch_disabled',
+                    'message' => 'Live scan status fetch is disabled for this request.',
+                ],
+            ];
+        }
 
         if (empty($settings['site_id']) || empty($resolved_scan_id)) {
             return [
@@ -314,6 +321,20 @@ class ICap_SEO_Service_Client
         $this->content_scores_index_cache = $index;
 
         return $index;
+    }
+
+    private function build_placeholder_score_data(int $post_id): array
+    {
+        $icap_score_value = 60 + ($post_id % 35);
+        $rank_math_value = 55 + ($post_id % 40);
+        $delta = $icap_score_value - $rank_math_value;
+        $delta_prefix = $delta > 0 ? '+' : '';
+
+        return [
+            'icap_score' => sprintf('%d/100', $icap_score_value),
+            'rank_math_score' => sprintf('%d/100', $rank_math_value),
+            'rank_math_delta' => sprintf('%s%d', $delta_prefix, $delta),
+        ];
     }
 
     private function is_api_connection_configured(): bool
