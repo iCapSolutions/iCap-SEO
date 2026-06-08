@@ -7,6 +7,7 @@ $tabs = [
     'home' => __('Home', 'icap-seo'),
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
     'site-health' => __('Site Health', 'icap-seo'),
+    'content-scores' => __('Content Scores', 'icap-seo'),
 ];
 ?>
 <div class="wrap icap-seo-wrap">
@@ -58,6 +59,45 @@ $tabs = [
                     <h3><?php esc_html_e('Recommendations', 'icap-seo'); ?></h3>
                     <p><?php echo esc_html(count($recommendation_preview['items'])); ?> <?php esc_html_e('queued items', 'icap-seo'); ?></p>
                 </div>
+            </div>
+        <?php elseif ($active_tab === 'content-scores') : ?>
+            <h2><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
+            <p><?php esc_html_e('Pages and posts with iCap placeholder scoring and side-by-side Rank Math comparison baseline.', 'icap-seo'); ?></p>
+            <div class="icap-seo-table-wrap">
+                <table class="widefat striped">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e('Title', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Type', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('iCap Score', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Rank Math (baseline)', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Delta', 'icap-seo'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($content_scores)) : ?>
+                            <tr>
+                                <td colspan="6"><?php esc_html_e('No pages or posts found.', 'icap-seo'); ?></td>
+                            </tr>
+                        <?php else : ?>
+                            <?php foreach ($content_scores as $row) : ?>
+                                <tr>
+                                    <td>
+                                        <a href="<?php echo esc_url($row['edit_link']); ?>">
+                                            <?php echo esc_html($row['title']); ?>
+                                        </a>
+                                    </td>
+                                    <td><?php echo esc_html($row['type']); ?></td>
+                                    <td><?php echo esc_html($row['status']); ?></td>
+                                    <td><?php echo esc_html($row['icap_score']); ?></td>
+                                    <td><?php echo esc_html($row['rank_math_score']); ?></td>
+                                    <td><?php echo esc_html($row['rank_math_delta']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
         <?php else : ?>
             <h2><?php esc_html_e('Home', 'icap-seo'); ?></h2>
