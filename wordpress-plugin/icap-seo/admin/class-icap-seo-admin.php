@@ -89,11 +89,46 @@ class ICap_SEO_Admin
         $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'home';
         $notice_code = isset($_GET[self::NOTICE_QUERY_KEY]) ? sanitize_key(wp_unslash($_GET[self::NOTICE_QUERY_KEY])) : '';
         $connection_settings = $this->service_client->get_connection_settings();
-        $score_snapshot = $this->service_client->get_site_score_snapshot();
-        $recommendation_preview = $this->service_client->get_recommendation_preview();
-        $content_scores = $this->service_client->get_content_scores_overview();
-        $scan_status_result = $this->service_client->get_scan_status();
-        $scan_status_data = $scan_status_result['success'] ? $scan_status_result['data'] : [];
+        $score_snapshot = [
+            'score' => null,
+            'last_scan' => $connection_settings['last_sync_at'] ?: null,
+            'status' => $this->service_client->is_api_connection_configured_public() ? 'Connected (awaiting scan data)' : 'Not connected',
+        ];
+        $recommendation_preview = [
+            'items' => [],
+            'source' => 'placeholder',
+        ];
+        $content_scores = [];
+        $scan_status_data = [];
+
+        try {
+            if ($active_tab === 'site-health' || $active_tab === 'home') {
+                $score_snapshot = $this->service_client->get_site_score_snapshot(false);
+            }
+
+            if ($active_tab === 'content-scores' || $active_tab === 'site-health') {
+                $content_scores = $this->service_client->get_content_scores_overview(false);
+            }
+
+            if ($active_tab === 'setup-wizard') {
+                $scan_status_result = $this->service_client->get_scan_status(null, false);
+                $scan_status_data = $scan_status_result['success'] ? $scan_status_result['data'] : [];
+            }
+        } catch (Throwable $e) {
+            $notice_code = 'render_fallback';
+            $score_snapshot = [
+                'score' => null,
+                'last_scan' => null,
+                'status' => 'Degraded mode',
+            ];
+            $recommendation_preview = [
+                'items' => [],
+                'source' => 'fallback',
+            ];
+            $content_scores = [];
+            $scan_status_data = [];
+            error_log('ICap SEO dashboard fallback: ' . $e->getMessage());
+        }
 
         include ICAP_SEO_PLUGIN_DIR . 'admin/views/dashboard.php';
     }

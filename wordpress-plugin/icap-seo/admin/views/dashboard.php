@@ -17,6 +17,7 @@ $notice_map = [
     'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Check API URL and credentials.', 'icap-seo')],
     'scan_queued' => ['type' => 'updated', 'message' => __('Scan request queued.', 'icap-seo')],
     'scan_failed' => ['type' => 'error', 'message' => __('Scan request failed. Confirm site is registered and billing/auth are active.', 'icap-seo')],
+    'render_fallback' => ['type' => 'error', 'message' => __('Dashboard loaded in fallback mode after an internal error. Please retry and check logs.', 'icap-seo')],
 ];
 ?>
 <div class="wrap icap-seo-wrap">
