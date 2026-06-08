@@ -39,3 +39,7 @@ Provide a lightweight WordPress plugin that renders onboarding and site SEO stat
 - Nonce protection for form actions.
 - Sanitize input and escape output in all admin views.
 - Keep secrets out of plugin code and repository history.
+
+## Detailed design docs
+- Hybrid scoring API/data flow: `docs/hybrid-scoring-api-design.md`
+- Infrastructure separation strategy: `docs/infrastructure-separation-design.md`

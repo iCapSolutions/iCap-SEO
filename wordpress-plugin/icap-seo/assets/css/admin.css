@@ -34,3 +34,17 @@
 .icap-seo-table-wrap {
     margin-top: 12px;
 }
+
+.icap-seo-actions {
+    display: flex;
+    gap: 10px;
+    margin: 12px 0;
+}
+
+.icap-seo-actions form {
+    margin: 0;
+}
+
+.icap-seo-settings-form {
+    margin-top: 12px;
+}
