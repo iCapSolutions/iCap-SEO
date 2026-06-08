@@ -8,6 +8,15 @@ $tabs = [
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
     'site-health' => __('Site Health', 'icap-seo'),
     'content-scores' => __('Content Scores', 'icap-seo'),
+    'settings' => __('Settings', 'icap-seo'),
+];
+
+$notice_map = [
+    'settings_saved' => ['type' => 'updated', 'message' => __('Connection settings saved.', 'icap-seo')],
+    'register_success' => ['type' => 'updated', 'message' => __('Site registration request succeeded.', 'icap-seo')],
+    'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Check API URL and credentials.', 'icap-seo')],
+    'scan_queued' => ['type' => 'updated', 'message' => __('Scan request queued.', 'icap-seo')],
+    'scan_failed' => ['type' => 'error', 'message' => __('Scan request failed. Confirm site is registered and billing/auth are active.', 'icap-seo')],
 ];
 ?>
 <div class="wrap icap-seo-wrap">
@@ -16,6 +25,11 @@ $tabs = [
         <?php esc_html_e('iCap SEO', 'icap-seo'); ?>
     </h1>
     <p><?php esc_html_e('SEO intelligence for WordPress sites by iCapSolutions.', 'icap-seo'); ?></p>
+    <?php if ($notice_code !== '' && isset($notice_map[$notice_code])) : ?>
+        <div class="notice <?php echo esc_attr($notice_map[$notice_code]['type'] === 'error' ? 'notice-error' : 'notice-success'); ?> is-dismissible">
+            <p><?php echo esc_html($notice_map[$notice_code]['message']); ?></p>
+        </div>
+    <?php endif; ?>
 
     <nav class="nav-tab-wrapper">
         <?php foreach ($tabs as $tab_key => $label) : ?>
@@ -43,7 +57,25 @@ $tabs = [
                 <li><?php esc_html_e('Run the first baseline SEO analysis.', 'icap-seo'); ?></li>
                 <li><?php esc_html_e('Review prioritized recommendations.', 'icap-seo'); ?></li>
             </ol>
-            <p><?php esc_html_e('Wizard actions will be enabled in upcoming releases.', 'icap-seo'); ?></p>
+            <div class="icap-seo-actions">
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="icap_seo_register_site">
+                    <?php wp_nonce_field('icap_seo_register_site'); ?>
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Register Site', 'icap-seo'); ?></button>
+                </form>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="icap_seo_trigger_scan">
+                    <?php wp_nonce_field('icap_seo_trigger_scan'); ?>
+                    <button type="submit" class="button"><?php esc_html_e('Trigger Full Scan', 'icap-seo'); ?></button>
+                </form>
+            </div>
+            <p class="description">
+                <?php esc_html_e('Latest scan ID:', 'icap-seo'); ?>
+                <code><?php echo esc_html($connection_settings['last_scan_id'] ?: 'n/a'); ?></code>
+                |
+                <?php esc_html_e('Status:', 'icap-seo'); ?>
+                <code><?php echo esc_html($scan_status_data['status'] ?? 'n/a'); ?></code>
+            </p>
         <?php elseif ($active_tab === 'site-health') : ?>
             <h2><?php esc_html_e('Site Health', 'icap-seo'); ?></h2>
             <div class="icap-seo-cards">
@@ -99,6 +131,46 @@ $tabs = [
                     </tbody>
                 </table>
             </div>
+            <p class="description">
+                <?php esc_html_e('Data source: API when configured and reachable; placeholder values otherwise.', 'icap-seo'); ?>
+            </p>
+        <?php elseif ($active_tab === 'settings') : ?>
+            <h2><?php esc_html_e('API Connection Settings', 'icap-seo'); ?></h2>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                <input type="hidden" name="action" value="icap_seo_save_settings">
+                <?php wp_nonce_field('icap_seo_save_settings'); ?>
+                <table class="form-table" role="presentation">
+                    <tbody>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-api-base-url"><?php esc_html_e('API Base URL', 'icap-seo'); ?></label></th>
+                            <td>
+                                <input id="icap-seo-api-base-url" name="api_base_url" type="url" class="regular-text" value="<?php echo esc_attr($connection_settings['api_base_url']); ?>" placeholder="https://api.example.com">
+                                <p class="description"><?php esc_html_e('Example: https://api.icapseo.com', 'icap-seo'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-site-id"><?php esc_html_e('Site ID', 'icap-seo'); ?></label></th>
+                            <td>
+                                <input id="icap-seo-site-id" name="site_id" type="text" class="regular-text" value="<?php echo esc_attr($connection_settings['site_id']); ?>">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-site-token"><?php esc_html_e('Site Token', 'icap-seo'); ?></label></th>
+                            <td>
+                                <input id="icap-seo-site-token" name="site_token" type="password" class="regular-text" value="<?php echo esc_attr($connection_settings['site_token']); ?>" autocomplete="off">
+                                <p class="description"><?php esc_html_e('Stored in WordPress options; rotate from customer portal when needed.', 'icap-seo'); ?></p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'icap-seo'); ?></button>
+                </p>
+            </form>
+            <p class="description">
+                <?php esc_html_e('Last successful score sync:', 'icap-seo'); ?>
+                <code><?php echo esc_html($connection_settings['last_sync_at'] ?: 'n/a'); ?></code>
+            </p>
         <?php else : ?>
             <h2><?php esc_html_e('Home', 'icap-seo'); ?></h2>
             <p><?php esc_html_e('Welcome to the iCap SEO service dashboard. This plugin will provide site scoring, setup automation, and cloud-powered SEO recommendations.', 'icap-seo'); ?></p>
