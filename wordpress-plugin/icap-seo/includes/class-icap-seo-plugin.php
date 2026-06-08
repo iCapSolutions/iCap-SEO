@@ -19,6 +19,7 @@ class ICap_SEO_Plugin
     {
         add_action('admin_menu', [$this, 'register_admin']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+        $this->admin->register_admin_actions();
         $this->admin->register_list_table_columns();
     }
 
