@@ -7,6 +7,7 @@
 - Plugin scaffold and initial dashboard tabs: `Done`
 - Baseline CI (PHP lint): `Done`
 - Node runtime warning mitigation in CI: `Done`
+- Content score visibility MVP (Posts/Pages columns + Content Scores tab): `Done`
 
 ## Next execution priorities
 1. Plugin settings + connection screen
