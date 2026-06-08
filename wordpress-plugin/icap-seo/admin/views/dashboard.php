@@ -14,7 +14,7 @@ $tabs = [
 $notice_map = [
     'settings_saved' => ['type' => 'updated', 'message' => __('Connection settings saved.', 'icap-seo')],
     'register_success' => ['type' => 'updated', 'message' => __('Site registration request succeeded.', 'icap-seo')],
-    'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Check API URL and credentials.', 'icap-seo')],
+    'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Check API Base URL and retry.', 'icap-seo')],
     'scan_queued' => ['type' => 'updated', 'message' => __('Scan request queued.', 'icap-seo')],
     'scan_failed' => ['type' => 'error', 'message' => __('Scan request failed. Confirm site is registered and billing/auth are active.', 'icap-seo')],
     'render_fallback' => ['type' => 'error', 'message' => __('Dashboard loaded in fallback mode after an internal error. Please retry and check logs.', 'icap-seo')],
@@ -54,7 +54,7 @@ $notice_map = [
         <?php if ($active_tab === 'setup-wizard') : ?>
             <h2><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
             <ol>
-                <li><?php esc_html_e('Connect this site to the iCap SEO cloud service.', 'icap-seo'); ?></li>
+                <li><?php esc_html_e('Enter API Base URL, then request site credentials from iCap SEO.', 'icap-seo'); ?></li>
                 <li><?php esc_html_e('Run the first baseline SEO analysis.', 'icap-seo'); ?></li>
                 <li><?php esc_html_e('Review prioritized recommendations.', 'icap-seo'); ?></li>
             </ol>
@@ -62,7 +62,7 @@ $notice_map = [
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="icap_seo_register_site">
                     <?php wp_nonce_field('icap_seo_register_site'); ?>
-                    <button type="submit" class="button button-primary"><?php esc_html_e('Register Site', 'icap-seo'); ?></button>
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Request Credentials & Register Site', 'icap-seo'); ?></button>
                 </form>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="icap_seo_trigger_scan">
@@ -146,20 +146,21 @@ $notice_map = [
                             <th scope="row"><label for="icap-seo-api-base-url"><?php esc_html_e('API Base URL', 'icap-seo'); ?></label></th>
                             <td>
                                 <input id="icap-seo-api-base-url" name="api_base_url" type="url" class="regular-text" value="<?php echo esc_attr($connection_settings['api_base_url']); ?>" placeholder="https://api.example.com">
-                                <p class="description"><?php esc_html_e('Example: https://api.icapseo.com', 'icap-seo'); ?></p>
+                                <p class="description"><?php esc_html_e('Required for self-serve registration. Example: https://api.icapseo.com', 'icap-seo'); ?></p>
                             </td>
                         </tr>
                         <tr>
                             <th scope="row"><label for="icap-seo-site-id"><?php esc_html_e('Site ID', 'icap-seo'); ?></label></th>
                             <td>
                                 <input id="icap-seo-site-id" name="site_id" type="text" class="regular-text" value="<?php echo esc_attr($connection_settings['site_id']); ?>">
+                                <p class="description"><?php esc_html_e('Usually auto-filled after registration.', 'icap-seo'); ?></p>
                             </td>
                         </tr>
                         <tr>
                             <th scope="row"><label for="icap-seo-site-token"><?php esc_html_e('Site Token', 'icap-seo'); ?></label></th>
                             <td>
                                 <input id="icap-seo-site-token" name="site_token" type="password" class="regular-text" value="<?php echo esc_attr($connection_settings['site_token']); ?>" autocomplete="off">
-                                <p class="description"><?php esc_html_e('Stored in WordPress options; rotate from customer portal when needed.', 'icap-seo'); ?></p>
+                                <p class="description"><?php esc_html_e('Usually auto-filled after registration. Stored in WordPress options; rotate from customer portal when needed.', 'icap-seo'); ?></p>
                             </td>
                         </tr>
                     </tbody>

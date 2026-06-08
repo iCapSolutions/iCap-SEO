@@ -145,7 +145,18 @@ class ICap_SEO_Service_Client
 
     public function register_site(array $payload): array
     {
-        $result = $this->api_request('POST', '/v1/sites/register', $payload);
+        $settings = $this->get_connection_settings();
+        if (empty($settings['api_base_url'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'api_base_url_missing',
+                    'message' => 'API Base URL is required before requesting registration credentials.',
+                ],
+            ];
+        }
+
+        $result = $this->api_request('POST', '/v1/sites/register', $payload, [], false);
         if (!$result['success']) {
             return $result;
         }
@@ -173,12 +184,12 @@ class ICap_SEO_Service_Client
     public function trigger_scan(string $scan_type = 'full_site'): array
     {
         $settings = $this->get_connection_settings();
-        if (empty($settings['site_id'])) {
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
             return [
                 'success' => false,
                 'error' => [
                     'code' => 'site_not_configured',
-                    'message' => 'Site ID is not configured.',
+                    'message' => 'Site registration credentials are not configured.',
                 ],
             ];
         }
@@ -343,16 +354,25 @@ class ICap_SEO_Service_Client
         return !empty($settings['api_base_url']) && !empty($settings['site_token']) && !empty($settings['site_id']);
     }
 
-    private function api_request(string $method, string $path, array $body = [], array $query = []): array
+    private function api_request(string $method, string $path, array $body = [], array $query = [], bool $requires_auth = true): array
     {
         $settings = $this->get_connection_settings();
 
-        if (empty($settings['api_base_url']) || empty($settings['site_token']) || empty($settings['site_id'])) {
+        if (empty($settings['api_base_url'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'api_base_url_missing',
+                    'message' => 'API Base URL is not configured.',
+                ],
+            ];
+        }
+        if ($requires_auth && (empty($settings['site_token']) || empty($settings['site_id']))) {
             return [
                 'success' => false,
                 'error' => [
                     'code' => 'not_configured',
-                    'message' => 'API connection settings are incomplete.',
+                    'message' => 'Site ID and Site Token are required.',
                 ],
             ];
         }
@@ -362,16 +382,20 @@ class ICap_SEO_Service_Client
             $url = add_query_arg($query, $url);
         }
 
+        $headers = [
+            'X-ICAP-Plugin-Version' => ICAP_SEO_VERSION,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+        if ($requires_auth) {
+            $headers['Authorization'] = 'Bearer ' . $settings['site_token'];
+            $headers['X-ICAP-Site-Id'] = $settings['site_id'];
+        }
+
         $args = [
             'method' => strtoupper($method),
             'timeout' => 3,
-            'headers' => [
-                'Authorization' => 'Bearer ' . $settings['site_token'],
-                'X-ICAP-Site-Id' => $settings['site_id'],
-                'X-ICAP-Plugin-Version' => ICAP_SEO_VERSION,
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-            ],
+            'headers' => $headers,
         ];
 
         if ($args['method'] !== 'GET' && !empty($body)) {

@@ -165,6 +165,7 @@ class ICap_SEO_Admin
             'wp_version' => get_bloginfo('version'),
             'plugin_version' => ICAP_SEO_VERSION,
             'site_name' => get_bloginfo('name'),
+            'admin_email' => get_bloginfo('admin_email'),
             'timezone' => wp_timezone_string(),
         ]);
 
