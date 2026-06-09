@@ -66,6 +66,7 @@ Output:
 
 ## Progress tracking
 - Active implementation tracker: `docs/next-steps.md`
+- Session handoff + cross-repo status: `docs/project-handoff-status.md`
 - Update this file as each phase moves from planned → in progress → complete.
 
 ## Relationship to seo-tools
