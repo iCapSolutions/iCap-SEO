@@ -15,15 +15,15 @@
 - Canonical customer onboarding documentation: `Done`
 - Dual-plugin architecture decision (public customer plugin + separate private control-center repository): `Done`
 - Private control-center repository bootstrap and phase-2 baseline releases: `Done`
-- Self-serve paid signup and entitlement automation: `Planned`
+- Self-serve paid signup and entitlement automation: `In Progress`
 
 ## Next execution priorities
 1. Phase-1 paid onboarding + entitlement enforcement
-   - Status: `Planned`
+   - Status: `In Progress`
    - Scope:
      - Implement billing API surface (`checkout-session`, `portal-session`, `subscription-status`) and Stripe webhook ingestion.
      - Persist tenant entitlement state and apply entitlement checks to scan-trigger capabilities.
-     - Add customer plugin UX for upgrade/signup prompts and billing-state recovery notices.
+     - Add customer plugin UX for upgrade/signup prompts and billing-state recovery notices (scan-blocking notice handling and billing status checks in progress).
 2. Provider control-center plugin (private repository)
    - Status: `In Progress`
    - Scope:

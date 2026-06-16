@@ -26,6 +26,8 @@ class ICap_SEO_Service_Client
                 'registration_token' => '',
                 'last_scan_id' => '',
                 'last_sync_at' => '',
+                'last_billing_state' => '',
+                'last_billing_checked_at' => '',
             ],
             $saved
         );
@@ -228,6 +230,55 @@ class ICap_SEO_Service_Client
                 'last_scan_id' => sanitize_text_field((string) $result['data']['scan_id']),
             ]);
         }
+
+        return $result;
+    }
+
+    public function get_subscription_status(bool $allow_live_fetch = true): array
+    {
+        if (!$allow_live_fetch) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'live_fetch_disabled',
+                    'message' => 'Live subscription status fetch is disabled for this request.',
+                ],
+            ];
+        }
+
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        $result = $this->api_request('GET', '/v1/billing/subscription-status');
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $state = 'unknown';
+        if (isset($result['data']['entitlement_state']) && is_string($result['data']['entitlement_state'])) {
+            $normalized_state = sanitize_key($result['data']['entitlement_state']);
+            if ($normalized_state !== '') {
+                $state = $normalized_state;
+            }
+        }
+
+        $result['data']['entitlement_state'] = $state;
+        if (isset($result['data']['plan_code']) && is_string($result['data']['plan_code'])) {
+            $result['data']['plan_code'] = sanitize_text_field($result['data']['plan_code']);
+        }
+
+        $this->update_connection_settings([
+            'last_billing_state' => $state,
+            'last_billing_checked_at' => current_time('mysql'),
+        ]);
 
         return $result;
     }
