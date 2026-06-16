@@ -24,9 +24,9 @@ Repository: https://github.com/iCapSolutions/iCap-SEO (public)
 ### Official method: Install from GitHub Release ZIP
 1. Open Releases:
    - https://github.com/iCapSolutions/iCap-SEO/releases
-2. Download `icap-seo.zip` from the latest release assets.
+2. Download `icap-seo-vX.Y.Z.zip` from the latest release assets.
 3. In WordPress admin, go to **Plugins → Add New → Upload Plugin**.
-4. Upload `icap-seo.zip`, install, and activate.
+4. Upload the downloaded `icap-seo-vX.Y.Z.zip`, install, and activate.
 
 ### Method 2: Git clone + manual copy
 ```sh
@@ -48,7 +48,7 @@ Build release zip (maintainers):
 scripts/build-plugin-zip.sh
 ```
 Output:
-- `dist/icap-seo.zip`
+- `dist/icap-seo-vX.Y.Z.zip` (derived from `ICAP_SEO_VERSION` in `wordpress-plugin/icap-seo/icap-seo.php`)
 
 ## Quick start after install
 1. Activate **iCap SEO** from WordPress admin.
