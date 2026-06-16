@@ -141,11 +141,13 @@ class ICap_SEO_Admin
         check_admin_referer('icap_seo_save_settings');
 
         $api_base_url = isset($_POST['api_base_url']) ? esc_url_raw((string) wp_unslash($_POST['api_base_url'])) : '';
+        $registration_token = isset($_POST['registration_token']) ? sanitize_text_field((string) wp_unslash($_POST['registration_token'])) : '';
         $site_id = isset($_POST['site_id']) ? sanitize_text_field((string) wp_unslash($_POST['site_id'])) : '';
         $site_token = isset($_POST['site_token']) ? sanitize_text_field((string) wp_unslash($_POST['site_token'])) : '';
 
         $this->service_client->update_connection_settings([
             'api_base_url' => $api_base_url,
+            'registration_token' => $registration_token,
             'site_id' => $site_id,
             'site_token' => $site_token,
         ]);
@@ -171,6 +173,19 @@ class ICap_SEO_Admin
 
         if ($result['success']) {
             $this->redirect_with_notice('register_success', 'settings');
+            return;
+        }
+        $error_code = '';
+        if (isset($result['error']['code']) && is_string($result['error']['code'])) {
+            $error_code = $result['error']['code'];
+        }
+
+        if ($error_code === 'registration_token_missing') {
+            $this->redirect_with_notice('registration_token_missing', 'settings');
+            return;
+        }
+        if ($error_code === 'api_base_url_missing') {
+            $this->redirect_with_notice('api_base_url_missing', 'settings');
             return;
         }
 

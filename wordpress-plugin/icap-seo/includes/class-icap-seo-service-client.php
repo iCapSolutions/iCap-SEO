@@ -23,6 +23,7 @@ class ICap_SEO_Service_Client
                 'api_base_url' => '',
                 'site_id' => '',
                 'site_token' => '',
+                'registration_token' => '',
                 'last_scan_id' => '',
                 'last_sync_at' => '',
             ],
@@ -155,8 +156,27 @@ class ICap_SEO_Service_Client
                 ],
             ];
         }
+        $registration_token = $this->resolve_registration_token();
+        if ($registration_token === '') {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'registration_token_missing',
+                    'message' => 'Registration token is required. Define ICAP_SEO_REGISTRATION_TOKEN in wp-config.php or save Registration Token in plugin settings.',
+                ],
+            ];
+        }
 
-        $result = $this->api_request('POST', '/v1/sites/register', $payload, [], false);
+        $result = $this->api_request(
+            'POST',
+            '/v1/sites/register',
+            $payload,
+            [],
+            false,
+            [
+                'X-ICAP-Registration-Token' => $registration_token,
+            ]
+        );
         if (!$result['success']) {
             return $result;
         }
@@ -353,8 +373,24 @@ class ICap_SEO_Service_Client
         $settings = $this->get_connection_settings();
         return !empty($settings['api_base_url']) && !empty($settings['site_token']) && !empty($settings['site_id']);
     }
+    private function resolve_registration_token(): string
+    {
+        if (defined('ICAP_SEO_REGISTRATION_TOKEN')) {
+            $constant_value = sanitize_text_field((string) ICAP_SEO_REGISTRATION_TOKEN);
+            if ($constant_value !== '') {
+                return $constant_value;
+            }
+        }
 
-    private function api_request(string $method, string $path, array $body = [], array $query = [], bool $requires_auth = true): array
+        $settings = $this->get_connection_settings();
+        if (!empty($settings['registration_token']) && is_string($settings['registration_token'])) {
+            return sanitize_text_field($settings['registration_token']);
+        }
+
+        return '';
+    }
+
+    private function api_request(string $method, string $path, array $body = [], array $query = [], bool $requires_auth = true, array $extra_headers = []): array
     {
         $settings = $this->get_connection_settings();
 
@@ -390,6 +426,9 @@ class ICap_SEO_Service_Client
         if ($requires_auth) {
             $headers['Authorization'] = 'Bearer ' . $settings['site_token'];
             $headers['X-ICAP-Site-Id'] = $settings['site_id'];
+        }
+        if (!empty($extra_headers)) {
+            $headers = array_merge($headers, $extra_headers);
         }
 
         $args = [
