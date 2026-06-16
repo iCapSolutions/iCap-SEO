@@ -34,6 +34,7 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_save_settings', [$this, 'handle_save_settings']);
         add_action('admin_post_icap_seo_register_site', [$this, 'handle_register_site']);
         add_action('admin_post_icap_seo_trigger_scan', [$this, 'handle_trigger_scan']);
+        add_action('admin_post_icap_seo_check_billing_status', [$this, 'handle_check_billing_status']);
     }
     public function register_list_table_columns(): void
     {
@@ -175,10 +176,7 @@ class ICap_SEO_Admin
             $this->redirect_with_notice('register_success', 'settings');
             return;
         }
-        $error_code = '';
-        if (isset($result['error']['code']) && is_string($result['error']['code'])) {
-            $error_code = $result['error']['code'];
-        }
+        $error_code = $this->extract_error_code($result);
 
         if ($error_code === 'registration_token_missing') {
             $this->redirect_with_notice('registration_token_missing', 'settings');
@@ -205,9 +203,85 @@ class ICap_SEO_Admin
             return;
         }
 
+        $error_code = $this->extract_error_code($result);
+        if ($error_code === 'payment_required') {
+            $this->redirect_with_notice('payment_required', 'setup-wizard');
+            return;
+        }
+        if ($error_code === 'subscription_required') {
+            $this->redirect_with_notice('subscription_required', 'setup-wizard');
+            return;
+        }
+        if ($error_code === 'account_suspended') {
+            $this->redirect_with_notice('account_suspended', 'setup-wizard');
+            return;
+        }
+        if ($error_code === 'invalid_token') {
+            $this->redirect_with_notice('invalid_token', 'setup-wizard');
+            return;
+        }
+        if ($error_code === 'rate_limited') {
+            $this->redirect_with_notice('rate_limited', 'setup-wizard');
+            return;
+        }
+
         $this->redirect_with_notice('scan_failed', 'setup-wizard');
     }
 
+    public function handle_check_billing_status(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_check_billing_status');
+
+        $result = $this->service_client->get_subscription_status(true);
+        if (!$result['success']) {
+            $error_code = $this->extract_error_code($result);
+            if ($error_code === 'api_base_url_missing') {
+                $this->redirect_with_notice('api_base_url_missing', 'settings');
+                return;
+            }
+            if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
+                $this->redirect_with_notice('billing_status_not_configured', 'settings');
+                return;
+            }
+            $this->redirect_with_notice('billing_status_unavailable', 'settings');
+            return;
+        }
+
+        $state = 'unknown';
+        if (isset($result['data']['entitlement_state']) && is_string($result['data']['entitlement_state'])) {
+            $normalized_state = sanitize_key($result['data']['entitlement_state']);
+            if ($normalized_state !== '') {
+                $state = $normalized_state;
+            }
+        }
+
+        if ($state === 'active' || $state === 'trialing') {
+            $this->redirect_with_notice('billing_status_active', 'settings');
+            return;
+        }
+        if ($state === 'past_due' || $state === 'grace_period') {
+            $this->redirect_with_notice('billing_status_attention', 'settings');
+            return;
+        }
+        if ($state === 'canceled' || $state === 'suspended') {
+            $this->redirect_with_notice('billing_status_blocked', 'settings');
+            return;
+        }
+
+        $this->redirect_with_notice('billing_status_unknown', 'settings');
+    }
+
+    private function extract_error_code(array $result): string
+    {
+        if (isset($result['error']['code']) && is_string($result['error']['code'])) {
+            return $result['error']['code'];
+        }
+
+        return '';
+    }
     private function redirect_with_notice(string $notice_code, string $tab): void
     {
         $url = add_query_arg(

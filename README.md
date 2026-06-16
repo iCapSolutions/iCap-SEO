@@ -87,6 +87,20 @@ Use this checklist after installing a new plugin ZIP:
 4. Set valid API Base URL + valid registration token, then click register.
    - Expected: registration success and saved `site_id` / `site_token`.
 5. Trigger a full scan and confirm status updates normally.
+## Billing entitlement checks
+- In **iCap SEO → Settings**, use **Check Billing Status** to request current entitlement state from:
+  - `GET /v1/billing/subscription-status`
+- Plugin stores the latest check metadata:
+  - `last_billing_state`
+  - `last_billing_checked_at`
+- Scan trigger behavior:
+  - `payment_required`: scan is blocked until billing is resolved.
+  - `subscription_required`: scan is blocked until an active subscription exists.
+  - `account_suspended`: scan is blocked until account access is restored.
+- Recovery path:
+  - Resolve billing/subscription state in the customer billing system.
+  - Re-run **Check Billing Status**.
+  - Retry **Trigger Full Scan**.
 
 ## Customer onboarding and support
 - Canonical onboarding doc for new customers: `docs/customer-onboarding.md`

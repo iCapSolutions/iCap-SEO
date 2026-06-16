@@ -153,6 +153,18 @@ Success response:
   - `estimated_effort`
 - `history` (optional compact timeseries)
 
+### 6) Get subscription status
+Endpoint:
+- `GET /v1/billing/subscription-status`
+
+Success response:
+- `entitlement_state` (`trialing` | `active` | `past_due` | `grace_period` | `canceled` | `suspended`)
+- `plan_code`
+- `currency`
+- `billing_country`
+- `grace_expires_at` (optional)
+- `updated_at`
+
 ## Authentication and authorization
 Header model:
 - `Authorization: Bearer <site_token>`
@@ -337,6 +349,11 @@ Suggested endpoints:
    - Only users with `manage_options` can configure API connection.
 5. Safe rendering
    - Always escape API-returned fields before output.
+6. Billing status checks
+   - Expose a Settings action that calls `GET /v1/billing/subscription-status`.
+   - Persist `last_billing_state` and `last_billing_checked_at` in plugin settings.
+7. Entitlement-aware scan UX
+   - When scan trigger returns `payment_required`, `subscription_required`, or `account_suspended`, show a specific recovery notice and do not queue a scan.
 
 ## Error model
 Standard error codes:
@@ -355,6 +372,8 @@ Plugin UX handling:
 - `rate_limited`: show retry-after message.
 - `upstream_unavailable`: keep last known values and show warning badge.
 - `payment_required`: show billing recovery notice in plugin settings.
+- `subscription_required`: show plan activation guidance before retrying scans.
+- `account_suspended`: show account restoration/support guidance before retrying scans.
 
 ## Scoring approach (v1)
 Category weights (initial default):

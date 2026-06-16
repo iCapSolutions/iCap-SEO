@@ -18,7 +18,18 @@ $notice_map = [
     'api_base_url_missing' => ['type' => 'error', 'message' => __('Site registration failed. API Base URL is required.', 'icap-seo')],
     'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Confirm API Base URL and Registration Token, then retry.', 'icap-seo')],
     'scan_queued' => ['type' => 'updated', 'message' => __('Scan request queued.', 'icap-seo')],
+    'payment_required' => ['type' => 'error', 'message' => __('Scan request blocked: payment is required for this site subscription. Resolve billing and retry.', 'icap-seo')],
+    'subscription_required' => ['type' => 'error', 'message' => __('Scan request blocked: no active subscription is associated with this site. Activate a plan and retry.', 'icap-seo')],
+    'account_suspended' => ['type' => 'error', 'message' => __('Scan request blocked: account is suspended. Contact iCap SEO support to restore access.', 'icap-seo')],
+    'invalid_token' => ['type' => 'error', 'message' => __('Scan request failed: site credentials are invalid. Re-run registration from Setup Wizard.', 'icap-seo')],
+    'rate_limited' => ['type' => 'error', 'message' => __('Scan request was rate-limited. Wait and retry.', 'icap-seo')],
     'scan_failed' => ['type' => 'error', 'message' => __('Scan request failed. Confirm site is registered and billing/auth are active.', 'icap-seo')],
+    'billing_status_active' => ['type' => 'updated', 'message' => __('Billing status check: site entitlement is active.', 'icap-seo')],
+    'billing_status_attention' => ['type' => 'error', 'message' => __('Billing status check: account needs billing attention (past due or grace period).', 'icap-seo')],
+    'billing_status_blocked' => ['type' => 'error', 'message' => __('Billing status check: account is blocked (canceled or suspended).', 'icap-seo')],
+    'billing_status_not_configured' => ['type' => 'error', 'message' => __('Billing status check requires site registration credentials. Register this site first.', 'icap-seo')],
+    'billing_status_unknown' => ['type' => 'error', 'message' => __('Billing status check returned an unknown entitlement state.', 'icap-seo')],
+    'billing_status_unavailable' => ['type' => 'error', 'message' => __('Billing status check failed. Confirm API availability and retry.', 'icap-seo')],
     'render_fallback' => ['type' => 'error', 'message' => __('Dashboard loaded in fallback mode after an internal error. Please retry and check logs.', 'icap-seo')],
 ];
 ?>
@@ -57,6 +68,7 @@ $notice_map = [
             <h2><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
             <ol>
                 <li><?php esc_html_e('Enter API Base URL, then request site credentials from iCap SEO.', 'icap-seo'); ?></li>
+                <li><?php esc_html_e('Confirm subscription entitlement is active before triggering scans.', 'icap-seo'); ?></li>
                 <li><?php esc_html_e('Run the first baseline SEO analysis.', 'icap-seo'); ?></li>
                 <li><?php esc_html_e('Review prioritized recommendations.', 'icap-seo'); ?></li>
             </ol>
@@ -178,9 +190,23 @@ $notice_map = [
                     <button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'icap-seo'); ?></button>
                 </p>
             </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                <input type="hidden" name="action" value="icap_seo_check_billing_status">
+                <?php wp_nonce_field('icap_seo_check_billing_status'); ?>
+                <p>
+                    <button type="submit" class="button"><?php esc_html_e('Check Billing Status', 'icap-seo'); ?></button>
+                </p>
+            </form>
             <p class="description">
                 <?php esc_html_e('Last successful score sync:', 'icap-seo'); ?>
                 <code><?php echo esc_html($connection_settings['last_sync_at'] ?: 'n/a'); ?></code>
+            </p>
+            <p class="description">
+                <?php esc_html_e('Last known billing state:', 'icap-seo'); ?>
+                <code><?php echo esc_html($connection_settings['last_billing_state'] ?: 'unknown'); ?></code>
+                |
+                <?php esc_html_e('Last billing check:', 'icap-seo'); ?>
+                <code><?php echo esc_html($connection_settings['last_billing_checked_at'] ?: 'n/a'); ?></code>
             </p>
         <?php else : ?>
             <h2><?php esc_html_e('Home', 'icap-seo'); ?></h2>
