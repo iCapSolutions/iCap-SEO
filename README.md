@@ -60,6 +60,33 @@ Output:
 4. Go to **Setup Wizard** and click **Request Credentials & Register Site**.
 5. Click **Trigger Full Scan** and confirm `scan_id` + status are returned.
 6. Review **Site Health** and **Content Scores** tabs.
+## Registration token requirement
+- The Setup Wizard action **Request Credentials & Register Site** requires a registration token.
+- Token source precedence:
+  1. `ICAP_SEO_REGISTRATION_TOKEN` constant in `wp-config.php` (highest precedence)
+  2. **Registration Token** saved in plugin settings
+- If no registration token is available, registration is expected to fail with a token-required error.
+- This requirement applies to registration requests; existing configured `site_id` + `site_token` flows can still be used for scan/status requests.
+## How to request a registration token
+- Registration tokens are currently issued manually by iCap SEO operations/admin.
+- When requesting a token, provide:
+  - target site URL
+  - API base URL you will register against
+  - admin/contact email for the site
+- Store the token using one of the supported methods:
+  - `ICAP_SEO_REGISTRATION_TOKEN` in `wp-config.php` (preferred)
+  - **Registration Token** field in **iCap SEO → Settings**
+- Keep the token private and do not commit it to git or include it in shared docs/screenshots.
+## Registration flow testing checklist
+Use this checklist after installing a new plugin ZIP:
+1. Confirm **Registration Token** field is visible in **iCap SEO → Settings**.
+2. Leave API Base URL empty and click **Request Credentials & Register Site**.
+   - Expected: API Base URL required error.
+3. Set API Base URL, leave registration token empty, and click register again.
+   - Expected: registration token required error.
+4. Set valid API Base URL + valid registration token, then click register.
+   - Expected: registration success and saved `site_id` / `site_token`.
+5. Trigger a full scan and confirm status updates normally.
 
 ## Customer onboarding and support
 - Canonical onboarding doc for new customers: `docs/customer-onboarding.md`
