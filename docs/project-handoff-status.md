@@ -21,10 +21,18 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
   - plugin can register from API base URL
   - stores returned `site_id` and `site_token`
   - includes `admin_email` in register payload
-- Added non-blocking/defensive behavior so admin UI remains usable if backend calls fail.
-- Delivered installable ZIP builds during testing; latest published GitHub release tag is `v0.1.2`.
+- Added registration-token support with clear source precedence:
+  - `ICAP_SEO_REGISTRATION_TOKEN` constant in `wp-config.php`
+  - saved plugin setting fallback
+- Added settings actions and UX for billing/entitlement visibility:
+  - `Check Billing Status` action wired to `GET /v1/billing/subscription-status`
+  - entitlement-aware scan-blocking notices for `payment_required`, `subscription_required`, and `account_suspended`
+- Added versioned ZIP packaging conventions and script support:
+  - release artifact format `icap-seo-vX.Y.Z.zip`
+  - latest plugin version on `main`: `0.1.7`
+  - latest distributed ZIP line for testing: `icap-seo-v0.1.7.zip`
 - Live smoke flow validated:
-  - register
+  - register (including expected token-required failure path)
   - trigger scan
   - poll scan status
   - fetch content scores
@@ -40,6 +48,15 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
   - confirmed regression tied to heredoc-in-command-substitution patterns in workflow scripts
   - restored stable workflow, then reintroduced Claude summary generation with heredoc-free syntax
 - Current workflow state (latest): stable and dispatchable, with manual plan/apply path and Claude summary step execution.
+- Merged entitlement-alignment backend updates (PR `#36`):
+  - `GET /v1/billing/subscription-status` now supports site-token + `X-ICAP-Site-Id` mode for customer plugin calls, while preserving admin-token summary mode for control-center/admin use
+  - `POST /v1/sites/{site_id}/scans` now enforces entitlement gating and returns expected error codes for blocked states
+- Added optional production DNS support for Numbercrate Google Search Console verification:
+  - `numbercrate_google_site_verification_tokens` variable in `environments/production/variables.tf`
+  - conditional TXT record creation in `environments/production/dns.tf`
+- Terraform validation completed for both updated environments before merge:
+  - `environments/icap-seo-production`
+  - `environments/production`
 
 ### 3) Website/marketing/docs (`icapsolutions`)
 - iCap SEO public page created and published:
@@ -61,6 +78,7 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Terraform workflow pipeline is operational again after parser regression fixes.
 - Claude summary integration is restored with parser-safe syntax.
 - Control-center private repo is active with baseline admin operations shipped.
+- Plugin entitlement UX and backend entitlement enforcement are now aligned and merged.
 
 ### Current product state
 - Public landing page exists, but broader product marketing/documentation expansion is still pending.
@@ -70,29 +88,35 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Architecture decision: keep customer plugin in public `iCap-SEO` and move iCapSolutions admin/control-center tooling to separate private `iCap-SEO-control-center`, sharing common backend endpoint contracts.
 
 ## Highest-priority next actions
-1. **Phase-1 paid onboarding and entitlement enforcement**
-   - Implement checkout/portal/subscription-status APIs and Stripe webhook processing.
-   - Persist tenant billing state and enforce entitlement-aware scan limits.
-   - Add customer plugin upgrade/signup and billing-recovery messaging.
+1. **Complete paid onboarding automation (Stripe + control-plane)**
+   - Implement customer checkout/portal session APIs and Stripe webhook processing.
+   - Move tenant entitlement from scaffold/manual state to billing-system-driven state transitions.
+   - Keep plugin and control-center behavior synchronized with canonical entitlement semantics.
 2. **Provider control-center plugin track**
    - Continue expanding the separate private internal admin plugin for iCapSolutions operations (not bundled into customer plugin).
    - Keep shared/common API contracts synchronized while preserving strict deployment and permissions separation from client sites.
-3. **Plugin release discipline**
-   - Confirm/version next plugin release after latest workflow/backend changes.
-   - Publish release notes and align README install steps with current behavior.
-4. **Backend capability expansion**
+3. **Integrated validation across plugin + backend**
+   - Re-run end-to-end checks against a live test site for key entitlement transitions:
+     - active/trialing (scan allowed)
+     - past_due/grace_period (payment-required block)
+     - canceled/suspended (scan blocked)
+   - Capture runbook notes for support and troubleshooting.
+4. **Plugin release discipline**
+   - Prepare next plugin release when plugin code changes warrant a version bump beyond `0.1.7`.
+   - Publish release notes and align README install/test steps with current behavior.
+5. **Backend capability expansion**
    - Move beyond scaffold behavior for scan/content-score endpoints.
    - Define persistence/query contracts for production-grade scoring outputs.
-5. **Ops hardening**
+6. **Ops hardening**
    - Add explicit monitoring/alarming and runbook notes for iCap SEO backend paths.
    - Confirm rollback instructions for plugin + backend deploys.
-6. **Website productization**
+7. **Website productization**
    - Expand `icapsolutions` pages to include:
      - product overview messaging
      - implementation/how-to guides
      - onboarding/support docs
      - CTA path (contact/demo/trial)
-7. **Cross-repo roadmap sync**
+8. **Cross-repo roadmap sync**
    - Keep this handoff file updated when major milestones ship in any of the 3 repos.
 
 ## Open backlog themes
