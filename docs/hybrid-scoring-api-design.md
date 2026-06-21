@@ -247,10 +247,13 @@ Requirements:
 - Update tenant entitlement state atomically.
 
 ### Portal-side billing API (not plugin API)
-Suggested endpoints:
+Current scaffolded endpoints:
 - `POST /v1/billing/checkout-session`
 - `POST /v1/billing/portal-session`
 - `GET /v1/billing/subscription-status`
+Implemented status notes:
+- Endpoint scaffolding is active in backend for checkout-session, portal-session, and Stripe webhook ingestion.
+- Customer portal auth model (human user auth + tenant role enforcement) is still pending and must be completed before production rollout.
 
 ## Data model (logical)
 ### Site profile
