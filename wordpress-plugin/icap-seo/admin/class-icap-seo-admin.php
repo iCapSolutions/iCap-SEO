@@ -91,6 +91,16 @@ class ICap_SEO_Admin
     {
         $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'home';
         $notice_code = isset($_GET[self::NOTICE_QUERY_KEY]) ? sanitize_key(wp_unslash($_GET[self::NOTICE_QUERY_KEY])) : '';
+        $billing_state = isset($_GET['billing']) ? sanitize_key(wp_unslash($_GET['billing'])) : '';
+        if ($notice_code === '') {
+            if ($billing_state === 'success') {
+                $notice_code = 'billing_checkout_returned';
+            } elseif ($billing_state === 'cancel') {
+                $notice_code = 'billing_checkout_cancelled';
+            } elseif ($billing_state === 'portal') {
+                $notice_code = 'billing_portal_returned';
+            }
+        }
         $connection_settings = $this->service_client->get_connection_settings();
         $score_snapshot = [
             'score' => null,
@@ -282,8 +292,10 @@ class ICap_SEO_Admin
             wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
         }
         check_admin_referer('icap_seo_start_billing_checkout');
-
-        $result = $this->service_client->create_billing_checkout_session();
+        $result = $this->service_client->create_billing_checkout_session([
+            'success_url' => $this->build_billing_settings_return_url('success'),
+            'cancel_url' => $this->build_billing_settings_return_url('cancel'),
+        ]);
         if (!$result['success']) {
             $error_code = $this->extract_error_code($result);
             if ($error_code === 'api_base_url_missing') {
@@ -325,8 +337,9 @@ class ICap_SEO_Admin
             wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
         }
         check_admin_referer('icap_seo_open_billing_portal');
-
-        $result = $this->service_client->create_billing_portal_session();
+        $result = $this->service_client->create_billing_portal_session([
+            'return_url' => $this->build_billing_settings_return_url('portal'),
+        ]);
         if (!$result['success']) {
             $error_code = $this->extract_error_code($result);
             if ($error_code === 'api_base_url_missing') {
@@ -364,6 +377,22 @@ class ICap_SEO_Admin
 
         wp_redirect($portal_url);
         exit;
+    }
+    private function build_billing_settings_return_url(string $billing_state): string
+    {
+        $normalized_state = sanitize_key($billing_state);
+        if ($normalized_state === '') {
+            $normalized_state = 'portal';
+        }
+
+        return add_query_arg(
+            [
+                'page' => 'icap-seo',
+                'tab' => 'settings',
+                'billing' => $normalized_state,
+            ],
+            admin_url('admin.php')
+        );
     }
 
     private function extract_error_code(array $result): string
