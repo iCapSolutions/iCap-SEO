@@ -283,6 +283,38 @@ class ICap_SEO_Service_Client
         return $result;
     }
 
+    public function create_billing_checkout_session(array $payload = []): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        return $this->api_request('POST', '/v1/billing/checkout-session', $payload);
+    }
+
+    public function create_billing_portal_session(array $payload = []): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        return $this->api_request('POST', '/v1/billing/portal-session', $payload);
+    }
+
     public function get_scan_status(?string $scan_id = null, bool $allow_live_fetch = true): array
     {
         $settings = $this->get_connection_settings();

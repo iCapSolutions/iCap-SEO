@@ -35,6 +35,8 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_register_site', [$this, 'handle_register_site']);
         add_action('admin_post_icap_seo_trigger_scan', [$this, 'handle_trigger_scan']);
         add_action('admin_post_icap_seo_check_billing_status', [$this, 'handle_check_billing_status']);
+        add_action('admin_post_icap_seo_start_billing_checkout', [$this, 'handle_start_billing_checkout']);
+        add_action('admin_post_icap_seo_open_billing_portal', [$this, 'handle_open_billing_portal']);
     }
     public function register_list_table_columns(): void
     {
@@ -272,6 +274,96 @@ class ICap_SEO_Admin
         }
 
         $this->redirect_with_notice('billing_status_unknown', 'settings');
+    }
+
+    public function handle_start_billing_checkout(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_start_billing_checkout');
+
+        $result = $this->service_client->create_billing_checkout_session();
+        if (!$result['success']) {
+            $error_code = $this->extract_error_code($result);
+            if ($error_code === 'api_base_url_missing') {
+                $this->redirect_with_notice('api_base_url_missing', 'settings');
+                return;
+            }
+            if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
+                $this->redirect_with_notice('billing_checkout_not_configured', 'settings');
+                return;
+            }
+            if ($error_code === 'validation_error') {
+                $this->redirect_with_notice('billing_checkout_misconfigured', 'settings');
+                return;
+            }
+            if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
+                $this->redirect_with_notice('billing_checkout_unavailable', 'settings');
+                return;
+            }
+            $this->redirect_with_notice('billing_checkout_failed', 'settings');
+            return;
+        }
+
+        $checkout_url = '';
+        if (isset($result['data']['checkout_url']) && is_string($result['data']['checkout_url'])) {
+            $checkout_url = esc_url_raw($result['data']['checkout_url']);
+        }
+        if ($checkout_url === '' || !wp_http_validate_url($checkout_url)) {
+            $this->redirect_with_notice('billing_checkout_failed', 'settings');
+            return;
+        }
+
+        wp_redirect($checkout_url);
+        exit;
+    }
+
+    public function handle_open_billing_portal(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_open_billing_portal');
+
+        $result = $this->service_client->create_billing_portal_session();
+        if (!$result['success']) {
+            $error_code = $this->extract_error_code($result);
+            if ($error_code === 'api_base_url_missing') {
+                $this->redirect_with_notice('api_base_url_missing', 'settings');
+                return;
+            }
+            if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
+                $this->redirect_with_notice('billing_portal_not_configured', 'settings');
+                return;
+            }
+            if ($error_code === 'subscription_required') {
+                $this->redirect_with_notice('billing_portal_subscription_required', 'settings');
+                return;
+            }
+            if ($error_code === 'validation_error') {
+                $this->redirect_with_notice('billing_portal_misconfigured', 'settings');
+                return;
+            }
+            if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
+                $this->redirect_with_notice('billing_portal_unavailable', 'settings');
+                return;
+            }
+            $this->redirect_with_notice('billing_portal_failed', 'settings');
+            return;
+        }
+
+        $portal_url = '';
+        if (isset($result['data']['portal_url']) && is_string($result['data']['portal_url'])) {
+            $portal_url = esc_url_raw($result['data']['portal_url']);
+        }
+        if ($portal_url === '' || !wp_http_validate_url($portal_url)) {
+            $this->redirect_with_notice('billing_portal_failed', 'settings');
+            return;
+        }
+
+        wp_redirect($portal_url);
+        exit;
     }
 
     private function extract_error_code(array $result): string

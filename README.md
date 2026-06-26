@@ -58,8 +58,10 @@ Output:
      - `define('ICAP_SEO_REGISTRATION_TOKEN', 'your-registration-token');`
    - Or save **Registration Token** in **iCap SEO → Settings**.
 4. Go to **Setup Wizard** and click **Request Credentials & Register Site**.
-5. Click **Trigger Full Scan** and confirm `scan_id` + status are returned.
-6. Review **Site Health** and **Content Scores** tabs.
+5. In **Settings**, click **Start Billing Checkout** to create/activate subscription.
+6. Use **Check Billing Status** and confirm entitlement is active/trialing.
+7. Click **Trigger Full Scan** and confirm `scan_id` + status are returned.
+8. Review **Site Health** and **Content Scores** tabs.
 ## Registration token requirement
 - The Setup Wizard action **Request Credentials & Register Site** requires a registration token.
 - Token source precedence:
@@ -104,7 +106,7 @@ Use this checklist after installing a new plugin ZIP:
 
 ## Customer onboarding and support
 - Canonical onboarding doc for new customers: `docs/customer-onboarding.md`
-- Current product note: self-serve paid checkout/subscription management is planned and not yet shipped in-plugin.
+- Current product note: plugin settings include actions for checkout-session and billing-portal session launch; webhook-driven entitlement updates complete the activation flow.
 
 ## Validation
 - GitHub Actions runs PHP lint checks for plugin files on pull requests and pushes to `main`.
@@ -114,7 +116,7 @@ Use this checklist after installing a new plugin ZIP:
 ## Roadmap (high-level)
 1. Finalize onboarding UX and connection diagnostics.
 2. Productionize scan and content-score API behavior.
-3. Add paid onboarding, entitlement enforcement, and customer portal/control-plane APIs used by the private control-center repository.
+3. Harden paid onboarding, entitlement automation, and customer portal/control-plane APIs used by the private control-center repository.
 4. Expand recommendation engine and remediation workflows.
 5. Multi-site management and WordPress.org hardening.
 
