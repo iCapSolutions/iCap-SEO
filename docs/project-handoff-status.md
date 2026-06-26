@@ -26,11 +26,13 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
   - saved plugin setting fallback
 - Added settings actions and UX for billing/entitlement visibility:
   - `Check Billing Status` action wired to `GET /v1/billing/subscription-status`
+  - `Start Billing Checkout` action wired to `POST /v1/billing/checkout-session`
+  - `Open Billing Portal` action wired to `POST /v1/billing/portal-session`
   - entitlement-aware scan-blocking notices for `payment_required`, `subscription_required`, and `account_suspended`
 - Added versioned ZIP packaging conventions and script support:
   - release artifact format `icap-seo-vX.Y.Z.zip`
-  - latest plugin version on `main`: `0.1.7`
-  - latest distributed ZIP line for testing: `icap-seo-v0.1.7.zip`
+  - latest plugin version on `main`: `0.1.8`
+  - latest distributed ZIP line for testing: `icap-seo-v0.1.8.zip`
 - Live smoke flow validated:
   - register (including expected token-required failure path)
   - trigger scan
@@ -51,6 +53,10 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Merged entitlement-alignment backend updates (PR `#36`):
   - `GET /v1/billing/subscription-status` now supports site-token + `X-ICAP-Site-Id` mode for customer plugin calls, while preserving admin-token summary mode for control-center/admin use
   - `POST /v1/sites/{site_id}/scans` now enforces entitlement gating and returns expected error codes for blocked states
+- Added Stripe onboarding flow hardening:
+  - checkout-session and portal-session creation backed by Stripe API requests
+  - webhook signature validation + event-id idempotency via dedicated DynamoDB event table
+  - webhook processing audit persistence and billing-policy enforcement (`US` country + `USD` currency for activation)
 - Added optional production DNS support for Numbercrate Google Search Console verification:
   - `numbercrate_google_site_verification_tokens` variable in `environments/production/variables.tf`
   - conditional TXT record creation in `environments/production/dns.tf`
@@ -69,7 +75,7 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Private repository created and isolated from customer-distributed plugin code.
 - Phase-1 read-only tenant and billing views shipped.
 - Phase-2 baseline shipped with pinned contract version, guarded billing resync action, and audit logging.
-- Release ZIP automation is active and latest release line is `v0.2.3`.
+- Release ZIP automation is active and latest release line is `v0.2.5`.
 
 ## Where we are left off
 ### Current technical state
@@ -79,18 +85,20 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Claude summary integration is restored with parser-safe syntax.
 - Control-center private repo is active with baseline admin operations shipped.
 - Plugin entitlement UX and backend entitlement enforcement are now aligned and merged.
+- Stripe checkout/portal session APIs and webhook-driven entitlement transitions are implemented.
 
 ### Current product state
 - Public landing page exists, but broader product marketing/documentation expansion is still pending.
 - No single "launch checklist" has been completed yet across plugin + backend + website content.
 - Canonical onboarding flow now lives in `iCap-SEO/docs/customer-onboarding.md`.
-- Self-serve paid signup/checkout and subscription-management flows remain unshipped.
+- Self-serve paid signup/subscription-management API flow is shipped; customer portal auth/role hardening and live transition validation remain pending.
 - Architecture decision: keep customer plugin in public `iCap-SEO` and move iCapSolutions admin/control-center tooling to separate private `iCap-SEO-control-center`, sharing common backend endpoint contracts.
 
 ## Highest-priority next actions
 1. **Complete paid onboarding automation (Stripe + control-plane)**
-   - Implement customer checkout/portal session APIs and Stripe webhook processing.
-   - Move tenant entitlement from scaffold/manual state to billing-system-driven state transitions.
+   - Complete customer-portal human auth + tenant-role enforcement for production.
+   - Execute live end-to-end validation of Stripe-driven entitlement transitions.
+   - Capture rollback/runbook guidance for webhook failures and billing-policy blocks.
    - Keep plugin and control-center behavior synchronized with canonical entitlement semantics.
 2. **Provider control-center plugin track**
    - Continue expanding the separate private internal admin plugin for iCapSolutions operations (not bundled into customer plugin).
@@ -102,7 +110,7 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
      - canceled/suspended (scan blocked)
    - Capture runbook notes for support and troubleshooting.
 4. **Plugin release discipline**
-   - Prepare next plugin release when plugin code changes warrant a version bump beyond `0.1.7`.
+   - Prepare next plugin release when plugin code changes warrant a version bump beyond `0.1.8`.
    - Publish release notes and align README install/test steps with current behavior.
 5. **Backend capability expansion**
    - Move beyond scaffold behavior for scan/content-score endpoints.

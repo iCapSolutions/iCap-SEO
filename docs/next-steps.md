@@ -23,8 +23,11 @@
 1. Phase-1 paid onboarding + entitlement enforcement
    - Status: `In Progress`
    - Scope:
-     - Remaining: implement billing API surface for checkout/portal session creation and Stripe webhook ingestion.
-     - Remaining: move tenant entitlement transitions to billing-system-driven updates (instead of scaffold/manual state only).
+     - Done: billing API surface for checkout/portal session creation and Stripe webhook ingestion is implemented.
+     - Done: webhook idempotency + audit persistence by Stripe event ID is implemented.
+     - Done: tenant entitlement transitions are driven by Stripe billing events.
+     - Remaining: complete customer-portal human auth + tenant role enforcement before production rollout.
+     - Remaining: run live end-to-end subscription transition validation across representative tenant states.
      - Done: customer plugin billing-state checks and scan-blocking notice handling for `payment_required`, `subscription_required`, and `account_suspended`.
      - Done: backend support for site-token `GET /v1/billing/subscription-status` and entitlement-gated `POST /v1/sites/{site_id}/scans`.
 2. Provider control-center plugin (private repository)
