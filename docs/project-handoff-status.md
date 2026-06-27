@@ -31,8 +31,8 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
   - entitlement-aware scan-blocking notices for `payment_required`, `subscription_required`, and `account_suspended`
 - Added versioned ZIP packaging conventions and script support:
   - release artifact format `icap-seo-vX.Y.Z.zip`
-  - latest plugin version on `main`: `0.1.8`
-  - latest distributed ZIP line for testing: `icap-seo-v0.1.8.zip`
+  - latest plugin version on `main`: `0.1.9`
+  - latest distributed ZIP line for testing: `icap-seo-v0.1.9.zip`
 - Live smoke flow validated:
   - register (including expected token-required failure path)
   - trigger scan
@@ -57,6 +57,10 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
   - checkout-session and portal-session creation backed by Stripe API requests
   - webhook signature validation + event-id idempotency via dedicated DynamoDB event table
   - webhook processing audit persistence and billing-policy enforcement (`US` country + `USD` currency for activation)
+- Added and validated activity-notification path for registration/billing lifecycle events:
+  - EventBridge bus/rule + SNS email delivery path is deployed
+  - Stripe completion events now flow through webhook ingestion to entitlement updates and activity notifications
+  - current email template is configured for readable multiline label/value formatting
 - Added optional production DNS support for Numbercrate Google Search Console verification:
   - `numbercrate_google_site_verification_tokens` variable in `environments/production/variables.tf`
   - conditional TXT record creation in `environments/production/dns.tf`
@@ -70,12 +74,16 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Core plugin page sections and SEO metadata implemented.
 - Internal links from existing SEO pages to plugin page added.
 - Planning docs for plugin positioning and page strategy are in place.
+- Follow-up work to consolidate information architecture and publish complete service/onboarding docs remains pending.
 
 ### 4) Provider/admin plugin (`iCap-SEO-control-center`, private)
 - Private repository created and isolated from customer-distributed plugin code.
 - Phase-1 read-only tenant and billing views shipped.
 - Phase-2 baseline shipped with pinned contract version, guarded billing resync action, and audit logging.
-- Release ZIP automation is active and latest release line is `v0.2.5`.
+- Billing session UX clarity improvements shipped:
+  - single site selector with explicit checkout vs portal actions
+  - unified action handler + clearer invalid-action notice behavior
+- Release ZIP automation is active and latest release line is `v0.2.7`.
 
 ## Where we are left off
 ### Current technical state
@@ -86,6 +94,8 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Control-center private repo is active with baseline admin operations shipped.
 - Plugin entitlement UX and backend entitlement enforcement are now aligned and merged.
 - Stripe checkout/portal session APIs and webhook-driven entitlement transitions are implemented.
+- Stripe webhook endpoint/signing-secret flow is configured and validated for current environment.
+- EventBridge → SNS activity notifications are active with readable multiline email formatting.
 
 ### Current product state
 - Public landing page exists, but broader product marketing/documentation expansion is still pending.
@@ -95,37 +105,32 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Architecture decision: keep customer plugin in public `iCap-SEO` and move iCapSolutions admin/control-center tooling to separate private `iCap-SEO-control-center`, sharing common backend endpoint contracts.
 
 ## Highest-priority next actions
-1. **Complete paid onboarding automation (Stripe + control-plane)**
+1. **Website productization and docs IA cleanup (soon)**
+   - Expand and reorganize `icapsolutions` content so the iCap SEO service has one clear user path.
+   - Publish complete customer-facing documentation for setup, billing flow, onboarding, and support.
+   - Ensure CTA path is explicit (contact/demo/trial) and linked from existing SEO/service pages.
+2. **Complete paid onboarding automation (Stripe + control-plane)**
    - Complete customer-portal human auth + tenant-role enforcement for production.
    - Execute live end-to-end validation of Stripe-driven entitlement transitions.
    - Capture rollback/runbook guidance for webhook failures and billing-policy blocks.
-   - Keep plugin and control-center behavior synchronized with canonical entitlement semantics.
-2. **Provider control-center plugin track**
-   - Continue expanding the separate private internal admin plugin for iCapSolutions operations (not bundled into customer plugin).
-   - Keep shared/common API contracts synchronized while preserving strict deployment and permissions separation from client sites.
 3. **Integrated validation across plugin + backend**
    - Re-run end-to-end checks against a live test site for key entitlement transitions:
      - active/trialing (scan allowed)
      - past_due/grace_period (payment-required block)
      - canceled/suspended (scan blocked)
    - Capture runbook notes for support and troubleshooting.
-4. **Plugin release discipline**
-   - Prepare next plugin release when plugin code changes warrant a version bump beyond `0.1.8`.
+4. **Provider control-center plugin track**
+   - Continue expanding the separate private internal admin plugin for iCapSolutions operations (not bundled into customer plugin).
+   - Keep shared/common API contracts synchronized while preserving strict deployment and permissions separation from client sites.
+5. **Plugin release discipline**
+   - Prepare next plugin release when plugin code changes warrant a version bump beyond `0.1.9`.
    - Publish release notes and align README install/test steps with current behavior.
-5. **Backend capability expansion**
+6. **Backend capability expansion + ops hardening**
    - Move beyond scaffold behavior for scan/content-score endpoints.
    - Define persistence/query contracts for production-grade scoring outputs.
-6. **Ops hardening**
-   - Add explicit monitoring/alarming and runbook notes for iCap SEO backend paths.
-   - Confirm rollback instructions for plugin + backend deploys.
-7. **Website productization**
-   - Expand `icapsolutions` pages to include:
-     - product overview messaging
-     - implementation/how-to guides
-     - onboarding/support docs
-     - CTA path (contact/demo/trial)
-8. **Cross-repo roadmap sync**
-   - Keep this handoff file updated when major milestones ship in any of the 3 repos.
+   - Add explicit monitoring/alarming and rollback runbook notes for backend/plugin deploys.
+7. **Cross-repo roadmap sync**
+   - Keep this handoff file updated when major milestones ship in `iCap-SEO`, `iCap-SEO-control-center`, `infrastructure`, and `icapsolutions`.
 
 ## Open backlog themes
 - Plugin hardening/security review and UX improvements.

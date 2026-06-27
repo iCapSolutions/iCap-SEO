@@ -9,7 +9,7 @@ Repository: https://github.com/iCapSolutions/iCap-SEO (public)
 - `infra`: Infrastructure as code scaffold (planned).
 - `docs`: Architecture, boundaries, and implementation notes.
 - `icap-seo-control-center`: maintained in a separate private repository (not included in this public repo).
-## Current scope (v0.1 foundation)
+## Current scope (production checkpoint, v0.1.9 line)
 - WordPress admin plugin named `iCap SEO`.
 - Admin dashboard tabs:
   - Home
@@ -20,6 +20,12 @@ Repository: https://github.com/iCapSolutions/iCap-SEO (public)
 - Self-serve site registration from the plugin (`site_id` + `site_token` persisted in WordPress options).
 - Manual full-site scan trigger and scan-status polling.
 - Content score retrieval with safe placeholder fallback when API data is unavailable.
+- Customer billing actions in Settings for:
+  - Stripe checkout-session launch
+  - Stripe billing-portal launch
+  - Billing-state checks
+- Billing return-path behavior sends customers back to their own WordPress admin path (`/wp-admin/admin.php?page=icap-seo&tab=settings`) after Stripe checkout/portal flows.
+- Entitlement-aware scan blocking is active for blocked billing states.
 ## Installation
 ### Official method: Install from GitHub Release ZIP
 1. Open Releases:
@@ -107,6 +113,14 @@ Use this checklist after installing a new plugin ZIP:
 ## Customer onboarding and support
 - Canonical onboarding doc for new customers: `docs/customer-onboarding.md`
 - Current product note: plugin settings include actions for checkout-session and billing-portal session launch; webhook-driven entitlement updates complete the activation flow.
+
+## Near-term documentation and rollout next steps
+- Keep cross-repo rollout docs synchronized after each release in:
+  - `README.md`
+  - `docs/project-handoff-status.md`
+  - `docs/next-steps.md`
+- Continue live validation of billing lifecycle transitions (checkout complete, renewal, payment failure, cancellation/reactivation).
+- Pending soon: update `icapsolutions` site content IA and service docs so onboarding, pricing/billing behavior, and support paths are clearly documented in one customer-facing flow.
 
 ## Validation
 - GitHub Actions runs PHP lint checks for plugin files on pull requests and pushes to `main`.
