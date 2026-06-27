@@ -17,6 +17,8 @@
 - Canonical customer onboarding documentation: `Done`
 - Dual-plugin architecture decision (public customer plugin + separate private control-center repository): `Done`
 - Private control-center repository bootstrap and phase-2 baseline releases: `Done`
+- EventBridge + SNS activity notifications with readable multiline email formatting: `Done`
+- Stripe webhook endpoint/signing-secret flow validated in active environment: `Done`
 - Self-serve paid signup and billing automation (Stripe-driven): `In Progress`
 
 ## Next execution priorities
@@ -35,7 +37,8 @@
    - Scope:
      - Maintain separate private repository `iCap-SEO-control-center` for provider/admin operations.
      - Keep control-center and customer plugin separate while sharing common endpoint contracts/client logic.
-     - Expand beyond current baseline (read-only tenant/billing views + guarded billing resync + audit logging) with deeper support workflows.
+     - Done: billing session actions now use one site selector with explicit checkout vs portal actions (clarity update shipped in release line `v0.2.7`).
+     - Expand beyond current baseline with deeper support workflows and operations tooling.
      - Keep bootstrap checklist and operational docs current in `docs/control-center-private-repo-bootstrap.md`.
 3. Plugin settings + connection screen
    - Status: `In Progress`
@@ -77,14 +80,15 @@
 9. Progress checkpoint update (current)
    - Status: `Done`
    - Scope:
-     - Cross-repo status synchronized in `docs/project-handoff-status.md` after merged infrastructure PR `#36`.
+     - Cross-repo status synchronized in `docs/project-handoff-status.md` after merged infrastructure notification/template PR sequence (`#39`–`#43`) and control-center clarity release.
      - Production DNS optional Google verification-token support validated and merged.
 10. Website productization and guides (icapsolutions repo)
-   - Status: `Planned`
+   - Status: `In Progress`
    - Scope:
      - Expand marketing pages for iCap SEO product positioning.
      - Add how-to documentation and onboarding guides.
      - Add FAQ/troubleshooting content and CTA pathways.
+     - Near-term priority: restructure site information architecture so iCap SEO has one clear service path with complete documentation in one place.
 
 ## Multi-site alpha rollout checklist
 - Select first two non-production WordPress sites for alpha.
