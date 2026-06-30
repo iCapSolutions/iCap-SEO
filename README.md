@@ -26,6 +26,13 @@ Repository: https://github.com/iCapSolutions/iCap-SEO (public)
   - Billing-state checks
 - Billing return-path behavior sends customers back to their own WordPress admin path (`/wp-admin/admin.php?page=icap-seo&tab=settings`) after Stripe checkout/portal flows.
 - Entitlement-aware scan blocking is active for blocked billing states.
+## End-to-end system workflow and network diagram
+- Canonical architecture + workflow doc: `docs/architecture.md`
+- Covers full flow from:
+  - customer WordPress plugin registration and scan actions
+  - persisted scan/content-history retrieval for Site Health and Content Scores
+  - private Control Center admin/billing operations
+  - backend infrastructure services and Stripe/event integrations
 ## Installation
 ### Official method: Install from GitHub Release ZIP
 1. Open Releases:
