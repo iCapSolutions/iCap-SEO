@@ -19,6 +19,8 @@
 - Private control-center repository bootstrap and phase-2 baseline releases: `Done`
 - EventBridge + SNS activity notifications with readable multiline email formatting: `Done`
 - Stripe webhook endpoint/signing-secret flow validated in active environment: `Done`
+- Profile-driven backend scan execution with DynamoDB run/history persistence: `Done`
+- Workflow-based infrastructure apply verified for latest scan persistence rollout: `Done`
 - Self-serve paid signup and billing automation (Stripe-driven): `In Progress`
 
 ## Next execution priorities
@@ -47,12 +49,13 @@
      - Done: billing status action and persisted billing-check metadata.
      - Remaining: add/finish Setup Wizard "Test Connection" action and tighten error-state guidance.
 4. First cloud API contract
-   - Status: `In Progress`
+   - Status: `Done`
    - Scope:
-     - `POST /sites/register`
+     - Done: `POST /sites/register`.
      - Done: dual-mode `GET /v1/billing/subscription-status` behavior (site-token and admin-token contexts).
      - Done: entitlement-aware scan gating on `POST /sites/{site_id}/scans`.
-     - Remaining: scan and score retrieval contract hardening (`/scans`, `/content-scores`) with production-ready responses.
+     - Done: scan and score retrieval contract hardening (`/scans`, `/content-scores`) with profile-driven scoring and persisted history responses.
+     - Follow-on hardening and automation tasks are tracked under backend operations priorities.
 5. AWS service skeleton
    - Status: `Done`
    - Scope:
@@ -76,6 +79,7 @@
    - Status: `In Progress`
    - Scope:
      - Keep Terraform workflow stable and monitor parser/dispatch reliability.
+     - Done: manual apply artifact handoff now includes Lambda ZIP for `icap-seo-production` apply runs.
      - Add/expand plugin checks (PHPCS and smoke tests) where practical.
 9. Progress checkpoint update (current)
    - Status: `Done`

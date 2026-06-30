@@ -67,6 +67,14 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Terraform validation completed for both updated environments before merge:
   - `environments/icap-seo-production`
   - `environments/production`
+- Replaced placeholder scan outputs with profile-driven backend execution using exported service definitions from `seo-tools`.
+- Added durable scan persistence for API consumers:
+  - scan runs table (`icap-seo-production-scan-runs`)
+  - content score snapshots table (`icap-seo-production-content-score-snapshots`, GSI `by_site_scan`)
+  - history-capable content score detail responses
+- Applied and verified these infrastructure changes via GitHub workflow path:
+  - merged workflow artifact fix PR `infrastructure#46`
+  - successful workflow apply run: `Terraform Plan / Approval / Apply` (`workflow_dispatch`)
 
 ### 3) Website/marketing/docs (`icapsolutions`)
 - iCap SEO public page created and published:
@@ -96,6 +104,9 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Stripe checkout/portal session APIs and webhook-driven entitlement transitions are implemented.
 - Stripe webhook endpoint/signing-secret flow is configured and validated for current environment.
 - EventBridge → SNS activity notifications are active with readable multiline email formatting.
+- Scan API routes are profile-driven and persist run/history data in DynamoDB-backed tables.
+- Workflow-based infrastructure apply has been validated for this deployment line.
+- End-to-end architecture/workflow documentation is now captured in `docs/architecture.md`.
 
 ### Current product state
 - Public landing page exists, but broader product marketing/documentation expansion is still pending.
@@ -125,10 +136,9 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 5. **Plugin release discipline**
    - Prepare next plugin release when plugin code changes warrant a version bump beyond `0.1.9`.
    - Publish release notes and align README install/test steps with current behavior.
-6. **Backend capability expansion + ops hardening**
-   - Move beyond scaffold behavior for scan/content-score endpoints.
-   - Define persistence/query contracts for production-grade scoring outputs.
+6. **Backend operations hardening**
    - Add explicit monitoring/alarming and rollback runbook notes for backend/plugin deploys.
+   - Add recurring smoke-test automation for scan trigger/status/content-history endpoints after deploys.
 7. **Cross-repo roadmap sync**
    - Keep this handoff file updated when major milestones ship in `iCap-SEO`, `iCap-SEO-control-center`, `infrastructure`, and `icapsolutions`.
 
@@ -142,6 +152,7 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 Start with:
 1. Read:
    - `iCap-SEO/docs/project-handoff-status.md` (this file)
+   - `iCap-SEO/docs/architecture.md`
    - `iCap-SEO/docs/customer-onboarding.md`
    - `iCap-SEO/docs/control-center-private-repo-bootstrap.md`
    - `iCap-SEO/docs/next-steps.md`
