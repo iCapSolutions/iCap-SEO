@@ -9,7 +9,7 @@ Repository: https://github.com/iCapSolutions/iCap-SEO (public)
 - `infra`: Infrastructure as code scaffold (planned).
 - `docs`: Architecture, boundaries, and implementation notes.
 - `icap-seo-control-center`: maintained in a separate private repository (not included in this public repo).
-## Current scope (production checkpoint, v0.1.9 line)
+## Current scope (production checkpoint, v0.1.10 line)
 - WordPress admin plugin named `iCap SEO`.
 - Admin dashboard tabs:
   - Home
@@ -18,7 +18,10 @@ Repository: https://github.com/iCapSolutions/iCap-SEO (public)
   - Content Scores
   - Settings
 - Self-serve site registration from the plugin (`site_id` + `site_token` persisted in WordPress options).
+- Setup Wizard **Test Connection** action for API reachability and credential validation checks.
 - Manual full-site scan trigger and scan-status polling.
+- Baseline scan tier (`basic`) is available for non-premium sites to run initial on-page analysis.
+- Premium subscription unlocks full layered scans (`premium`), including robots/crawler policy, security headers, content quality, schema, image, and link-health layers.
 - Content score retrieval with safe placeholder fallback when API data is unavailable.
 - Customer billing actions in Settings for:
   - Stripe checkout-session launch
@@ -60,8 +63,11 @@ Build release zip (maintainers):
 ```sh
 scripts/build-plugin-zip.sh
 ```
+If a package already exists for the current version tag, the script stops and asks for a version bump.
+Use `FORCE_REBUILD=1 scripts/build-plugin-zip.sh` only when intentionally rebuilding the same tag.
 Output:
 - `dist/icap-seo-vX.Y.Z.zip` (derived from `ICAP_SEO_VERSION` in `wordpress-plugin/icap-seo/icap-seo.php`)
+- `dist/icap-seo-vX.Y.Z.sha256` (checksum for release artifact verification/tracking)
 
 ## Quick start after install
 1. Activate **iCap SEO** from WordPress admin.
@@ -70,11 +76,13 @@ Output:
    - Preferred: set a constant in `wp-config.php`:
      - `define('ICAP_SEO_REGISTRATION_TOKEN', 'your-registration-token');`
    - Or save **Registration Token** in **iCap SEO → Settings**.
-4. Go to **Setup Wizard** and click **Request Credentials & Register Site**.
-5. In **Settings**, click **Start Billing Checkout** to create/activate subscription.
-6. Use **Check Billing Status** and confirm entitlement is active/trialing.
-7. Click **Trigger Full Scan** and confirm `scan_id` + status are returned.
-8. Review **Site Health** and **Content Scores** tabs.
+4. Go to **Setup Wizard** and click **Test Connection** to verify API host reachability first.
+5. Click **Request Credentials & Register Site**.
+6. In **Setup Wizard**, click **Trigger Full Scan** to run a baseline scan and confirm `scan_id` + status are returned.
+7. (Optional for premium layers) In **Settings**, click **Start Billing Checkout** to activate subscription.
+8. Use **Check Billing Status** and confirm entitlement is active/trialing for premium-layer access.
+9. Trigger another scan and confirm premium layers are included.
+10. Review **Site Health** and **Content Scores** tabs.
 ## Registration token requirement
 - The Setup Wizard action **Request Credentials & Register Site** requires a registration token.
 - Token source precedence:
@@ -116,6 +124,22 @@ Use this checklist after installing a new plugin ZIP:
   - Resolve billing/subscription state in the customer billing system.
   - Re-run **Check Billing Status**.
   - Retry **Trigger Full Scan**.
+
+## Scan tiers and premium layer exposure
+- `basic` tier (default for non-premium entitlement states):
+  - Baseline on-page audit layer
+- `premium` tier (active/trialing subscription states):
+  - Baseline on-page audit
+  - Robots and crawler policy
+  - Security headers
+  - Content quality and readability
+  - Structured data/schema checks
+  - Image optimization checks
+  - Internal and broken-link checks
+- API scan responses now include:
+  - `scan_tier`
+  - `scan_layers.executed`
+  - `scan_layers.premium_locked` (when applicable)
 
 ## Customer onboarding and support
 - Canonical onboarding doc for new customers: `docs/customer-onboarding.md`

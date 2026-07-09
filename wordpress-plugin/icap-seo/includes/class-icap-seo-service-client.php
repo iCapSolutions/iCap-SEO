@@ -10,6 +10,16 @@ class ICap_SEO_Service_Client
     private const CONTENT_SCORES_CACHE_TTL_SECONDS = 120;
 
     private ?array $content_scores_index_cache = null;
+    private array $latest_content_scores_meta = [
+        'scan_id' => '',
+        'scan_tier' => '',
+        'scan_layers' => [
+            'executed' => [],
+            'premium_locked' => [],
+        ],
+        'item_count' => 0,
+        'source' => 'unknown',
+    ];
 
     public function get_connection_settings(): array
     {
@@ -95,25 +105,82 @@ class ICap_SEO_Service_Client
         $site_id = $settings['site_id'];
         $cache_key = $site_id !== '' ? sprintf('icap_seo_scores_%s', md5($site_id)) : '';
 
-        if ($cache_key !== '') {
+        if ($cache_key !== '' && !$allow_live_fetch) {
             $cached = get_transient($cache_key);
             if (is_array($cached)) {
+                if (array_key_exists('rows', $cached) && is_array($cached['rows'])) {
+                    if (isset($cached['meta']) && is_array($cached['meta'])) {
+                        $this->latest_content_scores_meta = $this->normalize_content_scores_meta($cached['meta']);
+                    } else {
+                        $this->latest_content_scores_meta = $this->build_content_scores_meta(
+                            '',
+                            '',
+                            [],
+                            count($cached['rows']),
+                            'cache'
+                        );
+                    }
+                    return $cached['rows'];
+                }
+
+                $this->latest_content_scores_meta = $this->build_content_scores_meta(
+                    '',
+                    '',
+                    [],
+                    count($cached),
+                    'cache_legacy'
+                );
                 return $cached;
             }
         }
 
         if ($allow_live_fetch) {
             $api_rows = $this->fetch_content_scores_from_api();
-            if (!empty($api_rows)) {
+            if (($this->latest_content_scores_meta['source'] ?? '') === 'api') {
                 $this->update_connection_settings([
                     'last_sync_at' => current_time('mysql'),
                 ]);
 
                 if ($cache_key !== '') {
-                    set_transient($cache_key, $api_rows, self::CONTENT_SCORES_CACHE_TTL_SECONDS);
+                    set_transient(
+                        $cache_key,
+                        [
+                            'rows' => $api_rows,
+                            'meta' => $this->latest_content_scores_meta,
+                        ],
+                        self::CONTENT_SCORES_CACHE_TTL_SECONDS
+                    );
                 }
 
                 return $api_rows;
+            }
+        }
+        if ($cache_key !== '' && $allow_live_fetch) {
+            $cached = get_transient($cache_key);
+            if (is_array($cached)) {
+                if (array_key_exists('rows', $cached) && is_array($cached['rows'])) {
+                    if (isset($cached['meta']) && is_array($cached['meta'])) {
+                        $this->latest_content_scores_meta = $this->normalize_content_scores_meta($cached['meta']);
+                    } else {
+                        $this->latest_content_scores_meta = $this->build_content_scores_meta(
+                            '',
+                            '',
+                            [],
+                            count($cached['rows']),
+                            'cache_fallback'
+                        );
+                    }
+                    return $cached['rows'];
+                }
+
+                $this->latest_content_scores_meta = $this->build_content_scores_meta(
+                    '',
+                    '',
+                    [],
+                    count($cached),
+                    'cache_legacy'
+                );
+                return $cached;
             }
         }
         $posts = get_posts([
@@ -142,8 +209,87 @@ class ICap_SEO_Service_Client
                 'source' => 'placeholder',
             ];
         }
+        $this->latest_content_scores_meta = $this->build_content_scores_meta(
+            '',
+            '',
+            [],
+            count($rows),
+            'placeholder'
+        );
 
         return $rows;
+    }
+
+    private function normalize_layer_rows($raw_layers): array
+    {
+        if (!is_array($raw_layers)) {
+            return [];
+        }
+        $normalized = [];
+        foreach ($raw_layers as $layer) {
+            if (is_array($layer)) {
+                $row = [];
+                if (isset($layer['layer_id']) && is_string($layer['layer_id'])) {
+                    $row['layer_id'] = sanitize_key($layer['layer_id']);
+                }
+                if (isset($layer['name']) && is_string($layer['name'])) {
+                    $row['name'] = sanitize_text_field($layer['name']);
+                }
+                if (isset($layer['sub_skill']) && is_string($layer['sub_skill'])) {
+                    $row['sub_skill'] = sanitize_key($layer['sub_skill']);
+                }
+                if (isset($layer['premium_only'])) {
+                    $row['premium_only'] = (bool) $layer['premium_only'];
+                }
+                if (!empty($row)) {
+                    $normalized[] = $row;
+                }
+                continue;
+            }
+
+            if (is_string($layer)) {
+                $normalized[] = [
+                    'name' => sanitize_text_field($layer),
+                ];
+            }
+        }
+        return $normalized;
+    }
+
+    private function normalize_scan_layers_meta($raw_scan_layers): array
+    {
+        $scan_layers = is_array($raw_scan_layers) ? $raw_scan_layers : [];
+        return [
+            'executed' => $this->normalize_layer_rows($scan_layers['executed'] ?? []),
+            'premium_locked' => $this->normalize_layer_rows($scan_layers['premium_locked'] ?? []),
+        ];
+    }
+
+    private function build_content_scores_meta(string $scan_id, string $scan_tier, array $scan_layers, int $item_count, string $source): array
+    {
+        return [
+            'scan_id' => sanitize_text_field($scan_id),
+            'scan_tier' => sanitize_key($scan_tier),
+            'scan_layers' => $this->normalize_scan_layers_meta($scan_layers),
+            'item_count' => max(0, (int) $item_count),
+            'source' => sanitize_key($source),
+        ];
+    }
+
+    private function normalize_content_scores_meta(array $meta): array
+    {
+        return $this->build_content_scores_meta(
+            isset($meta['scan_id']) && is_string($meta['scan_id']) ? $meta['scan_id'] : '',
+            isset($meta['scan_tier']) && is_string($meta['scan_tier']) ? $meta['scan_tier'] : '',
+            isset($meta['scan_layers']) && is_array($meta['scan_layers']) ? $meta['scan_layers'] : [],
+            isset($meta['item_count']) ? (int) $meta['item_count'] : 0,
+            isset($meta['source']) && is_string($meta['source']) ? $meta['source'] : 'cache'
+        );
+    }
+
+    public function get_latest_content_scores_meta(): array
+    {
+        return $this->latest_content_scores_meta;
     }
 
     public function register_site(array $payload): array
@@ -315,6 +461,105 @@ class ICap_SEO_Service_Client
         return $this->api_request('POST', '/v1/billing/portal-session', $payload);
     }
 
+    public function test_connection(): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['api_base_url'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'api_base_url_missing',
+                    'message' => 'API Base URL is required before testing the connection.',
+                ],
+            ];
+        }
+
+        if (!empty($settings['site_id']) && !empty($settings['site_token'])) {
+            $status_result = $this->get_subscription_status(true);
+            if ($status_result['success']) {
+                return [
+                    'success' => true,
+                    'mode' => 'authenticated',
+                    'data' => $status_result['data'] ?? [],
+                ];
+            }
+
+            $error_code = $this->extract_error_code($status_result);
+            if ($error_code === 'invalid_token' || $error_code === 'forbidden') {
+                return [
+                    'success' => false,
+                    'error' => [
+                        'code' => 'invalid_token',
+                        'message' => 'API is reachable, but Site ID/Site Token were rejected.',
+                    ],
+                ];
+            }
+            if ($error_code === 'network_error' || $error_code === 'upstream_unavailable') {
+                return [
+                    'success' => false,
+                    'error' => [
+                        'code' => 'network_error',
+                        'message' => 'Could not reach the API endpoint.',
+                    ],
+                ];
+            }
+            if ($this->is_endpoint_missing_error($status_result)) {
+                return [
+                    'success' => false,
+                    'error' => [
+                        'code' => 'endpoint_not_found',
+                        'message' => 'API endpoint path was not found. Check API Base URL.',
+                    ],
+                ];
+            }
+
+            return $status_result;
+        }
+
+        $probe_result = $this->api_request('GET', '/v1/billing/subscription-status', [], [], false);
+        if ($probe_result['success']) {
+            return [
+                'success' => true,
+                'mode' => 'reachable_unregistered',
+                'data' => [],
+            ];
+        }
+
+        $probe_error_code = $this->extract_error_code($probe_result);
+        if ($probe_error_code === 'network_error' || $probe_error_code === 'upstream_unavailable') {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'network_error',
+                    'message' => 'Could not reach the API endpoint.',
+                ],
+            ];
+        }
+        if ($this->is_endpoint_missing_error($probe_result)) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'endpoint_not_found',
+                    'message' => 'API endpoint path was not found. Check API Base URL.',
+                ],
+            ];
+        }
+        if ($this->is_server_error_response($probe_result)) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'upstream_unavailable',
+                    'message' => 'API responded with a server-side error.',
+                ],
+            ];
+        }
+
+        return [
+            'success' => true,
+            'mode' => 'reachable_unregistered',
+            'data' => [],
+        ];
+    }
     public function get_scan_status(?string $scan_id = null, bool $allow_live_fetch = true): array
     {
         $settings = $this->get_connection_settings();
@@ -329,7 +574,29 @@ class ICap_SEO_Service_Client
             ];
         }
 
-        if (empty($settings['site_id']) || empty($resolved_scan_id)) {
+        if (empty($settings['site_id'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'scan_not_configured',
+                    'message' => 'Site ID is not configured.',
+                ],
+            ];
+        }
+        if (empty($resolved_scan_id) && $allow_live_fetch) {
+            $this->fetch_content_scores_from_api();
+            $latest_scan_id = '';
+            if (isset($this->latest_content_scores_meta['scan_id']) && is_string($this->latest_content_scores_meta['scan_id'])) {
+                $latest_scan_id = sanitize_text_field($this->latest_content_scores_meta['scan_id']);
+            }
+            if ($latest_scan_id !== '') {
+                $resolved_scan_id = $latest_scan_id;
+                $this->update_connection_settings([
+                    'last_scan_id' => $latest_scan_id,
+                ]);
+            }
+        }
+        if (empty($resolved_scan_id)) {
             return [
                 'success' => false,
                 'error' => [
@@ -353,6 +620,13 @@ class ICap_SEO_Service_Client
     {
         $settings = $this->get_connection_settings();
         if (empty($settings['site_id']) || !$this->is_api_connection_configured()) {
+            $this->latest_content_scores_meta = $this->build_content_scores_meta(
+                '',
+                '',
+                [],
+                0,
+                'not_configured'
+            );
             return [];
         }
 
@@ -367,12 +641,38 @@ class ICap_SEO_Service_Client
         );
 
         if (!$result['success']) {
+            $this->latest_content_scores_meta = $this->build_content_scores_meta(
+                '',
+                '',
+                [],
+                0,
+                'api_error'
+            );
             return [];
         }
 
         $items = $result['data']['items'] ?? [];
         if (!is_array($items)) {
+            $this->latest_content_scores_meta = $this->build_content_scores_meta(
+                '',
+                '',
+                [],
+                0,
+                'api_invalid'
+            );
             return [];
+        }
+        $scan_id = '';
+        if (isset($result['data']['scan_id']) && is_string($result['data']['scan_id'])) {
+            $scan_id = sanitize_text_field($result['data']['scan_id']);
+        }
+        $scan_tier = '';
+        if (isset($result['data']['scan_tier']) && is_string($result['data']['scan_tier'])) {
+            $scan_tier = sanitize_key($result['data']['scan_tier']);
+        }
+        $scan_layers = [];
+        if (isset($result['data']['scan_layers']) && is_array($result['data']['scan_layers'])) {
+            $scan_layers = $result['data']['scan_layers'];
         }
 
         $rows = [];
@@ -410,6 +710,13 @@ class ICap_SEO_Service_Client
                 'source' => 'api',
             ];
         }
+        $this->latest_content_scores_meta = $this->build_content_scores_meta(
+            $scan_id,
+            $scan_tier,
+            $scan_layers,
+            count($rows),
+            'api'
+        );
 
         return $rows;
     }
@@ -471,6 +778,40 @@ class ICap_SEO_Service_Client
         }
 
         return '';
+    }
+
+    private function extract_error_code(array $result): string
+    {
+        if (isset($result['error']['code']) && is_string($result['error']['code'])) {
+            return sanitize_key($result['error']['code']);
+        }
+
+        return '';
+    }
+
+    private function extract_http_status(array $result): int
+    {
+        if (isset($result['error']['http_status']) && is_numeric($result['error']['http_status'])) {
+            return (int) $result['error']['http_status'];
+        }
+
+        if (isset($result['http_status']) && is_numeric($result['http_status'])) {
+            return (int) $result['http_status'];
+        }
+
+        return 0;
+    }
+
+    private function is_endpoint_missing_error(array $result): bool
+    {
+        return $this->extract_http_status($result) === 404;
+    }
+
+    private function is_server_error_response(array $result): bool
+    {
+        $status_code = $this->extract_http_status($result);
+
+        return $status_code >= 500;
     }
 
     private function api_request(string $method, string $path, array $body = [], array $query = [], bool $requires_auth = true, array $extra_headers = []): array
@@ -546,6 +887,7 @@ class ICap_SEO_Service_Client
                 'error' => [
                     'code' => isset($error_payload['code']) ? (string) $error_payload['code'] : 'api_error',
                     'message' => isset($error_payload['message']) ? (string) $error_payload['message'] : sprintf('API request failed with status %d.', $status_code),
+                    'http_status' => $status_code,
                 ],
             ];
         }
@@ -555,12 +897,14 @@ class ICap_SEO_Service_Client
                 'success' => (bool) $decoded_body['success'],
                 'data' => isset($decoded_body['data']) && is_array($decoded_body['data']) ? $decoded_body['data'] : [],
                 'error' => isset($decoded_body['error']) && is_array($decoded_body['error']) ? $decoded_body['error'] : [],
+                'http_status' => $status_code,
             ];
         }
 
         return [
             'success' => true,
             'data' => is_array($decoded_body) ? $decoded_body : [],
+            'http_status' => $status_code,
         ];
     }
 }

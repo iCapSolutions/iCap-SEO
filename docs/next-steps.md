@@ -21,7 +21,17 @@
 - Stripe webhook endpoint/signing-secret flow validated in active environment: `Done`
 - Profile-driven backend scan execution with DynamoDB run/history persistence: `Done`
 - Workflow-based infrastructure apply verified for latest scan persistence rollout: `Done`
+- Setup Wizard connection testing and guidance improvements: `Done`
+- Tiered scan execution and premium-layer exposure (`basic` vs `premium`): `In Progress`
 - Self-serve paid signup and billing automation (Stripe-driven): `In Progress`
+## Immediate implementation focus (active)
+- Tiered scan rollout for customer-facing scans
+  - Status: `In Progress`
+  - Scope:
+    - Backend policy now targets `basic` tier for non-premium entitlement states and `premium` tier for active/trialing.
+    - Scan responses are being standardized to expose `scan_tier` and `scan_layers` (`executed` / `premium_locked`) for plugin display.
+    - Plugin Setup Wizard now surfaces scan tier and layer visibility from scan-status responses.
+    - Remaining: complete end-to-end validation on Glamourpuss and finalize cross-repo docs alignment.
 
 ## Next execution priorities
 1. Phase-1 paid onboarding + entitlement enforcement
@@ -33,7 +43,8 @@
      - Remaining: complete customer-portal human auth + tenant role enforcement before production rollout.
      - Remaining: run live end-to-end subscription transition validation across representative tenant states.
      - Done: customer plugin billing-state checks and scan-blocking notice handling for `payment_required`, `subscription_required`, and `account_suspended`.
-     - Done: backend support for site-token `GET /v1/billing/subscription-status` and entitlement-gated `POST /v1/sites/{site_id}/scans`.
+    - Done: backend support for site-token `GET /v1/billing/subscription-status` and entitlement-aware scan policy on `POST /v1/sites/{site_id}/scans`.
+    - In Progress: finalize/validate tiered scan-layer behavior (`basic` baseline vs `premium` full layer set) in live-style test flow.
 2. Provider control-center plugin (private repository)
    - Status: `In Progress`
    - Scope:
@@ -43,11 +54,11 @@
      - Expand beyond current baseline with deeper support workflows and operations tooling.
      - Keep bootstrap checklist and operational docs current in `docs/control-center-private-repo-bootstrap.md`.
 3. Plugin settings + connection screen
-   - Status: `In Progress`
+   - Status: `Done`
    - Scope:
      - Done: registration token settings UX and precedence docs (`wp-config.php` constant over saved setting).
      - Done: billing status action and persisted billing-check metadata.
-     - Remaining: add/finish Setup Wizard "Test Connection" action and tighten error-state guidance.
+     - Done: Setup Wizard **Test Connection** action with actionable notices for API reachability, invalid credentials, and endpoint misconfiguration.
 4. First cloud API contract
    - Status: `Done`
    - Scope:
