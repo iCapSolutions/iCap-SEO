@@ -17,6 +17,13 @@ $notice_map = [
     'registration_token_missing' => ['type' => 'error', 'message' => __('Site registration failed. Set Registration Token in Settings or define ICAP_SEO_REGISTRATION_TOKEN in wp-config.php.', 'icap-seo')],
     'api_base_url_missing' => ['type' => 'error', 'message' => __('Site registration failed. API Base URL is required.', 'icap-seo')],
     'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Confirm API Base URL and Registration Token, then retry.', 'icap-seo')],
+    'connection_ok_authenticated' => ['type' => 'updated', 'message' => __('Connection test succeeded. API and saved site credentials are valid.', 'icap-seo')],
+    'connection_ok_reachable' => ['type' => 'updated', 'message' => __('Connection test reached the API. Next step: register this site to provision credentials.', 'icap-seo')],
+    'connection_api_base_url_missing' => ['type' => 'error', 'message' => __('Connection test failed. API Base URL is required before testing.', 'icap-seo')],
+    'connection_invalid_token' => ['type' => 'error', 'message' => __('Connection test reached the API, but Site ID/Site Token were rejected. Re-run registration in Setup Wizard.', 'icap-seo')],
+    'connection_endpoint_not_found' => ['type' => 'error', 'message' => __('Connection test reached the host but API route was not found. Confirm API Base URL points to the iCap SEO API root.', 'icap-seo')],
+    'connection_unreachable' => ['type' => 'error', 'message' => __('Connection test could not reach the API. Verify network access and API availability.', 'icap-seo')],
+    'connection_failed' => ['type' => 'error', 'message' => __('Connection test failed with an unexpected API response. Check logs and retry.', 'icap-seo')],
     'scan_queued' => ['type' => 'updated', 'message' => __('Scan request queued.', 'icap-seo')],
     'payment_required' => ['type' => 'error', 'message' => __('Scan request blocked: payment is required for this site subscription. Resolve billing and retry.', 'icap-seo')],
     'subscription_required' => ['type' => 'error', 'message' => __('Scan request blocked: no active subscription is associated with this site. Activate a plan and retry.', 'icap-seo')],
@@ -44,6 +51,33 @@ $notice_map = [
     'billing_portal_returned' => ['type' => 'updated', 'message' => __('Returned from billing portal.', 'icap-seo')],
     'render_fallback' => ['type' => 'error', 'message' => __('Dashboard loaded in fallback mode after an internal error. Please retry and check logs.', 'icap-seo')],
 ];
+
+if (!isset($latest_content_scores_meta) || !is_array($latest_content_scores_meta)) {
+    $latest_content_scores_meta = [];
+}
+$latest_scores_scan_id = (isset($latest_content_scores_meta['scan_id']) && is_string($latest_content_scores_meta['scan_id']))
+    ? sanitize_text_field($latest_content_scores_meta['scan_id'])
+    : '';
+$latest_scores_scan_tier = (isset($latest_content_scores_meta['scan_tier']) && is_string($latest_content_scores_meta['scan_tier']))
+    ? sanitize_key($latest_content_scores_meta['scan_tier'])
+    : '';
+$latest_scores_source = (isset($latest_content_scores_meta['source']) && is_string($latest_content_scores_meta['source']))
+    ? sanitize_key($latest_content_scores_meta['source'])
+    : 'unknown';
+$latest_scores_item_count = isset($latest_content_scores_meta['item_count']) ? (int) $latest_content_scores_meta['item_count'] : count($content_scores ?? []);
+$latest_scores_scan_layers = (isset($latest_content_scores_meta['scan_layers']) && is_array($latest_content_scores_meta['scan_layers']))
+    ? $latest_content_scores_meta['scan_layers']
+    : [];
+$latest_scores_executed_layer_names = [];
+if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_scan_layers['executed'])) {
+    foreach ($latest_scores_scan_layers['executed'] as $layer_row) {
+        if (is_array($layer_row) && isset($layer_row['name']) && is_string($layer_row['name'])) {
+            $latest_scores_executed_layer_names[] = sanitize_text_field($layer_row['name']);
+        } elseif (is_string($layer_row)) {
+            $latest_scores_executed_layer_names[] = sanitize_text_field($layer_row);
+        }
+    }
+}
 ?>
 <div class="wrap icap-seo-wrap">
     <h1 class="icap-seo-header">
@@ -77,10 +111,58 @@ $notice_map = [
 
     <section class="icap-seo-content">
         <?php if ($active_tab === 'setup-wizard') : ?>
+            <?php
+            $scan_tier_value = '';
+            if (isset($scan_status_data['scan_tier']) && is_string($scan_status_data['scan_tier'])) {
+                $scan_tier_value = sanitize_text_field($scan_status_data['scan_tier']);
+            }
+            if ($scan_tier_value === '' && $latest_scores_scan_tier !== '') {
+                $scan_tier_value = $latest_scores_scan_tier;
+            }
+            $scan_layers_data = [];
+            if (isset($scan_status_data['scan_layers']) && is_array($scan_status_data['scan_layers'])) {
+                $scan_layers_data = $scan_status_data['scan_layers'];
+            }
+            if (empty($scan_layers_data) && !empty($latest_scores_scan_layers)) {
+                $scan_layers_data = $latest_scores_scan_layers;
+            }
+            $scan_status_value = 'n/a';
+            if (isset($scan_status_data['status']) && is_string($scan_status_data['status'])) {
+                $scan_status_value = sanitize_key($scan_status_data['status']);
+            } elseif ($latest_scores_scan_id !== '') {
+                $scan_status_value = 'completed';
+            }
+            $latest_scan_id_display = $connection_settings['last_scan_id'];
+            if (isset($scan_status_data['scan_id']) && is_string($scan_status_data['scan_id'])) {
+                $latest_scan_id_display = sanitize_text_field($scan_status_data['scan_id']);
+            } elseif ($latest_scan_id_display === '' && $latest_scores_scan_id !== '') {
+                $latest_scan_id_display = $latest_scores_scan_id;
+            }
+            $executed_layer_names = [];
+            if (isset($scan_layers_data['executed']) && is_array($scan_layers_data['executed'])) {
+                foreach ($scan_layers_data['executed'] as $layer_row) {
+                    if (is_array($layer_row) && isset($layer_row['name']) && is_string($layer_row['name'])) {
+                        $executed_layer_names[] = sanitize_text_field($layer_row['name']);
+                    } elseif (is_string($layer_row)) {
+                        $executed_layer_names[] = sanitize_text_field($layer_row);
+                    }
+                }
+            }
+            $premium_locked_layer_names = [];
+            if (isset($scan_layers_data['premium_locked']) && is_array($scan_layers_data['premium_locked'])) {
+                foreach ($scan_layers_data['premium_locked'] as $layer_row) {
+                    if (is_array($layer_row) && isset($layer_row['name']) && is_string($layer_row['name'])) {
+                        $premium_locked_layer_names[] = sanitize_text_field($layer_row['name']);
+                    } elseif (is_string($layer_row)) {
+                        $premium_locked_layer_names[] = sanitize_text_field($layer_row);
+                    }
+                }
+            }
+            ?>
             <h2><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
             <ol>
                 <li><?php esc_html_e('Enter API Base URL, then request site credentials from iCap SEO.', 'icap-seo'); ?></li>
-                <li><?php esc_html_e('Confirm subscription entitlement is active before triggering scans.', 'icap-seo'); ?></li>
+                <li><?php esc_html_e('Run baseline scans anytime, then activate premium subscription for full layered checks.', 'icap-seo'); ?></li>
                 <li><?php esc_html_e('Run the first baseline SEO analysis.', 'icap-seo'); ?></li>
                 <li><?php esc_html_e('Review prioritized recommendations.', 'icap-seo'); ?></li>
             </ol>
@@ -91,18 +173,47 @@ $notice_map = [
                     <button type="submit" class="button button-primary"><?php esc_html_e('Request Credentials & Register Site', 'icap-seo'); ?></button>
                 </form>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="icap_seo_test_connection">
+                    <?php wp_nonce_field('icap_seo_test_connection'); ?>
+                    <button type="submit" class="button"><?php esc_html_e('Test Connection', 'icap-seo'); ?></button>
+                </form>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="icap_seo_trigger_scan">
                     <?php wp_nonce_field('icap_seo_trigger_scan'); ?>
                     <button type="submit" class="button"><?php esc_html_e('Trigger Full Scan', 'icap-seo'); ?></button>
                 </form>
             </div>
             <p class="description">
+                <?php esc_html_e('Connection profile:', 'icap-seo'); ?>
+                <?php esc_html_e('API Base URL', 'icap-seo'); ?>
+                <code><?php echo esc_html($connection_settings['api_base_url'] !== '' ? 'configured' : 'missing'); ?></code>
+                |
+                <?php esc_html_e('Site credentials', 'icap-seo'); ?>
+                <code><?php echo esc_html(($connection_settings['site_id'] !== '' && $connection_settings['site_token'] !== '') ? 'present' : 'missing'); ?></code>
+            </p>
+            <p class="description">
                 <?php esc_html_e('Latest scan ID:', 'icap-seo'); ?>
-                <code><?php echo esc_html($connection_settings['last_scan_id'] ?: 'n/a'); ?></code>
+                <code><?php echo esc_html($latest_scan_id_display !== '' ? $latest_scan_id_display : 'n/a'); ?></code>
                 |
                 <?php esc_html_e('Status:', 'icap-seo'); ?>
-                <code><?php echo esc_html($scan_status_data['status'] ?? 'n/a'); ?></code>
+                <code><?php echo esc_html($scan_status_value); ?></code>
             </p>
+            <p class="description">
+                <?php esc_html_e('Scan tier:', 'icap-seo'); ?>
+                <code><?php echo esc_html($scan_tier_value !== '' ? $scan_tier_value : 'n/a'); ?></code>
+            </p>
+            <?php if (!empty($executed_layer_names)) : ?>
+                <p class="description">
+                    <?php esc_html_e('Executed scan layers:', 'icap-seo'); ?>
+                    <code><?php echo esc_html(implode(', ', $executed_layer_names)); ?></code>
+                </p>
+            <?php endif; ?>
+            <?php if (!empty($premium_locked_layer_names)) : ?>
+                <p class="description">
+                    <?php esc_html_e('Premium-only layers not included in this scan:', 'icap-seo'); ?>
+                    <code><?php echo esc_html(implode(', ', $premium_locked_layer_names)); ?></code>
+                </p>
+            <?php endif; ?>
         <?php elseif ($active_tab === 'site-health') : ?>
             <h2><?php esc_html_e('Site Health', 'icap-seo'); ?></h2>
             <div class="icap-seo-cards">
@@ -115,13 +226,49 @@ $notice_map = [
                     <p><?php echo esc_html($score_snapshot['last_scan'] ?? 'Not available'); ?></p>
                 </div>
                 <div class="icap-seo-card">
-                    <h3><?php esc_html_e('Recommendations', 'icap-seo'); ?></h3>
-                    <p><?php echo esc_html(count($recommendation_preview['items'])); ?> <?php esc_html_e('queued items', 'icap-seo'); ?></p>
+                    <h3><?php esc_html_e('Scored Content Items', 'icap-seo'); ?></h3>
+                    <p><?php echo esc_html((string) max(count($content_scores), $latest_scores_item_count)); ?></p>
                 </div>
             </div>
+            <?php if ($latest_scores_scan_id !== '') : ?>
+                <p class="description">
+                    <?php esc_html_e('Latest completed scan:', 'icap-seo'); ?>
+                    <code><?php echo esc_html($latest_scores_scan_id); ?></code>
+                    <?php if ($latest_scores_scan_tier !== '') : ?>
+                        |
+                        <?php esc_html_e('Tier:', 'icap-seo'); ?>
+                        <code><?php echo esc_html($latest_scores_scan_tier); ?></code>
+                    <?php endif; ?>
+                </p>
+            <?php endif; ?>
+            <?php if (!empty($latest_scores_executed_layer_names)) : ?>
+                <p class="description">
+                    <?php esc_html_e('Executed layers:', 'icap-seo'); ?>
+                    <code><?php echo esc_html(implode(', ', $latest_scores_executed_layer_names)); ?></code>
+                </p>
+            <?php endif; ?>
         <?php elseif ($active_tab === 'content-scores') : ?>
             <h2><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
-            <p><?php esc_html_e('Pages and posts with iCap placeholder scoring and side-by-side Rank Math comparison baseline.', 'icap-seo'); ?></p>
+            <?php if ($latest_scores_scan_id !== '') : ?>
+                <p class="description">
+                    <?php esc_html_e('Latest scan:', 'icap-seo'); ?>
+                    <code><?php echo esc_html($latest_scores_scan_id); ?></code>
+                    <?php if ($latest_scores_scan_tier !== '') : ?>
+                        |
+                        <?php esc_html_e('Tier:', 'icap-seo'); ?>
+                        <code><?php echo esc_html($latest_scores_scan_tier); ?></code>
+                    <?php endif; ?>
+                    |
+                    <?php esc_html_e('Scored items:', 'icap-seo'); ?>
+                    <code><?php echo esc_html((string) $latest_scores_item_count); ?></code>
+                </p>
+            <?php endif; ?>
+            <?php if (!empty($latest_scores_executed_layer_names)) : ?>
+                <p class="description">
+                    <?php esc_html_e('Executed layers:', 'icap-seo'); ?>
+                    <code><?php echo esc_html(implode(', ', $latest_scores_executed_layer_names)); ?></code>
+                </p>
+            <?php endif; ?>
             <div class="icap-seo-table-wrap">
                 <table class="widefat striped">
                     <thead>
@@ -137,7 +284,13 @@ $notice_map = [
                     <tbody>
                         <?php if (empty($content_scores)) : ?>
                             <tr>
-                                <td colspan="6"><?php esc_html_e('No pages or posts found.', 'icap-seo'); ?></td>
+                                <td colspan="6">
+                                    <?php if ($latest_scores_source === 'api') : ?>
+                                        <?php esc_html_e('No scored content rows were returned for the latest scan yet.', 'icap-seo'); ?>
+                                    <?php else : ?>
+                                        <?php esc_html_e('No pages or posts found.', 'icap-seo'); ?>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php else : ?>
                             <?php foreach ($content_scores as $row) : ?>
@@ -159,7 +312,11 @@ $notice_map = [
                 </table>
             </div>
             <p class="description">
-                <?php esc_html_e('Data source: API when configured and reachable; placeholder values otherwise.', 'icap-seo'); ?>
+                <?php if ($latest_scores_source === 'api') : ?>
+                    <?php esc_html_e('Data source: live iCap SEO API scan results.', 'icap-seo'); ?>
+                <?php else : ?>
+                    <?php esc_html_e('Data source: placeholder fallback (API results unavailable for this view).', 'icap-seo'); ?>
+                <?php endif; ?>
             </p>
         <?php elseif ($active_tab === 'settings') : ?>
             <h2><?php esc_html_e('API Connection Settings', 'icap-seo'); ?></h2>

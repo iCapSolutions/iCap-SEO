@@ -33,6 +33,7 @@ class ICap_SEO_Admin
     {
         add_action('admin_post_icap_seo_save_settings', [$this, 'handle_save_settings']);
         add_action('admin_post_icap_seo_register_site', [$this, 'handle_register_site']);
+        add_action('admin_post_icap_seo_test_connection', [$this, 'handle_test_connection']);
         add_action('admin_post_icap_seo_trigger_scan', [$this, 'handle_trigger_scan']);
         add_action('admin_post_icap_seo_check_billing_status', [$this, 'handle_check_billing_status']);
         add_action('admin_post_icap_seo_start_billing_checkout', [$this, 'handle_start_billing_checkout']);
@@ -113,19 +114,34 @@ class ICap_SEO_Admin
         ];
         $content_scores = [];
         $scan_status_data = [];
+        $latest_content_scores_meta = [];
+        $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
 
         try {
             if ($active_tab === 'site-health' || $active_tab === 'home') {
-                $score_snapshot = $this->service_client->get_site_score_snapshot(false);
+                $score_snapshot = $this->service_client->get_site_score_snapshot($allow_live_fetch);
             }
 
-            if ($active_tab === 'content-scores' || $active_tab === 'site-health') {
-                $content_scores = $this->service_client->get_content_scores_overview(false);
+            if ($active_tab === 'content-scores' || $active_tab === 'site-health' || $active_tab === 'home') {
+                $content_scores = $this->service_client->get_content_scores_overview($allow_live_fetch);
+                $latest_content_scores_meta = $this->service_client->get_latest_content_scores_meta();
             }
 
             if ($active_tab === 'setup-wizard') {
-                $scan_status_result = $this->service_client->get_scan_status(null, false);
+                $scan_status_result = $this->service_client->get_scan_status(null, $allow_live_fetch);
                 $scan_status_data = $scan_status_result['success'] ? $scan_status_result['data'] : [];
+                if (empty($latest_content_scores_meta)) {
+                    $this->service_client->get_content_scores_overview($allow_live_fetch);
+                    $latest_content_scores_meta = $this->service_client->get_latest_content_scores_meta();
+                }
+                if (empty($scan_status_data) && !empty($latest_content_scores_meta['scan_id'])) {
+                    $scan_status_data = [
+                        'scan_id' => $latest_content_scores_meta['scan_id'],
+                        'scan_tier' => $latest_content_scores_meta['scan_tier'] ?? '',
+                        'scan_layers' => $latest_content_scores_meta['scan_layers'] ?? [],
+                        'status' => 'completed',
+                    ];
+                }
             }
         } catch (Throwable $e) {
             $notice_code = 'render_fallback';
@@ -140,6 +156,7 @@ class ICap_SEO_Admin
             ];
             $content_scores = [];
             $scan_status_data = [];
+            $latest_content_scores_meta = [];
             error_log('ICap SEO dashboard fallback: ' . $e->getMessage());
         }
 
@@ -200,6 +217,45 @@ class ICap_SEO_Admin
         }
 
         $this->redirect_with_notice('register_failed', 'settings');
+    }
+    public function handle_test_connection(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_test_connection');
+
+        $result = $this->service_client->test_connection();
+        if ($result['success']) {
+            $mode = isset($result['mode']) && is_string($result['mode']) ? sanitize_key($result['mode']) : '';
+            if ($mode === 'authenticated') {
+                $this->redirect_with_notice('connection_ok_authenticated', 'setup-wizard');
+                return;
+            }
+
+            $this->redirect_with_notice('connection_ok_reachable', 'setup-wizard');
+            return;
+        }
+
+        $error_code = $this->extract_error_code($result);
+        if ($error_code === 'api_base_url_missing') {
+            $this->redirect_with_notice('connection_api_base_url_missing', 'settings');
+            return;
+        }
+        if ($error_code === 'invalid_token' || $error_code === 'forbidden') {
+            $this->redirect_with_notice('connection_invalid_token', 'setup-wizard');
+            return;
+        }
+        if ($error_code === 'endpoint_not_found') {
+            $this->redirect_with_notice('connection_endpoint_not_found', 'setup-wizard');
+            return;
+        }
+        if ($error_code === 'network_error' || $error_code === 'upstream_unavailable') {
+            $this->redirect_with_notice('connection_unreachable', 'setup-wizard');
+            return;
+        }
+
+        $this->redirect_with_notice('connection_failed', 'setup-wizard');
     }
 
     public function handle_trigger_scan(): void

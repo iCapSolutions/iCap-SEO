@@ -33,15 +33,29 @@ fi
 ZIP_BASENAME="icap-seo-${TAG_VERSION}.zip"
 ZIP_PATH="${DIST_DIR}/${ZIP_BASENAME}"
 LEGACY_ZIP_PATH="${DIST_DIR}/icap-seo.zip"
+SHA_PATH="${DIST_DIR}/icap-seo-${TAG_VERSION}.sha256"
 
 mkdir -p "${DIST_DIR}"
+if [[ -f "${ZIP_PATH}" && "${FORCE_REBUILD:-0}" != "1" ]]; then
+  echo "Release package already exists for ${TAG_VERSION}: ${ZIP_PATH}"
+  echo "Bump ICAP_SEO_VERSION before packaging a new release, or rerun with FORCE_REBUILD=1."
+  exit 1
+fi
 rm -f "${ZIP_PATH}"
 rm -f "${LEGACY_ZIP_PATH}"
+rm -f "${SHA_PATH}"
 
 (
   cd "${REPO_ROOT}/wordpress-plugin"
   zip -rq "${ZIP_PATH}" "icap-seo"
 )
 
+(
+  cd "${DIST_DIR}"
+  shasum -a 256 "${ZIP_BASENAME}" > "${SHA_PATH##*/}"
+)
+
 echo "Built plugin zip:"
 echo "  ${ZIP_PATH}"
+echo "Checksum:"
+echo "  ${SHA_PATH}"
