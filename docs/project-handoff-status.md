@@ -116,7 +116,10 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Stripe webhook endpoint/signing-secret flow is configured and validated for current environment.
 - EventBridge → SNS activity notifications are active with readable multiline email formatting.
 - Scan API routes are profile-driven and persist run/history data in DynamoDB-backed tables.
-- Tiered scan-layer rollout is implemented in code and docs are being finalized; full Glamourpuss end-to-end validation remains the active finalization step.
+- Tiered scan-layer rollout is implemented, merged, and validated in live scan execution records.
+- Infrastructure is live-synced to AWS for iCap SEO and production environments.
+- Terraform no-op workflow behavior now skips manual approval/apply correctly when plans are true no-op.
+- Active engineering stop point is endpoint hardening for exposed APIs before scan/scoring expansion work resumes.
 - Workflow-based infrastructure apply has been validated for this deployment line.
 - End-to-end architecture/workflow documentation is now captured in `docs/architecture.md`.
 
@@ -127,37 +130,50 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Self-serve paid signup/subscription-management API flow is shipped; customer portal auth/role hardening and live transition validation remain pending.
 - Architecture decision: keep customer plugin in public `iCap-SEO` and move iCapSolutions admin/control-center tooling to separate private `iCap-SEO-control-center`, sharing common backend endpoint contracts.
 
+## Session wrap-up checkpoint (2026-07-24)
+- Tiered scan-layer rollout shipped and merged across core SEO repos:
+  - `iCap-SEO#22`
+  - `infrastructure#48`
+  - `seo-tools#14`
+- Live AWS-to-Terraform reconciliation shipped and merged:
+  - `infrastructure#62`
+- Terraform no-op workflow fallthrough fixes shipped and merged:
+  - `infrastructure#64`
+  - `infrastructure#66`
+- Current implementation stop point is backend endpoint hardening; hardening code changes are the next net-new engineering phase.
+
+## Phased roadmap snapshot
+1. **Phase 1 — Foundation + registration flow**: `Done`
+   - Customer plugin registration, API connectivity, baseline scan/status/content score flow.
+2. **Phase 2 — Billing + entitlement-aware scan tiers**: `Done`
+   - Stripe billing/webhook path, entitlement gating, `basic` vs `premium` scan-layer behavior.
+3. **Phase 3 — Infra convergence + release safety**: `Done`
+   - Live env Terraform sync and CI no-op merge-flow reliability fixes.
+4. **Phase 4 — Exposed-endpoint hardening**: `In Progress` (**active phase now**)
+   - Tighten auth boundaries, strict input validation, abuse controls, and security regression coverage.
+5. **Phase 5 — Scan/scoring capability expansion**: `Planned` (**next phase**)
+   - Expand scan layers, scoring depth, and recommendation quality.
+6. **Phase 6 — Productization + operations scale-out**: `Planned`
+   - Monitoring/runbooks, docs IA cleanup, and rollout/support maturity.
+
 ## Highest-priority next actions
-1. **Finalize tiered scan behavior and validation (immediate)**
-   - Complete end-to-end Glamourpuss validation for both expected paths:
-     - baseline/basic scan behavior for non-premium entitlement states
-     - premium layered scan behavior for active/trialing states
-   - Confirm plugin display of `scan_tier`, executed layers, and premium-locked layers against live API responses.
-   - Ensure cross-repo docs remain synchronized for tier/layer definitions and customer-facing messaging.
-2. **Website productization and docs IA cleanup (soon)**
-   - Expand and reorganize `icapsolutions` content so the iCap SEO service has one clear user path.
-   - Publish complete customer-facing documentation for setup, billing flow, onboarding, and support.
-   - Ensure CTA path is explicit (contact/demo/trial) and linked from existing SEO/service pages.
-3. **Complete paid onboarding automation (Stripe + control-plane)**
-   - Complete customer-portal human auth + tenant-role enforcement for production.
-   - Execute live end-to-end validation of Stripe-driven entitlement transitions.
-   - Capture rollback/runbook guidance for webhook failures and billing-policy blocks.
-4. **Integrated validation across plugin + backend**
-   - Re-run end-to-end checks against a live test site for key entitlement transitions:
-     - active/trialing (scan allowed)
-     - past_due/grace_period (payment-required block)
-     - canceled/suspended (scan blocked)
-   - Capture runbook notes for support and troubleshooting.
-5. **Provider control-center plugin track**
-   - Continue expanding the separate private internal admin plugin for iCapSolutions operations (not bundled into customer plugin).
-   - Keep shared/common API contracts synchronized while preserving strict deployment and permissions separation from client sites.
-6. **Plugin release discipline**
-   - Prepare next plugin release when plugin code changes warrant a version bump beyond `0.1.10`.
-   - Publish release notes and align README install/test steps with current behavior.
-7. **Backend operations hardening**
-   - Add explicit monitoring/alarming and rollback runbook notes for backend/plugin deploys.
-   - Add recurring smoke-test automation for scan trigger/status/content-history endpoints after deploys.
-8. **Cross-repo roadmap sync**
+1. **Phase 4: Harden exposed endpoints (immediate active work)**
+   - Audit and tighten auth/authorization on exposed backend routes in `infrastructure/environments/icap-seo-production/lambda_src/handler.py`.
+   - Enforce stricter method/input validation per route and normalize denial/error behavior.
+   - Align API edge protections (rate limits/throttling/WAF expectations) for externally reachable paths.
+   - Add focused regression/security tests and runbook notes for auth and webhook abuse/failure paths.
+2. **Phase 5: Expand scanning and scoring capabilities (next)**
+   - Define and implement next scan-layer additions beyond the current baseline/premium split.
+   - Expand score payload depth (category clarity, deltas/history, recommendation priority metadata).
+   - Validate plugin rendering/UX for new scan/scoring response fields.
+3. **Website productization and docs IA cleanup (soon)**
+   - Expand and reorganize `icapsolutions` content so iCap SEO has one clear user path.
+   - Publish complete customer-facing setup/billing/onboarding/support documentation.
+   - Keep CTA pathways explicit and linked from existing SEO/service pages.
+4. **Provider control-center plugin track**
+   - Continue expanding the private internal admin plugin for iCapSolutions operations.
+   - Keep shared endpoint contracts synchronized while preserving strict customer/provider separation.
+5. **Cross-repo roadmap sync**
    - Keep this handoff file updated when major milestones ship in `iCap-SEO`, `iCap-SEO-control-center`, `infrastructure`, and `icapsolutions`.
 
 ## Open backlog themes
