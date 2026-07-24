@@ -22,16 +22,33 @@
 - Profile-driven backend scan execution with DynamoDB run/history persistence: `Done`
 - Workflow-based infrastructure apply verified for latest scan persistence rollout: `Done`
 - Setup Wizard connection testing and guidance improvements: `Done`
-- Tiered scan execution and premium-layer exposure (`basic` vs `premium`): `In Progress`
+- Tiered scan execution and premium-layer exposure (`basic` vs `premium`): `Done`
+- Live AWS→Terraform sync + no-op workflow fallthrough reliability: `Done`
+- Endpoint hardening for exposed backend/API routes: `In Progress`
+- Scan/scoring capability expansion beyond current layers: `Planned`
 - Self-serve paid signup and billing automation (Stripe-driven): `In Progress`
+
+## Phased roadmap (authoritative order)
+1. **Phase 1 — Foundation + registration path**: `Done`
+2. **Phase 2 — Billing + entitlement-aware scan tiers**: `Done`
+3. **Phase 3 — Infra convergence + CI release safety**: `Done`
+4. **Phase 4 — Exposed endpoint hardening**: `In Progress` (**active**)
+5. **Phase 5 — Scan/scoring capability expansion**: `Planned` (**next**)
+6. **Phase 6 — Productization + operations scale-out**: `Planned`
+
 ## Immediate implementation focus (active)
-- Tiered scan rollout for customer-facing scans
+- Phase 4: endpoint hardening for exposed backend/API surfaces
   - Status: `In Progress`
   - Scope:
-    - Backend policy now targets `basic` tier for non-premium entitlement states and `premium` tier for active/trialing.
-    - Scan responses are being standardized to expose `scan_tier` and `scan_layers` (`executed` / `premium_locked`) for plugin display.
-    - Plugin Setup Wizard now surfaces scan tier and layer visibility from scan-status responses.
-    - Remaining: complete end-to-end validation on Glamourpuss and finalize cross-repo docs alignment.
+    - Tighten route-level auth/authorization boundaries.
+    - Enforce stricter request/method/input validation and consistent deny/error behavior.
+    - Align abuse controls (throttling/rate-limit/WAF expectations) and add security regression coverage.
+- Phase 5 preparation: scanning/scoring expansion backlog
+  - Status: `Planned`
+  - Scope:
+    - Define next scan-layer additions beyond current baseline/premium behavior.
+    - Expand scoring payload depth (category clarity, deltas/history, recommendation priority metadata).
+    - Validate plugin UX handling for expanded scan/scoring fields.
 
 ## Next execution priorities
 1. Phase-1 paid onboarding + entitlement enforcement
@@ -43,8 +60,9 @@
      - Remaining: complete customer-portal human auth + tenant role enforcement before production rollout.
      - Remaining: run live end-to-end subscription transition validation across representative tenant states.
      - Done: customer plugin billing-state checks and scan-blocking notice handling for `payment_required`, `subscription_required`, and `account_suspended`.
-    - Done: backend support for site-token `GET /v1/billing/subscription-status` and entitlement-aware scan policy on `POST /v1/sites/{site_id}/scans`.
-    - In Progress: finalize/validate tiered scan-layer behavior (`basic` baseline vs `premium` full layer set) in live-style test flow.
+     - Done: backend support for site-token `GET /v1/billing/subscription-status` and entitlement-aware scan policy on `POST /v1/sites/{site_id}/scans`.
+     - Done: tiered scan-layer behavior (`basic` baseline vs `premium` full layer set) is validated and merged.
+     - Remaining: complete endpoint hardening of exposed backend routes before additional scan/scoring feature growth.
 2. Provider control-center plugin (private repository)
    - Status: `In Progress`
    - Scope:
