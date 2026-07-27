@@ -27,6 +27,7 @@
 - Endpoint hardening for exposed backend/API routes: `Done`
 - CloudFront API front-door migration + plugin endpoint rollout validation: `Done`
 - Customer plugin content-score detail drill-down (breakdown/recommendations/trend): `In Progress`
+- Phase 5 remediation API MVP (`remediation-preview` + `apply-remediation`): `In Progress`
 - Scan/scoring capability expansion beyond current layers: `Planned`
 - Self-serve paid signup and billing automation (Stripe-driven): `In Progress`
 
@@ -52,6 +53,7 @@
   - Scope:
     - Define next scan-layer additions beyond current baseline/premium behavior.
     - In Progress: expand customer plugin UX with content-detail drill-down for category clarity, recommendation priority metadata, and score history/trend.
+    - In Progress: backend Phase 5 remediation contract MVP with secure site-token routes for preview/apply payloads on scored content keys.
     - Planned: add guided remediation workflow concept (`Yes, make SEO changes`) that applies approved recommendations, writes page updates, and reruns scans to validate score improvement.
     - Planned: define remediation safety boundaries (preview/diff confirmation, capability checks, reversible edits, audit trail).
 
