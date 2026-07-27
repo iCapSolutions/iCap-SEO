@@ -37,13 +37,16 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
   - shows executed scan layers and premium-locked layers when returned by backend
 - Added versioned ZIP packaging conventions and script support:
   - release artifact format `icap-seo-vX.Y.Z.zip`
-  - latest plugin version on `main`: `0.1.10`
-  - latest distributed ZIP line for testing: `icap-seo-v0.1.10.zip`
+  - latest plugin version on `main`: `0.1.11`
+  - latest distributed ZIP line for testing: `icap-seo-v0.1.11.zip`
 - Live smoke flow validated:
   - register (including expected token-required failure path)
   - trigger scan
   - poll scan status
   - fetch content scores
+- Edge endpoint migration validated:
+  - customer/admin API traffic now fronts through CloudFront (`api_frontdoor_base_url`) instead of direct API Gateway URL in plugin settings.
+  - plugin default API base URL constant now points to CloudFront front door.
 
 ### 2) Backend/infrastructure (`infrastructure`)
 - Provisioned iCap SEO API/backend infrastructure in AWS.
@@ -85,6 +88,11 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Applied and verified these infrastructure changes via GitHub workflow path:
   - merged workflow artifact fix PR `infrastructure#46`
   - successful workflow apply run: `Terraform Plan / Approval / Apply` (`workflow_dispatch`)
+- Endpoint hardening pass shipped and validated:
+  - stricter Lambda route matching and path/input validation in `environments/icap-seo-production/lambda_src/handler.py`
+  - API Gateway route throttling enabled on default/admin/webhook routes
+  - CloudFront front-door distribution added for iCap SEO API with CloudFront-scoped WAF managed rules + per-IP rate limiting
+  - edge smoke checks validated expected auth behavior via CloudFront endpoint
 
 ### 3) Website/marketing/docs (`icapsolutions`)
 - iCap SEO public page created and published:
@@ -101,7 +109,9 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Billing session UX clarity improvements shipped:
   - single site selector with explicit checkout vs portal actions
   - unified action handler + clearer invalid-action notice behavior
-- Release ZIP automation is active and latest release line is `v0.2.7`.
+- Release ZIP automation is active and latest release line is `v0.2.8`.
+- CloudFront endpoint migration checkpoint validated in live WP CC smoke actions:
+  - Tenants view, Billing summary view, and Billing Resync action successful after endpoint change.
 
 ## Where we are left off
 ### Current technical state
@@ -119,7 +129,7 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Tiered scan-layer rollout is implemented, merged, and validated in live scan execution records.
 - Infrastructure is live-synced to AWS for iCap SEO and production environments.
 - Terraform no-op workflow behavior now skips manual approval/apply correctly when plans are true no-op.
-- Active engineering stop point is endpoint hardening for exposed APIs before scan/scoring expansion work resumes.
+- Endpoint hardening rollout is active and partially complete; core route/auth/edge controls are now deployed with CloudFront+WAF front door.
 - Workflow-based infrastructure apply has been validated for this deployment line.
 - End-to-end architecture/workflow documentation is now captured in `docs/architecture.md`.
 
@@ -141,6 +151,17 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
   - `infrastructure#64`
   - `infrastructure#66`
 - Current implementation stop point is backend endpoint hardening; hardening code changes are the next net-new engineering phase.
+## Session wrap-up checkpoint (2026-07-26)
+- Endpoint hardening rollout merged and deployed in active environment:
+  - strict route/path validation and payload-size guard in Lambda handler
+  - API Gateway throttling controls enabled
+  - CloudFront API front door + CloudFront-scoped WAF deployed
+- Plugin release rollout for endpoint migration completed:
+  - `iCap SEO` `v0.1.11` ZIP installed on Glamourpuss
+  - `iCap SEO Control Center` `v0.2.8` ZIP installed on WP CC
+- Live validation status:
+  - Glamourpuss full scan trigger successful on CloudFront endpoint
+  - WP CC Tenants/Billing/Resync flows successful on CloudFront endpoint
 
 ## Phased roadmap snapshot
 1. **Phase 1 — Foundation + registration flow**: `Done`
@@ -158,10 +179,9 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 
 ## Highest-priority next actions
 1. **Phase 4: Harden exposed endpoints (immediate active work)**
-   - Audit and tighten auth/authorization on exposed backend routes in `infrastructure/environments/icap-seo-production/lambda_src/handler.py`.
-   - Enforce stricter method/input validation per route and normalize denial/error behavior.
-   - Align API edge protections (rate limits/throttling/WAF expectations) for externally reachable paths.
-   - Add focused regression/security tests and runbook notes for auth and webhook abuse/failure paths.
+  - Done: tightened auth/authorization boundaries, strict route matching, and input/path validation in `infrastructure/environments/icap-seo-production/lambda_src/handler.py`.
+  - Done: enabled API edge throttling and CloudFront-fronted WAF protection.
+  - Remaining: add focused regression/security test coverage and finalize runbook notes for auth/webhook abuse/failure paths.
 2. **Phase 5: Expand scanning and scoring capabilities (next)**
    - Define and implement next scan-layer additions beyond the current baseline/premium split.
    - Expand score payload depth (category clarity, deltas/history, recommendation priority metadata).

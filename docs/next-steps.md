@@ -25,6 +25,7 @@
 - Tiered scan execution and premium-layer exposure (`basic` vs `premium`): `Done`
 - Live AWS→Terraform sync + no-op workflow fallthrough reliability: `Done`
 - Endpoint hardening for exposed backend/API routes: `In Progress`
+- CloudFront API front-door migration + plugin endpoint rollout validation: `Done`
 - Scan/scoring capability expansion beyond current layers: `Planned`
 - Self-serve paid signup and billing automation (Stripe-driven): `In Progress`
 
@@ -40,9 +41,10 @@
 - Phase 4: endpoint hardening for exposed backend/API surfaces
   - Status: `In Progress`
   - Scope:
-    - Tighten route-level auth/authorization boundaries.
-    - Enforce stricter request/method/input validation and consistent deny/error behavior.
-    - Align abuse controls (throttling/rate-limit/WAF expectations) and add security regression coverage.
+    - Done: tightened route-level auth/authorization boundaries.
+    - Done: enforced stricter route/path/input validation and payload-size guard with consistent deny/error behavior.
+    - Done: aligned abuse controls with API Gateway throttling + CloudFront-scoped WAF front-door rollout.
+    - Remaining: add focused security regression coverage and finalize endpoint hardening runbook notes.
 - Phase 5 preparation: scanning/scoring expansion backlog
   - Status: `Planned`
   - Scope:
@@ -62,13 +64,14 @@
      - Done: customer plugin billing-state checks and scan-blocking notice handling for `payment_required`, `subscription_required`, and `account_suspended`.
      - Done: backend support for site-token `GET /v1/billing/subscription-status` and entitlement-aware scan policy on `POST /v1/sites/{site_id}/scans`.
      - Done: tiered scan-layer behavior (`basic` baseline vs `premium` full layer set) is validated and merged.
-     - Remaining: complete endpoint hardening of exposed backend routes before additional scan/scoring feature growth.
+     - Remaining: complete endpoint hardening regression-test coverage before additional scan/scoring feature growth.
 2. Provider control-center plugin (private repository)
    - Status: `In Progress`
    - Scope:
      - Maintain separate private repository `iCap-SEO-control-center` for provider/admin operations.
      - Keep control-center and customer plugin separate while sharing common endpoint contracts/client logic.
      - Done: billing session actions now use one site selector with explicit checkout vs portal actions (clarity update shipped in release line `v0.2.7`).
+     - Done: endpoint migration rollout validated on release line `v0.2.8` with Tenants/Billing/Resync smoke actions.
      - Expand beyond current baseline with deeper support workflows and operations tooling.
      - Keep bootstrap checklist and operational docs current in `docs/control-center-private-repo-bootstrap.md`.
 3. Plugin settings + connection screen
@@ -122,6 +125,12 @@
      - Add how-to documentation and onboarding guides.
      - Add FAQ/troubleshooting content and CTA pathways.
      - Near-term priority: restructure site information architecture so iCap SEO has one clear service path with complete documentation in one place.
+11. Endpoint migration checkpoint (CloudFront front door)
+  - Status: `Done`
+  - Scope:
+    - Done: deployed CloudFront API front door with CloudFront-scoped WAF controls.
+    - Done: released and installed `iCap SEO v0.1.11` and `iCap SEO Control Center v0.2.8` with updated default endpoint behavior.
+    - Done: validated Glamourpuss scan trigger + WP CC Tenants/Billing/Resync flows on new endpoint.
 
 ## Multi-site alpha rollout checklist
 - Select first two non-production WordPress sites for alpha.
