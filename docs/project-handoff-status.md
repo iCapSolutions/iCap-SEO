@@ -129,7 +129,7 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Tiered scan-layer rollout is implemented, merged, and validated in live scan execution records.
 - Infrastructure is live-synced to AWS for iCap SEO and production environments.
 - Terraform no-op workflow behavior now skips manual approval/apply correctly when plans are true no-op.
-- Endpoint hardening rollout is active and partially complete; core route/auth/edge controls are now deployed with CloudFront+WAF front door.
+- Endpoint hardening rollout is complete; route/auth/edge controls plus focused regression checks are now in place.
 - Workflow-based infrastructure apply has been validated for this deployment line.
 - End-to-end architecture/workflow documentation is now captured in `docs/architecture.md`.
 
@@ -170,18 +170,18 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
    - Stripe billing/webhook path, entitlement gating, `basic` vs `premium` scan-layer behavior.
 3. **Phase 3 — Infra convergence + release safety**: `Done`
    - Live env Terraform sync and CI no-op merge-flow reliability fixes.
-4. **Phase 4 — Exposed-endpoint hardening**: `In Progress` (**active phase now**)
-   - Tighten auth boundaries, strict input validation, abuse controls, and security regression coverage.
-5. **Phase 5 — Scan/scoring capability expansion**: `Planned` (**next phase**)
+4. **Phase 4 — Exposed-endpoint hardening**: `Done`
+   - Auth boundaries, strict input validation, abuse controls, and focused security regression coverage are implemented.
+5. **Phase 5 — Scan/scoring capability expansion**: `In Progress` (**active phase now**)
    - Expand scan layers, scoring depth, and recommendation quality.
 6. **Phase 6 — Productization + operations scale-out**: `Planned`
    - Monitoring/runbooks, docs IA cleanup, and rollout/support maturity.
 
 ## Highest-priority next actions
-1. **Phase 4: Harden exposed endpoints (immediate active work)**
+1. **Phase 4: Harden exposed endpoints (completed)**
   - Done: tightened auth/authorization boundaries, strict route matching, and input/path validation in `infrastructure/environments/icap-seo-production/lambda_src/handler.py`.
   - Done: enabled API edge throttling and CloudFront-fronted WAF protection.
-  - Remaining: add focused regression/security test coverage and finalize runbook notes for auth/webhook abuse/failure paths.
+  - Done: added focused regression/security test coverage and finalized runbook notes for auth/webhook abuse/failure paths.
 2. **Phase 5: Expand scanning and scoring capabilities (next)**
    - Define and implement next scan-layer additions beyond the current baseline/premium split.
    - Expand score payload depth (category clarity, deltas/history, recommendation priority metadata).
