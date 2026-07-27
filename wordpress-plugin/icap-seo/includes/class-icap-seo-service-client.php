@@ -27,10 +27,17 @@ class ICap_SEO_Service_Client
         if (!is_array($saved)) {
             $saved = [];
         }
+        $default_api_base_url = '';
+        if (defined('ICAP_SEO_DEFAULT_API_BASE_URL')) {
+            $default_api_base_url = esc_url_raw((string) ICAP_SEO_DEFAULT_API_BASE_URL);
+        }
+        if ($default_api_base_url === '') {
+            $default_api_base_url = 'https://de1mbls2mfy7q.cloudfront.net';
+        }
 
         return array_merge(
             [
-                'api_base_url' => '',
+                'api_base_url' => $default_api_base_url,
                 'site_id' => '',
                 'site_token' => '',
                 'registration_token' => '',
