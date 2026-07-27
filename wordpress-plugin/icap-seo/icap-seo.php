@@ -3,7 +3,7 @@
  * Plugin Name: iCap SEO
  * Plugin URI: https://www.icapsolutions.com
  * Description: iCap SEO service dashboard and setup foundation for WordPress.
- * Version: 0.1.11
+ * Version: 0.1.12
  * Author: iCapSolutions
  * Author URI: https://www.icapsolutions.com
  * License: GPL v2 or later
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('ICAP_SEO_VERSION', '0.1.11');
+define('ICAP_SEO_VERSION', '0.1.12');
 if (!defined('ICAP_SEO_DEFAULT_API_BASE_URL')) {
     define('ICAP_SEO_DEFAULT_API_BASE_URL', 'https://de1mbls2mfy7q.cloudfront.net');
 }

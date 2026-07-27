@@ -24,7 +24,7 @@
 - Setup Wizard connection testing and guidance improvements: `Done`
 - Tiered scan execution and premium-layer exposure (`basic` vs `premium`): `Done`
 - Live AWS→Terraform sync + no-op workflow fallthrough reliability: `Done`
-- Endpoint hardening for exposed backend/API routes: `In Progress`
+- Endpoint hardening for exposed backend/API routes: `Done`
 - CloudFront API front-door migration + plugin endpoint rollout validation: `Done`
 - Customer plugin content-score detail drill-down (breakdown/recommendations/trend): `In Progress`
 - Scan/scoring capability expansion beyond current layers: `Planned`
@@ -34,20 +34,21 @@
 1. **Phase 1 — Foundation + registration path**: `Done`
 2. **Phase 2 — Billing + entitlement-aware scan tiers**: `Done`
 3. **Phase 3 — Infra convergence + CI release safety**: `Done`
-4. **Phase 4 — Exposed endpoint hardening**: `In Progress` (**active**)
-5. **Phase 5 — Scan/scoring capability expansion**: `Planned` (**next**)
+4. **Phase 4 — Exposed endpoint hardening**: `Done`
+5. **Phase 5 — Scan/scoring capability expansion**: `In Progress` (**active**)
 6. **Phase 6 — Productization + operations scale-out**: `Planned`
 
 ## Immediate implementation focus (active)
 - Phase 4: endpoint hardening for exposed backend/API surfaces
-  - Status: `In Progress`
+  - Status: `Done`
   - Scope:
     - Done: tightened route-level auth/authorization boundaries.
     - Done: enforced stricter route/path/input validation and payload-size guard with consistent deny/error behavior.
     - Done: aligned abuse controls with API Gateway throttling + CloudFront-scoped WAF front-door rollout.
-    - Remaining: add focused security regression coverage and finalize endpoint hardening runbook notes.
+    - Done: added focused security regression coverage for route matching, header guards, payload-size limits, and identifier validation.
+    - Done: finalized runbook notes in `infrastructure/README.md` with regression test execution command.
 - Phase 5 preparation: scanning/scoring expansion backlog
-  - Status: `Planned`
+  - Status: `In Progress`
   - Scope:
     - Define next scan-layer additions beyond current baseline/premium behavior.
     - In Progress: expand customer plugin UX with content-detail drill-down for category clarity, recommendation priority metadata, and score history/trend.
@@ -66,7 +67,7 @@
      - Done: customer plugin billing-state checks and scan-blocking notice handling for `payment_required`, `subscription_required`, and `account_suspended`.
      - Done: backend support for site-token `GET /v1/billing/subscription-status` and entitlement-aware scan policy on `POST /v1/sites/{site_id}/scans`.
      - Done: tiered scan-layer behavior (`basic` baseline vs `premium` full layer set) is validated and merged.
-     - Remaining: complete endpoint hardening regression-test coverage before additional scan/scoring feature growth.
+     - Done: endpoint hardening regression-test coverage landed before continued scan/scoring feature growth.
 2. Provider control-center plugin (private repository)
    - Status: `In Progress`
    - Scope:
