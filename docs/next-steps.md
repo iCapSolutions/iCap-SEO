@@ -26,6 +26,7 @@
 - Live AWS→Terraform sync + no-op workflow fallthrough reliability: `Done`
 - Endpoint hardening for exposed backend/API routes: `In Progress`
 - CloudFront API front-door migration + plugin endpoint rollout validation: `Done`
+- Customer plugin content-score detail drill-down (breakdown/recommendations/trend): `In Progress`
 - Scan/scoring capability expansion beyond current layers: `Planned`
 - Self-serve paid signup and billing automation (Stripe-driven): `In Progress`
 
@@ -49,8 +50,9 @@
   - Status: `Planned`
   - Scope:
     - Define next scan-layer additions beyond current baseline/premium behavior.
-    - Expand scoring payload depth (category clarity, deltas/history, recommendation priority metadata).
-    - Validate plugin UX handling for expanded scan/scoring fields.
+    - In Progress: expand customer plugin UX with content-detail drill-down for category clarity, recommendation priority metadata, and score history/trend.
+    - Planned: add guided remediation workflow concept (`Yes, make SEO changes`) that applies approved recommendations, writes page updates, and reruns scans to validate score improvement.
+    - Planned: define remediation safety boundaries (preview/diff confirmation, capability checks, reversible edits, audit trail).
 
 ## Next execution priorities
 1. Phase-1 paid onboarding + entitlement enforcement

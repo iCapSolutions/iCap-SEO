@@ -205,6 +205,7 @@ class ICap_SEO_Service_Client
             $icap_score_numeric = (int) str_replace('/100', '', $score_data['icap_score']);
             $rows[] = [
                 'id' => (int) $post->ID,
+                'content_key' => sprintf('post_%d', (int) $post->ID),
                 'title' => get_the_title($post),
                 'type' => (string) $post->post_type,
                 'status' => (string) $post->post_status,
@@ -225,6 +226,113 @@ class ICap_SEO_Service_Client
         );
 
         return $rows;
+    }
+
+    public function get_content_score_detail(string $content_key, bool $allow_live_fetch = true): array
+    {
+        if (!$allow_live_fetch) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'live_fetch_disabled',
+                    'message' => 'Live content detail fetch is disabled for this request.',
+                ],
+            ];
+        }
+
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        $resolved_content_key = sanitize_text_field(trim($content_key));
+        if ($resolved_content_key === '') {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'validation_error',
+                    'message' => 'Content key is required.',
+                ],
+            ];
+        }
+
+        $result = $this->api_request(
+            'GET',
+            sprintf(
+                '/v1/sites/%s/content-scores/%s',
+                rawurlencode((string) $settings['site_id']),
+                rawurlencode($resolved_content_key)
+            )
+        );
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
+        $category_scores = [];
+        if (isset($data['category_scores']) && is_array($data['category_scores'])) {
+            foreach ($data['category_scores'] as $category => $value) {
+                $category_key = sanitize_key((string) $category);
+                if ($category_key === '') {
+                    continue;
+                }
+                $category_scores[$category_key] = (int) $value;
+            }
+        }
+
+        $issues = [];
+        if (isset($data['issues']) && is_array($data['issues'])) {
+            foreach ($data['issues'] as $issue) {
+                if (!is_array($issue)) {
+                    continue;
+                }
+                $issues[] = [
+                    'issue_code' => isset($issue['issue_code']) ? sanitize_key((string) $issue['issue_code']) : '',
+                    'severity' => isset($issue['severity']) ? sanitize_key((string) $issue['severity']) : 'medium',
+                    'description' => isset($issue['description']) ? sanitize_text_field((string) $issue['description']) : '',
+                    'recommended_fix' => isset($issue['recommended_fix']) ? sanitize_text_field((string) $issue['recommended_fix']) : '',
+                    'estimated_effort' => isset($issue['estimated_effort']) ? sanitize_key((string) $issue['estimated_effort']) : '',
+                ];
+            }
+        }
+
+        $history = [];
+        if (isset($data['history']) && is_array($data['history'])) {
+            foreach ($data['history'] as $history_row) {
+                if (!is_array($history_row)) {
+                    continue;
+                }
+                $history[] = [
+                    'scan_id' => isset($history_row['scan_id']) ? sanitize_text_field((string) $history_row['scan_id']) : '',
+                    'scored_at' => isset($history_row['scored_at']) ? sanitize_text_field((string) $history_row['scored_at']) : '',
+                    'overall_score' => isset($history_row['overall_score']) ? (int) $history_row['overall_score'] : 0,
+                ];
+            }
+        }
+
+        $result['data'] = [
+            'content_key' => isset($data['content_key']) ? sanitize_text_field((string) $data['content_key']) : $resolved_content_key,
+            'wp_post_id' => isset($data['wp_post_id']) ? (int) $data['wp_post_id'] : 0,
+            'title' => isset($data['title']) ? sanitize_text_field((string) $data['title']) : '',
+            'post_type' => isset($data['post_type']) ? sanitize_key((string) $data['post_type']) : '',
+            'status' => isset($data['status']) ? sanitize_key((string) $data['status']) : '',
+            'permalink' => isset($data['permalink']) ? esc_url_raw((string) $data['permalink']) : '',
+            'overall_score' => isset($data['overall_score']) ? (int) $data['overall_score'] : 0,
+            'rank_math_score' => isset($data['rank_math_score']) && $data['rank_math_score'] !== null ? (int) $data['rank_math_score'] : null,
+            'delta_vs_rank_math' => isset($data['delta_vs_rank_math']) && $data['delta_vs_rank_math'] !== null ? (int) $data['delta_vs_rank_math'] : null,
+            'last_scored_at' => isset($data['last_scored_at']) ? sanitize_text_field((string) $data['last_scored_at']) : '',
+            'category_scores' => $category_scores,
+            'issues' => $issues,
+            'history' => $history,
+        ];
+
+        return $result;
     }
 
     private function normalize_layer_rows($raw_layers): array
@@ -706,6 +814,9 @@ class ICap_SEO_Service_Client
 
             $rows[] = [
                 'id' => $post_id,
+                'content_key' => isset($item['content_key']) && is_string($item['content_key']) && $item['content_key'] !== ''
+                    ? sanitize_text_field((string) $item['content_key'])
+                    : sprintf('post_%d', $post_id),
                 'title' => isset($item['title']) ? sanitize_text_field((string) $item['title']) : sprintf('Post %d', $post_id),
                 'type' => isset($item['post_type']) ? sanitize_key((string) $item['post_type']) : '',
                 'status' => isset($item['status']) ? sanitize_key((string) $item['status']) : '',
