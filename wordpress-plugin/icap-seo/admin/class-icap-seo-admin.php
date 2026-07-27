@@ -115,6 +115,9 @@ class ICap_SEO_Admin
         $content_scores = [];
         $scan_status_data = [];
         $latest_content_scores_meta = [];
+        $selected_content_key = '';
+        $content_score_detail = [];
+        $content_score_detail_error = '';
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
 
         try {
@@ -125,6 +128,22 @@ class ICap_SEO_Admin
             if ($active_tab === 'content-scores' || $active_tab === 'site-health' || $active_tab === 'home') {
                 $content_scores = $this->service_client->get_content_scores_overview($allow_live_fetch);
                 $latest_content_scores_meta = $this->service_client->get_latest_content_scores_meta();
+
+                if ($active_tab === 'content-scores') {
+                    $selected_content_key = isset($_GET['content_key'])
+                        ? sanitize_text_field((string) wp_unslash($_GET['content_key']))
+                        : '';
+                    if ($selected_content_key !== '') {
+                        $detail_result = $this->service_client->get_content_score_detail($selected_content_key, $allow_live_fetch);
+                        if (!empty($detail_result['success'])) {
+                            $content_score_detail = isset($detail_result['data']) && is_array($detail_result['data']) ? $detail_result['data'] : [];
+                        } else {
+                            $content_score_detail_error = isset($detail_result['error']['message']) && is_string($detail_result['error']['message'])
+                                ? sanitize_text_field($detail_result['error']['message'])
+                                : __('Unable to load content score details right now.', 'icap-seo');
+                        }
+                    }
+                }
             }
 
             if ($active_tab === 'setup-wizard') {

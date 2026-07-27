@@ -55,6 +55,15 @@ $notice_map = [
 if (!isset($latest_content_scores_meta) || !is_array($latest_content_scores_meta)) {
     $latest_content_scores_meta = [];
 }
+$selected_content_key = isset($selected_content_key) && is_string($selected_content_key)
+    ? sanitize_text_field($selected_content_key)
+    : '';
+$content_score_detail = isset($content_score_detail) && is_array($content_score_detail)
+    ? $content_score_detail
+    : [];
+$content_score_detail_error = isset($content_score_detail_error) && is_string($content_score_detail_error)
+    ? sanitize_text_field($content_score_detail_error)
+    : '';
 $latest_scores_scan_id = (isset($latest_content_scores_meta['scan_id']) && is_string($latest_content_scores_meta['scan_id']))
     ? sanitize_text_field($latest_content_scores_meta['scan_id'])
     : '';
@@ -279,12 +288,13 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                             <th><?php esc_html_e('iCap Score', 'icap-seo'); ?></th>
                             <th><?php esc_html_e('Rank Math (baseline)', 'icap-seo'); ?></th>
                             <th><?php esc_html_e('Delta', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Details', 'icap-seo'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($content_scores)) : ?>
                             <tr>
-                                <td colspan="6">
+                                <td colspan="7">
                                     <?php if ($latest_scores_source === 'api') : ?>
                                         <?php esc_html_e('No scored content rows were returned for the latest scan yet.', 'icap-seo'); ?>
                                     <?php else : ?>
@@ -294,7 +304,13 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                             </tr>
                         <?php else : ?>
                             <?php foreach ($content_scores as $row) : ?>
-                                <tr>
+                                <?php
+                                $row_content_key = (isset($row['content_key']) && is_string($row['content_key']))
+                                    ? sanitize_text_field($row['content_key'])
+                                    : '';
+                                $row_is_selected = $row_content_key !== '' && $selected_content_key !== '' && $row_content_key === $selected_content_key;
+                                ?>
+                                <tr<?php echo $row_is_selected ? ' style="background-color:#eef6ff;"' : ''; ?>>
                                     <td>
                                         <a href="<?php echo esc_url($row['edit_link']); ?>">
                                             <?php echo esc_html($row['title']); ?>
@@ -305,6 +321,25 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                                     <td><?php echo esc_html($row['icap_score']); ?></td>
                                     <td><?php echo esc_html($row['rank_math_score']); ?></td>
                                     <td><?php echo esc_html($row['rank_math_delta']); ?></td>
+                                    <td>
+                                        <?php if ($row_content_key !== '') : ?>
+                                            <?php
+                                            $detail_link = add_query_arg(
+                                                [
+                                                    'page' => 'icap-seo',
+                                                    'tab' => 'content-scores',
+                                                    'content_key' => $row_content_key,
+                                                ],
+                                                admin_url('admin.php')
+                                            );
+                                            ?>
+                                            <a href="<?php echo esc_url($detail_link); ?>">
+                                                <?php echo esc_html($row_is_selected ? __('Viewing details', 'icap-seo') : __('View details', 'icap-seo')); ?>
+                                            </a>
+                                        <?php else : ?>
+                                            <span>&mdash;</span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -318,6 +353,154 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                     <?php esc_html_e('Data source: placeholder fallback (API results unavailable for this view).', 'icap-seo'); ?>
                 <?php endif; ?>
             </p>
+            <?php if ($selected_content_key !== '') : ?>
+                <hr>
+                <h3><?php esc_html_e('Content Detail', 'icap-seo'); ?></h3>
+                <?php if ($content_score_detail_error !== '') : ?>
+                    <div class="notice notice-error inline">
+                        <p><?php echo esc_html($content_score_detail_error); ?></p>
+                    </div>
+                <?php elseif (empty($content_score_detail)) : ?>
+                    <p><?php esc_html_e('No detail data available for this content key yet.', 'icap-seo'); ?></p>
+                <?php else : ?>
+                    <?php
+                    $detail_title = isset($content_score_detail['title']) && is_string($content_score_detail['title']) && $content_score_detail['title'] !== ''
+                        ? sanitize_text_field($content_score_detail['title'])
+                        : __('Untitled content', 'icap-seo');
+                    $detail_status = isset($content_score_detail['status']) && is_string($content_score_detail['status'])
+                        ? sanitize_text_field($content_score_detail['status'])
+                        : '';
+                    $detail_type = isset($content_score_detail['post_type']) && is_string($content_score_detail['post_type'])
+                        ? sanitize_text_field($content_score_detail['post_type'])
+                        : '';
+                    $detail_permalink = isset($content_score_detail['permalink']) && is_string($content_score_detail['permalink'])
+                        ? esc_url_raw($content_score_detail['permalink'])
+                        : '';
+                    $detail_score = isset($content_score_detail['overall_score']) ? (int) $content_score_detail['overall_score'] : 0;
+                    $detail_rank_math = (isset($content_score_detail['rank_math_score']) && $content_score_detail['rank_math_score'] !== null)
+                        ? (int) $content_score_detail['rank_math_score']
+                        : null;
+                    $detail_delta = (isset($content_score_detail['delta_vs_rank_math']) && $content_score_detail['delta_vs_rank_math'] !== null)
+                        ? (int) $content_score_detail['delta_vs_rank_math']
+                        : null;
+                    $detail_category_scores = isset($content_score_detail['category_scores']) && is_array($content_score_detail['category_scores'])
+                        ? $content_score_detail['category_scores']
+                        : [];
+                    if (!empty($detail_category_scores)) {
+                        arsort($detail_category_scores);
+                    }
+                    $detail_issues = isset($content_score_detail['issues']) && is_array($content_score_detail['issues'])
+                        ? $content_score_detail['issues']
+                        : [];
+                    $severity_order = ['critical' => 0, 'high' => 1, 'medium' => 2, 'low' => 3];
+                    usort($detail_issues, static function ($left, $right) use ($severity_order): int {
+                        $left_severity = isset($left['severity']) && is_string($left['severity']) ? sanitize_key($left['severity']) : 'medium';
+                        $right_severity = isset($right['severity']) && is_string($right['severity']) ? sanitize_key($right['severity']) : 'medium';
+                        $left_rank = $severity_order[$left_severity] ?? 4;
+                        $right_rank = $severity_order[$right_severity] ?? 4;
+                        return $left_rank <=> $right_rank;
+                    });
+                    $detail_history = isset($content_score_detail['history']) && is_array($content_score_detail['history'])
+                        ? $content_score_detail['history']
+                        : [];
+                    $trend_summary = __('Insufficient history for trend.', 'icap-seo');
+                    if (count($detail_history) >= 2) {
+                        $latest_history_score = isset($detail_history[0]['overall_score']) ? (int) $detail_history[0]['overall_score'] : 0;
+                        $oldest_history_score = isset($detail_history[count($detail_history) - 1]['overall_score']) ? (int) $detail_history[count($detail_history) - 1]['overall_score'] : 0;
+                        $trend_delta = $latest_history_score - $oldest_history_score;
+                        if ($trend_delta > 0) {
+                            $trend_summary = sprintf(__('Improving (%+d over %d scans).', 'icap-seo'), $trend_delta, count($detail_history));
+                        } elseif ($trend_delta < 0) {
+                            $trend_summary = sprintf(__('Declining (%+d over %d scans).', 'icap-seo'), $trend_delta, count($detail_history));
+                        } else {
+                            $trend_summary = sprintf(__('Flat trend (0 over %d scans).', 'icap-seo'), count($detail_history));
+                        }
+                    }
+                    ?>
+                    <h4><?php echo esc_html($detail_title); ?></h4>
+                    <p class="description">
+                        <?php esc_html_e('Type:', 'icap-seo'); ?> <code><?php echo esc_html($detail_type !== '' ? $detail_type : 'n/a'); ?></code>
+                        |
+                        <?php esc_html_e('Status:', 'icap-seo'); ?> <code><?php echo esc_html($detail_status !== '' ? $detail_status : 'n/a'); ?></code>
+                        |
+                        <?php esc_html_e('Overall score:', 'icap-seo'); ?> <code><?php echo esc_html(sprintf('%d/100', $detail_score)); ?></code>
+                        |
+                        <?php esc_html_e('Rank Math:', 'icap-seo'); ?> <code><?php echo esc_html($detail_rank_math === null ? 'n/a' : sprintf('%d/100', $detail_rank_math)); ?></code>
+                        |
+                        <?php esc_html_e('Delta:', 'icap-seo'); ?> <code><?php echo esc_html($detail_delta === null ? 'n/a' : sprintf('%+d', $detail_delta)); ?></code>
+                    </p>
+                    <?php if ($detail_permalink !== '') : ?>
+                        <p><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View published URL', 'icap-seo'); ?></a></p>
+                    <?php endif; ?>
+                    <h4><?php esc_html_e('Category score breakdown', 'icap-seo'); ?></h4>
+                    <?php if (empty($detail_category_scores)) : ?>
+                        <p><?php esc_html_e('No category scores returned for this scan.', 'icap-seo'); ?></p>
+                    <?php else : ?>
+                        <ul>
+                            <?php foreach ($detail_category_scores as $category_name => $category_score) : ?>
+                                <li>
+                                    <strong><?php echo esc_html(ucwords(str_replace('_', ' ', sanitize_text_field((string) $category_name)))); ?>:</strong>
+                                    <?php echo esc_html(sprintf('%d/100', (int) $category_score)); ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                    <h4><?php esc_html_e('Prioritized recommendations', 'icap-seo'); ?></h4>
+                    <?php if (empty($detail_issues)) : ?>
+                        <p><?php esc_html_e('No recommendation issues returned for this content item.', 'icap-seo'); ?></p>
+                    <?php else : ?>
+                        <ol>
+                            <?php foreach ($detail_issues as $issue) : ?>
+                                <?php
+                                $issue_severity = isset($issue['severity']) ? sanitize_text_field((string) $issue['severity']) : 'medium';
+                                $issue_description = isset($issue['description']) ? sanitize_text_field((string) $issue['description']) : '';
+                                $issue_recommended_fix = isset($issue['recommended_fix']) ? sanitize_text_field((string) $issue['recommended_fix']) : '';
+                                $issue_effort = isset($issue['estimated_effort']) ? sanitize_text_field((string) $issue['estimated_effort']) : '';
+                                ?>
+                                <li>
+                                    <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
+                                    <?php if ($issue_effort !== '') : ?>
+                                        <span>(<?php echo esc_html(sprintf(__('effort: %s', 'icap-seo'), $issue_effort)); ?>)</span>
+                                    <?php endif; ?>
+                                    <div><?php echo esc_html($issue_description !== '' ? $issue_description : __('No issue description provided.', 'icap-seo')); ?></div>
+                                    <?php if ($issue_recommended_fix !== '') : ?>
+                                        <div><em><?php echo esc_html($issue_recommended_fix); ?></em></div>
+                                    <?php endif; ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ol>
+                    <?php endif; ?>
+                    <h4><?php esc_html_e('Score trend history', 'icap-seo'); ?></h4>
+                    <p class="description"><?php echo esc_html($trend_summary); ?></p>
+                    <?php if (empty($detail_history)) : ?>
+                        <p><?php esc_html_e('No historical scan points available yet.', 'icap-seo'); ?></p>
+                    <?php else : ?>
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e('Scored At', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Score', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Scan ID', 'icap-seo'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($detail_history as $history_row) : ?>
+                                    <?php
+                                    $history_scored_at = isset($history_row['scored_at']) ? sanitize_text_field((string) $history_row['scored_at']) : '';
+                                    $history_score = isset($history_row['overall_score']) ? (int) $history_row['overall_score'] : 0;
+                                    $history_scan_id = isset($history_row['scan_id']) ? sanitize_text_field((string) $history_row['scan_id']) : '';
+                                    ?>
+                                    <tr>
+                                        <td><?php echo esc_html($history_scored_at !== '' ? $history_scored_at : 'n/a'); ?></td>
+                                        <td><?php echo esc_html(sprintf('%d/100', $history_score)); ?></td>
+                                        <td><code><?php echo esc_html($history_scan_id !== '' ? $history_scan_id : 'n/a'); ?></code></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                <?php endif; ?>
+            <?php endif; ?>
         <?php elseif ($active_tab === 'settings') : ?>
             <h2><?php esc_html_e('API Connection Settings', 'icap-seo'); ?></h2>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
