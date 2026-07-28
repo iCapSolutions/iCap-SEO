@@ -49,6 +49,15 @@ $notice_map = [
     'billing_portal_unavailable' => ['type' => 'error', 'message' => __('Billing portal is temporarily unavailable. Please retry shortly.', 'icap-seo')],
     'billing_portal_failed' => ['type' => 'error', 'message' => __('Billing portal request failed. Confirm API and billing settings, then retry.', 'icap-seo')],
     'billing_portal_returned' => ['type' => 'updated', 'message' => __('Returned from billing portal.', 'icap-seo')],
+    'remediation_preview_ready' => ['type' => 'updated', 'message' => __('Remediation preview refreshed for this content item.', 'icap-seo')],
+    'remediation_apply_queued' => ['type' => 'updated', 'message' => __('Remediation apply request was accepted and queued.', 'icap-seo')],
+    'remediation_content_key_missing' => ['type' => 'error', 'message' => __('Remediation request failed: content key is required.', 'icap-seo')],
+    'remediation_validation_error' => ['type' => 'error', 'message' => __('Remediation request failed validation. Refresh content details and retry.', 'icap-seo')],
+    'remediation_auth_error' => ['type' => 'error', 'message' => __('Remediation request failed authentication. Re-register the site credentials and retry.', 'icap-seo')],
+    'remediation_preview_unavailable' => ['type' => 'error', 'message' => __('Remediation preview is temporarily unavailable. Please retry shortly.', 'icap-seo')],
+    'remediation_apply_unavailable' => ['type' => 'error', 'message' => __('Remediation apply is temporarily unavailable. Please retry shortly.', 'icap-seo')],
+    'remediation_preview_failed' => ['type' => 'error', 'message' => __('Remediation preview failed with an unexpected response.', 'icap-seo')],
+    'remediation_apply_failed' => ['type' => 'error', 'message' => __('Remediation apply failed with an unexpected response.', 'icap-seo')],
     'render_fallback' => ['type' => 'error', 'message' => __('Dashboard loaded in fallback mode after an internal error. Please retry and check logs.', 'icap-seo')],
 ];
 
@@ -63,6 +72,12 @@ $content_score_detail = isset($content_score_detail) && is_array($content_score_
     : [];
 $content_score_detail_error = isset($content_score_detail_error) && is_string($content_score_detail_error)
     ? sanitize_text_field($content_score_detail_error)
+    : '';
+$remediation_preview = isset($remediation_preview) && is_array($remediation_preview)
+    ? $remediation_preview
+    : [];
+$remediation_preview_error = isset($remediation_preview_error) && is_string($remediation_preview_error)
+    ? sanitize_text_field($remediation_preview_error)
     : '';
 $latest_scores_scan_id = (isset($latest_content_scores_meta['scan_id']) && is_string($latest_content_scores_meta['scan_id']))
     ? sanitize_text_field($latest_content_scores_meta['scan_id'])
@@ -469,6 +484,90 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                                 </li>
                             <?php endforeach; ?>
                         </ol>
+                    <?php endif; ?>
+                    <h4><?php esc_html_e('Remediation preview and apply', 'icap-seo'); ?></h4>
+                    <p class="description"><?php esc_html_e('Review proposed changes, then queue remediation for this content item.', 'icap-seo'); ?></p>
+                    <div class="icap-seo-actions">
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                            <input type="hidden" name="action" value="icap_seo_preview_remediation">
+                            <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                            <?php wp_nonce_field('icap_seo_preview_remediation'); ?>
+                            <?php foreach ($detail_issues as $issue) : ?>
+                                <?php
+                                $issue_code = isset($issue['issue_code']) && is_string($issue['issue_code'])
+                                    ? sanitize_key($issue['issue_code'])
+                                    : '';
+                                ?>
+                                <?php if ($issue_code !== '') : ?>
+                                    <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                            <button type="submit" class="button"><?php esc_html_e('Refresh remediation preview', 'icap-seo'); ?></button>
+                        </form>
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                            <input type="hidden" name="action" value="icap_seo_apply_remediation">
+                            <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                            <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
+                            <?php foreach ($detail_issues as $issue) : ?>
+                                <?php
+                                $issue_code = isset($issue['issue_code']) && is_string($issue['issue_code'])
+                                    ? sanitize_key($issue['issue_code'])
+                                    : '';
+                                ?>
+                                <?php if ($issue_code !== '') : ?>
+                                    <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Yes, make SEO changes', 'icap-seo'); ?></button>
+                        </form>
+                    </div>
+                    <?php if ($remediation_preview_error !== '') : ?>
+                        <div class="notice notice-error inline">
+                            <p><?php echo esc_html($remediation_preview_error); ?></p>
+                        </div>
+                    <?php else : ?>
+                        <?php
+                        $preview_changes = (isset($remediation_preview['proposed_changes']) && is_array($remediation_preview['proposed_changes']))
+                            ? $remediation_preview['proposed_changes']
+                            : [];
+                        $preview_summary = (isset($remediation_preview['summary']) && is_array($remediation_preview['summary']))
+                            ? $remediation_preview['summary']
+                            : [];
+                        ?>
+                        <?php if (empty($preview_changes)) : ?>
+                            <p><?php esc_html_e('No proposed remediation changes are currently available for this content item.', 'icap-seo'); ?></p>
+                        <?php else : ?>
+                            <p class="description">
+                                <?php
+                                $queued_estimate = isset($preview_summary['proposed_change_count']) ? (int) $preview_summary['proposed_change_count'] : count($preview_changes);
+                                echo esc_html(sprintf(__('Proposed changes: %d', 'icap-seo'), $queued_estimate));
+                                ?>
+                            </p>
+                            <ul>
+                                <?php foreach ($preview_changes as $change_row) : ?>
+                                    <?php
+                                    $change_issue_code = isset($change_row['issue_code']) ? sanitize_text_field((string) $change_row['issue_code']) : '';
+                                    $change_summary = isset($change_row['summary']) ? sanitize_text_field((string) $change_row['summary']) : '';
+                                    $change_severity = isset($change_row['severity']) ? sanitize_text_field((string) $change_row['severity']) : 'medium';
+                                    $change_effort = isset($change_row['estimated_effort']) ? sanitize_text_field((string) $change_row['estimated_effort']) : '';
+                                    $change_review = !empty($change_row['requires_editor_review']);
+                                    ?>
+                                    <li>
+                                        <strong><?php echo esc_html(strtoupper($change_severity)); ?></strong>
+                                        <?php if ($change_issue_code !== '') : ?>
+                                            <code><?php echo esc_html($change_issue_code); ?></code>
+                                        <?php endif; ?>
+                                        <?php if ($change_effort !== '') : ?>
+                                            <span>(<?php echo esc_html(sprintf(__('effort: %s', 'icap-seo'), $change_effort)); ?>)</span>
+                                        <?php endif; ?>
+                                        <div><?php echo esc_html($change_summary !== '' ? $change_summary : __('No summary provided.', 'icap-seo')); ?></div>
+                                        <?php if ($change_review) : ?>
+                                            <div><em><?php esc_html_e('Requires editor review before publish.', 'icap-seo'); ?></em></div>
+                                        <?php endif; ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
                     <?php endif; ?>
                     <h4><?php esc_html_e('Score trend history', 'icap-seo'); ?></h4>
                     <p class="description"><?php echo esc_html($trend_summary); ?></p>

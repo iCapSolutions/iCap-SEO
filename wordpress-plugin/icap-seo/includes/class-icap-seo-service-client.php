@@ -335,6 +335,158 @@ class ICap_SEO_Service_Client
         return $result;
     }
 
+    public function get_content_remediation_preview(string $content_key, array $approved_issue_codes = [], bool $allow_live_fetch = true): array
+    {
+        if (!$allow_live_fetch) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'live_fetch_disabled',
+                    'message' => 'Live remediation preview fetch is disabled for this request.',
+                ],
+            ];
+        }
+
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        $resolved_content_key = sanitize_text_field(trim($content_key));
+        if ($resolved_content_key === '') {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'validation_error',
+                    'message' => 'Content key is required.',
+                ],
+            ];
+        }
+
+        $payload = [];
+        $normalized_issue_codes = $this->normalize_approved_issue_codes($approved_issue_codes);
+        if (!empty($normalized_issue_codes)) {
+            $payload['approved_issue_codes'] = $normalized_issue_codes;
+        }
+
+        $result = $this->api_request(
+            'POST',
+            sprintf(
+                '/v1/sites/%s/content-scores/%s/remediation-preview',
+                rawurlencode((string) $settings['site_id']),
+                rawurlencode($resolved_content_key)
+            ),
+            $payload
+        );
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
+        $proposed_changes = [];
+        if (isset($data['proposed_changes']) && is_array($data['proposed_changes'])) {
+            foreach ($data['proposed_changes'] as $change_row) {
+                if (!is_array($change_row)) {
+                    continue;
+                }
+                $target = isset($change_row['target']) && is_array($change_row['target']) ? $change_row['target'] : [];
+                $proposed_changes[] = [
+                    'change_id' => isset($change_row['change_id']) ? sanitize_text_field((string) $change_row['change_id']) : '',
+                    'issue_code' => isset($change_row['issue_code']) ? sanitize_key((string) $change_row['issue_code']) : '',
+                    'severity' => isset($change_row['severity']) ? sanitize_key((string) $change_row['severity']) : 'medium',
+                    'summary' => isset($change_row['summary']) ? sanitize_text_field((string) $change_row['summary']) : '',
+                    'estimated_effort' => isset($change_row['estimated_effort']) ? sanitize_key((string) $change_row['estimated_effort']) : '',
+                    'requires_editor_review' => !empty($change_row['requires_editor_review']),
+                    'target' => [
+                        'content_key' => isset($target['content_key']) ? sanitize_text_field((string) $target['content_key']) : '',
+                        'wp_post_id' => isset($target['wp_post_id']) ? (int) $target['wp_post_id'] : 0,
+                    ],
+                ];
+            }
+        }
+
+        $result['data'] = [
+            'site_id' => isset($data['site_id']) ? sanitize_text_field((string) $data['site_id']) : '',
+            'content_key' => isset($data['content_key']) ? sanitize_text_field((string) $data['content_key']) : $resolved_content_key,
+            'scan_id' => isset($data['scan_id']) ? sanitize_text_field((string) $data['scan_id']) : '',
+            'overall_score' => isset($data['overall_score']) ? (int) $data['overall_score'] : 0,
+            'proposed_changes' => $proposed_changes,
+            'summary' => isset($data['summary']) && is_array($data['summary']) ? $data['summary'] : [],
+        ];
+
+        return $result;
+    }
+
+    public function apply_content_remediation(string $content_key, array $approved_issue_codes = [], bool $allow_live_fetch = true): array
+    {
+        if (!$allow_live_fetch) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'live_fetch_disabled',
+                    'message' => 'Live remediation apply is disabled for this request.',
+                ],
+            ];
+        }
+
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        $resolved_content_key = sanitize_text_field(trim($content_key));
+        if ($resolved_content_key === '') {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'validation_error',
+                    'message' => 'Content key is required.',
+                ],
+            ];
+        }
+
+        $payload = [];
+        $normalized_issue_codes = $this->normalize_approved_issue_codes($approved_issue_codes);
+        if (!empty($normalized_issue_codes)) {
+            $payload['approved_issue_codes'] = $normalized_issue_codes;
+        }
+
+        $result = $this->api_request(
+            'POST',
+            sprintf(
+                '/v1/sites/%s/content-scores/%s/apply-remediation',
+                rawurlencode((string) $settings['site_id']),
+                rawurlencode($resolved_content_key)
+            ),
+            $payload
+        );
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
+        $result['data'] = [
+            'remediation_job_id' => isset($data['remediation_job_id']) ? sanitize_text_field((string) $data['remediation_job_id']) : '',
+            'status' => isset($data['status']) ? sanitize_key((string) $data['status']) : '',
+            'queued_changes_count' => isset($data['queued_changes_count']) ? (int) $data['queued_changes_count'] : 0,
+            'requires_confirmation' => !empty($data['requires_confirmation']),
+        ];
+
+        return $result;
+    }
+
     private function normalize_layer_rows($raw_layers): array
     {
         if (!is_array($raw_layers)) {
@@ -874,6 +1026,19 @@ class ICap_SEO_Service_Client
             'rank_math_score' => sprintf('%d/100', $rank_math_value),
             'rank_math_delta' => sprintf('%s%d', $delta_prefix, $delta),
         ];
+    }
+
+    private function normalize_approved_issue_codes(array $approved_issue_codes): array
+    {
+        $normalized = [];
+        foreach ($approved_issue_codes as $issue_code) {
+            $candidate = sanitize_key((string) $issue_code);
+            if ($candidate !== '') {
+                $normalized[] = $candidate;
+            }
+        }
+
+        return array_values(array_unique($normalized));
     }
 
     private function is_api_connection_configured(): bool

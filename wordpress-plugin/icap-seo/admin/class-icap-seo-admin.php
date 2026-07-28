@@ -38,6 +38,8 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_check_billing_status', [$this, 'handle_check_billing_status']);
         add_action('admin_post_icap_seo_start_billing_checkout', [$this, 'handle_start_billing_checkout']);
         add_action('admin_post_icap_seo_open_billing_portal', [$this, 'handle_open_billing_portal']);
+        add_action('admin_post_icap_seo_preview_remediation', [$this, 'handle_preview_remediation']);
+        add_action('admin_post_icap_seo_apply_remediation', [$this, 'handle_apply_remediation']);
     }
     public function register_list_table_columns(): void
     {
@@ -118,6 +120,8 @@ class ICap_SEO_Admin
         $selected_content_key = '';
         $content_score_detail = [];
         $content_score_detail_error = '';
+        $remediation_preview = [];
+        $remediation_preview_error = '';
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
 
         try {
@@ -137,6 +141,15 @@ class ICap_SEO_Admin
                         $detail_result = $this->service_client->get_content_score_detail($selected_content_key, $allow_live_fetch);
                         if (!empty($detail_result['success'])) {
                             $content_score_detail = isset($detail_result['data']) && is_array($detail_result['data']) ? $detail_result['data'] : [];
+
+                            $preview_result = $this->service_client->get_content_remediation_preview($selected_content_key, [], $allow_live_fetch);
+                            if (!empty($preview_result['success'])) {
+                                $remediation_preview = isset($preview_result['data']) && is_array($preview_result['data']) ? $preview_result['data'] : [];
+                            } else {
+                                $remediation_preview_error = isset($preview_result['error']['message']) && is_string($preview_result['error']['message'])
+                                    ? sanitize_text_field($preview_result['error']['message'])
+                                    : __('Unable to load remediation preview right now.', 'icap-seo');
+                            }
                         } else {
                             $content_score_detail_error = isset($detail_result['error']['message']) && is_string($detail_result['error']['message'])
                                 ? sanitize_text_field($detail_result['error']['message'])
@@ -176,6 +189,8 @@ class ICap_SEO_Admin
             $content_scores = [];
             $scan_status_data = [];
             $latest_content_scores_meta = [];
+            $remediation_preview = [];
+            $remediation_preview_error = '';
             error_log('ICap SEO dashboard fallback: ' . $e->getMessage());
         }
 
@@ -453,6 +468,96 @@ class ICap_SEO_Admin
         wp_redirect($portal_url);
         exit;
     }
+
+    public function handle_preview_remediation(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_preview_remediation');
+
+        $content_key = isset($_POST['content_key']) ? sanitize_text_field((string) wp_unslash($_POST['content_key'])) : '';
+        if ($content_key === '') {
+            $this->redirect_with_notice('remediation_content_key_missing', 'content-scores');
+            return;
+        }
+
+        $approved_issue_codes_raw = isset($_POST['approved_issue_codes']) ? wp_unslash($_POST['approved_issue_codes']) : [];
+        if (!is_array($approved_issue_codes_raw)) {
+            $approved_issue_codes_raw = [];
+        }
+        $approved_issue_codes = array_map(
+            static fn($value): string => sanitize_key((string) $value),
+            $approved_issue_codes_raw
+        );
+
+        $result = $this->service_client->get_content_remediation_preview($content_key, $approved_issue_codes, true);
+        if ($result['success']) {
+            $this->redirect_with_notice('remediation_preview_ready', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $error_code = $this->extract_error_code($result);
+        if ($error_code === 'validation_error') {
+            $this->redirect_with_notice('remediation_validation_error', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+        if ($error_code === 'invalid_token' || $error_code === 'forbidden') {
+            $this->redirect_with_notice('remediation_auth_error', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+        if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
+            $this->redirect_with_notice('remediation_preview_unavailable', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $this->redirect_with_notice('remediation_preview_failed', 'content-scores', ['content_key' => $content_key]);
+    }
+
+    public function handle_apply_remediation(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_apply_remediation');
+
+        $content_key = isset($_POST['content_key']) ? sanitize_text_field((string) wp_unslash($_POST['content_key'])) : '';
+        if ($content_key === '') {
+            $this->redirect_with_notice('remediation_content_key_missing', 'content-scores');
+            return;
+        }
+
+        $approved_issue_codes_raw = isset($_POST['approved_issue_codes']) ? wp_unslash($_POST['approved_issue_codes']) : [];
+        if (!is_array($approved_issue_codes_raw)) {
+            $approved_issue_codes_raw = [];
+        }
+        $approved_issue_codes = array_map(
+            static fn($value): string => sanitize_key((string) $value),
+            $approved_issue_codes_raw
+        );
+
+        $result = $this->service_client->apply_content_remediation($content_key, $approved_issue_codes, true);
+        if ($result['success']) {
+            $this->redirect_with_notice('remediation_apply_queued', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $error_code = $this->extract_error_code($result);
+        if ($error_code === 'validation_error') {
+            $this->redirect_with_notice('remediation_validation_error', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+        if ($error_code === 'invalid_token' || $error_code === 'forbidden') {
+            $this->redirect_with_notice('remediation_auth_error', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+        if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
+            $this->redirect_with_notice('remediation_apply_unavailable', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $this->redirect_with_notice('remediation_apply_failed', 'content-scores', ['content_key' => $content_key]);
+    }
     private function build_billing_settings_return_url(string $billing_state): string
     {
         $normalized_state = sanitize_key($billing_state);
@@ -478,14 +583,21 @@ class ICap_SEO_Admin
 
         return '';
     }
-    private function redirect_with_notice(string $notice_code, string $tab): void
+    private function redirect_with_notice(string $notice_code, string $tab, array $extra_query_args = []): void
     {
+        $extra_query_args = array_filter(
+            $extra_query_args,
+            static fn($value): bool => is_string($value) && $value !== ''
+        );
         $url = add_query_arg(
-            [
-                'page' => 'icap-seo',
-                'tab' => $tab,
-                self::NOTICE_QUERY_KEY => $notice_code,
-            ],
+            array_merge(
+                [
+                    'page' => 'icap-seo',
+                    'tab' => $tab,
+                    self::NOTICE_QUERY_KEY => $notice_code,
+                ],
+                $extra_query_args
+            ),
             admin_url('admin.php')
         );
 
