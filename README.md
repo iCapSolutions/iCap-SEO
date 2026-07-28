@@ -9,7 +9,7 @@ Repository: https://github.com/iCapSolutions/iCap-SEO (public)
 - `infra`: Infrastructure as code scaffold (planned).
 - `docs`: Architecture, boundaries, and implementation notes.
 - `icap-seo-control-center`: maintained in a separate private repository (not included in this public repo).
-## Current scope (production checkpoint, v0.1.10 line)
+## Current scope (production checkpoint, v0.1.13 line)
 - WordPress admin plugin named `iCap SEO`.
 - Admin dashboard tabs:
   - Home
@@ -23,6 +23,11 @@ Repository: https://github.com/iCapSolutions/iCap-SEO (public)
 - Baseline scan tier (`basic`) is available for non-premium sites to run initial on-page analysis.
 - Premium subscription unlocks full layered scans (`premium`), including robots/crawler policy, security headers, content quality, schema, image, and link-health layers.
 - Content score retrieval with safe placeholder fallback when API data is unavailable.
+- Content-score detail drill-down with category breakdown, prioritized recommendations, and score history/trend.
+- Remediation CTA workflow is wired in Content Scores detail:
+  - `Refresh remediation preview`
+  - `Yes, make SEO changes`
+  - current backend behavior returns accepted/queued remediation payloads (`manual_review_required`); direct page mutation is not implemented yet.
 - Customer billing actions in Settings for:
   - Stripe checkout-session launch
   - Stripe billing-portal launch
