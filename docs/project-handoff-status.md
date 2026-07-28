@@ -37,8 +37,8 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
   - shows executed scan layers and premium-locked layers when returned by backend
 - Added versioned ZIP packaging conventions and script support:
   - release artifact format `icap-seo-vX.Y.Z.zip`
-  - latest plugin version on `main`: `0.1.11`
-  - latest distributed ZIP line for testing: `icap-seo-v0.1.11.zip`
+  - latest plugin version on `main`: `0.1.13`
+  - latest distributed ZIP line for testing: `icap-seo-v0.1.13.zip`
 - Live smoke flow validated:
   - register (including expected token-required failure path)
   - trigger scan
@@ -47,6 +47,14 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Edge endpoint migration validated:
   - customer/admin API traffic now fronts through CloudFront (`api_frontdoor_base_url`) instead of direct API Gateway URL in plugin settings.
   - plugin default API base URL constant now points to CloudFront front door.
+- Added Content Scores detail drill-down UX with:
+  - category-score breakdown
+  - prioritized recommendations
+  - score trend/history visibility
+- Added Phase 5 remediation CTA wiring in customer plugin:
+  - `Refresh remediation preview`
+  - `Yes, make SEO changes`
+  - admin handler/notice flows for remediation preview/apply outcomes
 
 ### 2) Backend/infrastructure (`infrastructure`)
 - Provisioned iCap SEO API/backend infrastructure in AWS.
@@ -93,6 +101,10 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
   - API Gateway route throttling enabled on default/admin/webhook routes
   - CloudFront front-door distribution added for iCap SEO API with CloudFront-scoped WAF managed rules + per-IP rate limiting
   - edge smoke checks validated expected auth behavior via CloudFront endpoint
+- Added Phase 5 remediation backend MVP routes in Lambda:
+  - `POST /v1/sites/{site_id}/content-scores/{content_key}/remediation-preview`
+  - `POST /v1/sites/{site_id}/content-scores/{content_key}/apply-remediation`
+- Added missing API Gateway route resources for remediation endpoints and merged/deployed the fix (`infrastructure#70`) to remove live 404 route misses.
 
 ### 3) Website/marketing/docs (`icapsolutions`)
 - iCap SEO public page created and published:
@@ -132,6 +144,7 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Endpoint hardening rollout is complete; route/auth/edge controls plus focused regression checks are now in place.
 - Workflow-based infrastructure apply has been validated for this deployment line.
 - End-to-end architecture/workflow documentation is now captured in `docs/architecture.md`.
+- Live endpoint verification confirms remediation routes now resolve through CloudFront and return authenticated API responses (401 when token is missing/invalid), replacing prior edge-layer 404 behavior.
 
 ### Current product state
 - Public landing page exists, but broader product marketing/documentation expansion is still pending.
@@ -162,6 +175,20 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
 - Live validation status:
   - Glamourpuss full scan trigger successful on CloudFront endpoint
   - WP CC Tenants/Billing/Resync flows successful on CloudFront endpoint
+## Session wrap-up checkpoint (2026-07-28)
+- Phase 5 remediation wiring shipped in customer plugin and merged:
+  - `iCap-SEO#29`
+  - plugin release line bumped and packaged as `v0.1.13`
+- Root-cause/fix for remediation 404 completed:
+  - Lambda already had remediation handlers
+  - API Gateway was missing explicit remediation route resources
+  - route resources added/merged in `infrastructure#70` and applied
+- Live post-fix validation:
+  - remediation routes resolve through CloudFront
+  - unauthenticated calls return expected auth errors (not route-not-found)
+- Current stop point:
+  - remediation preview/apply CTA wiring is complete
+  - actual WordPress content mutation workflow remains pending (queue/accepted response only today)
 
 ## Phased roadmap snapshot
 1. **Phase 1 — Foundation + registration flow**: `Done`
@@ -174,6 +201,8 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
    - Auth boundaries, strict input validation, abuse controls, and focused security regression coverage are implemented.
 5. **Phase 5 — Scan/scoring capability expansion**: `In Progress` (**active phase now**)
    - Expand scan layers, scoring depth, and recommendation quality.
+   - Remediation preview/apply contract + plugin CTA wiring are complete.
+   - Real content-write execution path remains pending.
 6. **Phase 6 — Productization + operations scale-out**: `Planned`
    - Monitoring/runbooks, docs IA cleanup, and rollout/support maturity.
 
@@ -186,6 +215,11 @@ Use this file when restarting work and when asking: "Where are we on iCap SEO an
    - Define and implement next scan-layer additions beyond the current baseline/premium split.
    - Expand score payload depth (category clarity, deltas/history, recommendation priority metadata).
    - Validate plugin rendering/UX for new scan/scoring response fields.
+   - Implement remediation execution lifecycle beyond queue/accepted response:
+     - persist remediation jobs
+     - add confirm/status APIs
+     - execute safe content updates
+     - trigger/post rescan and report score deltas
 3. **Website productization and docs IA cleanup (soon)**
    - Expand and reorganize `icapsolutions` content so iCap SEO has one clear user path.
    - Publish complete customer-facing setup/billing/onboarding/support documentation.
