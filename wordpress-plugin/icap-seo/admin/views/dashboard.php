@@ -51,6 +51,8 @@ $notice_map = [
     'billing_portal_returned' => ['type' => 'updated', 'message' => __('Returned from billing portal.', 'icap-seo')],
     'remediation_preview_ready' => ['type' => 'updated', 'message' => __('Remediation preview refreshed for this content item.', 'icap-seo')],
     'remediation_apply_queued' => ['type' => 'updated', 'message' => __('Remediation apply request was accepted and queued.', 'icap-seo')],
+    'remediation_apply_title_updated' => ['type' => 'updated', 'message' => __('Title remediation applied locally for this item. Re-scan to verify score movement.', 'icap-seo')],
+    'remediation_apply_title_update_failed' => ['type' => 'error', 'message' => __('Remediation request was accepted, but local title update could not be applied. Verify edit permissions and content key mapping.', 'icap-seo')],
     'remediation_content_key_missing' => ['type' => 'error', 'message' => __('Remediation request failed: content key is required.', 'icap-seo')],
     'remediation_validation_error' => ['type' => 'error', 'message' => __('Remediation request failed validation. Refresh content details and retry.', 'icap-seo')],
     'remediation_auth_error' => ['type' => 'error', 'message' => __('Remediation request failed authentication. Re-register the site credentials and retry.', 'icap-seo')],
@@ -418,6 +420,10 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                     $detail_history = isset($content_score_detail['history']) && is_array($content_score_detail['history'])
                         ? $content_score_detail['history']
                         : [];
+                    $top_issue_code = '';
+                    if (!empty($detail_issues) && isset($detail_issues[0]['issue_code']) && is_string($detail_issues[0]['issue_code'])) {
+                        $top_issue_code = sanitize_key($detail_issues[0]['issue_code']);
+                    }
                     $trend_summary = __('Insufficient history for trend.', 'icap-seo');
                     if (count($detail_history) >= 2) {
                         $latest_history_score = isset($detail_history[0]['overall_score']) ? (int) $detail_history[0]['overall_score'] : 0;
@@ -486,38 +492,24 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                         </ol>
                     <?php endif; ?>
                     <h4><?php esc_html_e('Remediation preview and apply', 'icap-seo'); ?></h4>
-                    <p class="description"><?php esc_html_e('Review proposed changes, then queue remediation for this content item.', 'icap-seo'); ?></p>
+                    <p class="description"><?php esc_html_e('POC mode: this submits only the top prioritized recommendation for this content item.', 'icap-seo'); ?></p>
                     <div class="icap-seo-actions">
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="icap_seo_preview_remediation">
                             <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                             <?php wp_nonce_field('icap_seo_preview_remediation'); ?>
-                            <?php foreach ($detail_issues as $issue) : ?>
-                                <?php
-                                $issue_code = isset($issue['issue_code']) && is_string($issue['issue_code'])
-                                    ? sanitize_key($issue['issue_code'])
-                                    : '';
-                                ?>
-                                <?php if ($issue_code !== '') : ?>
-                                    <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
-                                <?php endif; ?>
-                            <?php endforeach; ?>
+                            <?php if ($top_issue_code !== '') : ?>
+                                <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($top_issue_code); ?>">
+                            <?php endif; ?>
                             <button type="submit" class="button"><?php esc_html_e('Refresh remediation preview', 'icap-seo'); ?></button>
                         </form>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="icap_seo_apply_remediation">
                             <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                             <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
-                            <?php foreach ($detail_issues as $issue) : ?>
-                                <?php
-                                $issue_code = isset($issue['issue_code']) && is_string($issue['issue_code'])
-                                    ? sanitize_key($issue['issue_code'])
-                                    : '';
-                                ?>
-                                <?php if ($issue_code !== '') : ?>
-                                    <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
-                                <?php endif; ?>
-                            <?php endforeach; ?>
+                            <?php if ($top_issue_code !== '') : ?>
+                                <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($top_issue_code); ?>">
+                            <?php endif; ?>
                             <button type="submit" class="button button-primary"><?php esc_html_e('Yes, make SEO changes', 'icap-seo'); ?></button>
                         </form>
                     </div>

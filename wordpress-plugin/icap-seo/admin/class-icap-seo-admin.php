@@ -538,6 +538,15 @@ class ICap_SEO_Admin
 
         $result = $this->service_client->apply_content_remediation($content_key, $approved_issue_codes, true);
         if ($result['success']) {
+            $local_apply_result = $this->apply_supported_local_remediation($content_key, $approved_issue_codes);
+            if (!empty($local_apply_result['applied'])) {
+                $this->redirect_with_notice('remediation_apply_title_updated', 'content-scores', ['content_key' => $content_key]);
+                return;
+            }
+            if (!empty($local_apply_result['failed'])) {
+                $this->redirect_with_notice('remediation_apply_title_update_failed', 'content-scores', ['content_key' => $content_key]);
+                return;
+            }
             $this->redirect_with_notice('remediation_apply_queued', 'content-scores', ['content_key' => $content_key]);
             return;
         }
@@ -557,6 +566,155 @@ class ICap_SEO_Admin
         }
 
         $this->redirect_with_notice('remediation_apply_failed', 'content-scores', ['content_key' => $content_key]);
+    }
+
+    private function apply_supported_local_remediation(string $content_key, array $approved_issue_codes): array
+    {
+        $normalized_codes = array_map(
+            static fn($value): string => sanitize_key((string) $value),
+            $approved_issue_codes
+        );
+
+        if (!in_array('title_length_out_of_range', $normalized_codes, true)) {
+            return ['applied' => false, 'failed' => false];
+        }
+
+        $post_id = $this->extract_post_id_from_content_key($content_key);
+        if ($post_id <= 0) {
+            return ['applied' => false, 'failed' => true];
+        }
+        if (!current_user_can('edit_post', $post_id)) {
+            return ['applied' => false, 'failed' => true];
+        }
+
+        $post = get_post($post_id);
+        if (!$post instanceof WP_Post) {
+            return ['applied' => false, 'failed' => true];
+        }
+
+        $current_title = sanitize_text_field((string) $post->post_title);
+        $updated_title = $this->build_seo_title_with_target_length($current_title);
+        if ($updated_title === '' || $updated_title === $current_title) {
+            return ['applied' => false, 'failed' => false];
+        }
+
+        $update_result = wp_update_post(
+            [
+                'ID' => $post_id,
+                'post_title' => $updated_title,
+            ],
+            true
+        );
+
+        if (is_wp_error($update_result)) {
+            return ['applied' => false, 'failed' => true];
+        }
+
+        return ['applied' => true, 'failed' => false];
+    }
+
+    private function extract_post_id_from_content_key(string $content_key): int
+    {
+        $normalized = sanitize_text_field((string) $content_key);
+        if (preg_match('/:(\d+)$/', $normalized, $matches) === 1) {
+            return absint($matches[1]);
+        }
+        if (preg_match('/^post_(\d+)$/', $normalized, $matches) === 1) {
+            return absint($matches[1]);
+        }
+
+        return 0;
+    }
+
+    private function build_seo_title_with_target_length(string $title): string
+    {
+        $normalized_title = preg_replace('/\s+/', ' ', trim($title));
+        if (!is_string($normalized_title)) {
+            $normalized_title = '';
+        }
+        if ($normalized_title === '') {
+            return '';
+        }
+
+        $candidate = $normalized_title;
+        $length = $this->string_length($candidate);
+        if ($length > 65) {
+            $candidate = $this->trim_title_to_max_length($candidate, 65);
+            $length = $this->string_length($candidate);
+        }
+
+        if ($length < 20) {
+            $site_name = sanitize_text_field((string) get_bloginfo('name'));
+            if ($site_name !== '') {
+                $candidate = trim($candidate . ' | ' . $site_name);
+            }
+            if ($this->string_length($candidate) < 20) {
+                $candidate = trim($candidate . ' Team');
+            }
+            if ($this->string_length($candidate) < 20) {
+                $candidate = trim($candidate . ' Info');
+            }
+            if ($this->string_length($candidate) > 65) {
+                $candidate = $this->trim_title_to_max_length($candidate, 65);
+            }
+        }
+
+        return trim((string) $candidate);
+    }
+
+    private function trim_title_to_max_length(string $title, int $max_length): string
+    {
+        $normalized = preg_replace('/\s+/', ' ', trim($title));
+        if (!is_string($normalized)) {
+            $normalized = '';
+        }
+        if ($normalized === '') {
+            return '';
+        }
+        if ($this->string_length($normalized) <= $max_length) {
+            return $normalized;
+        }
+
+        $words = preg_split('/\s+/', $normalized);
+        if (!is_array($words)) {
+            return $this->string_substr($normalized, 0, $max_length);
+        }
+
+        $assembled = '';
+        foreach ($words as $word) {
+            if (!is_string($word) || $word === '') {
+                continue;
+            }
+            $next = $assembled === '' ? $word : ($assembled . ' ' . $word);
+            if ($this->string_length($next) > $max_length) {
+                break;
+            }
+            $assembled = $next;
+        }
+
+        if ($assembled === '') {
+            return $this->string_substr($normalized, 0, $max_length);
+        }
+
+        return $assembled;
+    }
+
+    private function string_length(string $value): int
+    {
+        if (function_exists('mb_strlen')) {
+            return (int) mb_strlen($value);
+        }
+
+        return (int) strlen($value);
+    }
+
+    private function string_substr(string $value, int $start, int $length): string
+    {
+        if (function_exists('mb_substr')) {
+            return (string) mb_substr($value, $start, $length);
+        }
+
+        return (string) substr($value, $start, $length);
     }
     private function build_billing_settings_return_url(string $billing_state): string
     {
