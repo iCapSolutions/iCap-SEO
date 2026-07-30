@@ -633,6 +633,44 @@ if ($notice_code === 'remediation_apply_noop') {
                             </ul>
                         <?php endif; ?>
                     <?php endif; ?>
+                    <h4><?php esc_html_e('Latest remediation changes', 'icap-seo'); ?></h4>
+                    <?php
+                    $remediation_audit_entries = isset($remediation_audit_entries) && is_array($remediation_audit_entries)
+                        ? $remediation_audit_entries
+                        : [];
+                    ?>
+                    <?php if (empty($remediation_audit_entries)) : ?>
+                        <p><?php esc_html_e('No local remediation change entries are recorded for this content yet.', 'icap-seo'); ?></p>
+                    <?php else : ?>
+                        <ul>
+                            <?php foreach (array_slice($remediation_audit_entries, 0, 8) as $audit_entry) : ?>
+                                <?php
+                                $audit_timestamp = isset($audit_entry['timestamp']) ? sanitize_text_field((string) $audit_entry['timestamp']) : '';
+                                $audit_issue_codes = isset($audit_entry['issue_codes']) && is_array($audit_entry['issue_codes'])
+                                    ? array_map(static fn($value): string => sanitize_key((string) $value), $audit_entry['issue_codes'])
+                                    : [];
+                                $audit_title_changed = !empty($audit_entry['title_changed']);
+                                $audit_excerpt_changed = !empty($audit_entry['excerpt_changed']);
+                                $audit_title_before = isset($audit_entry['title_before']) ? sanitize_text_field((string) $audit_entry['title_before']) : '';
+                                $audit_title_after = isset($audit_entry['title_after']) ? sanitize_text_field((string) $audit_entry['title_after']) : '';
+                                $audit_excerpt_before = isset($audit_entry['excerpt_before']) ? sanitize_text_field((string) $audit_entry['excerpt_before']) : '';
+                                $audit_excerpt_after = isset($audit_entry['excerpt_after']) ? sanitize_text_field((string) $audit_entry['excerpt_after']) : '';
+                                ?>
+                                <li>
+                                    <strong><?php echo esc_html($audit_timestamp !== '' ? $audit_timestamp : __('Unknown time', 'icap-seo')); ?></strong>
+                                    <?php if (!empty($audit_issue_codes)) : ?>
+                                        <div><code><?php echo esc_html(implode(', ', $audit_issue_codes)); ?></code></div>
+                                    <?php endif; ?>
+                                    <?php if ($audit_title_changed) : ?>
+                                        <div><?php echo esc_html(sprintf(__('Title: "%1$s" → "%2$s"', 'icap-seo'), $audit_title_before, $audit_title_after)); ?></div>
+                                    <?php endif; ?>
+                                    <?php if ($audit_excerpt_changed) : ?>
+                                        <div><?php echo esc_html(sprintf(__('Meta description/excerpt: "%1$s" → "%2$s"', 'icap-seo'), $audit_excerpt_before, $audit_excerpt_after)); ?></div>
+                                    <?php endif; ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
                     <h4><?php esc_html_e('Score trend history', 'icap-seo'); ?></h4>
                     <p class="description"><?php echo esc_html($trend_summary); ?></p>
                     <?php if (empty($detail_history)) : ?>

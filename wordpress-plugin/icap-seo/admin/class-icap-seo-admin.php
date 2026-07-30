@@ -12,6 +12,9 @@ class ICap_SEO_Admin
     private const NOTICE_QUERY_KEY = 'icap_seo_notice';
     private const SEO_CHANGE_COMMENT_START = '<!-- SEO by iCap - https://icapsolutions.com -->';
     private const SEO_CHANGE_COMMENT_END = '<!-- /SEO by iCap - https://icapsolutions.com -->';
+    private const REMEDIATION_HISTORY_META_KEY = '_icap_seo_remediation_history';
+    private const REMEDIATION_SUMMARY_META_KEY = 'icap_seo_last_remediation_summary';
+    private const REMEDIATION_HISTORY_MAX_ENTRIES = 15;
 
     public function __construct(ICap_SEO_Service_Client $service_client)
     {
@@ -43,6 +46,7 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_open_billing_portal', [$this, 'handle_open_billing_portal']);
         add_action('admin_post_icap_seo_preview_remediation', [$this, 'handle_preview_remediation']);
         add_action('admin_post_icap_seo_apply_remediation', [$this, 'handle_apply_remediation']);
+        add_action('add_meta_boxes', [$this, 'register_remediation_meta_boxes']);
     }
     public function register_list_table_columns(): void
     {
@@ -125,6 +129,7 @@ class ICap_SEO_Admin
         $content_score_detail_error = '';
         $remediation_preview = [];
         $remediation_preview_error = '';
+        $remediation_audit_entries = [];
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
 
         try {
@@ -144,6 +149,10 @@ class ICap_SEO_Admin
                         $detail_result = $this->service_client->get_content_score_detail($selected_content_key, $allow_live_fetch);
                         if (!empty($detail_result['success'])) {
                             $content_score_detail = isset($detail_result['data']) && is_array($detail_result['data']) ? $detail_result['data'] : [];
+                            $selected_post_id = $this->extract_post_id_from_content_key($selected_content_key);
+                            if ($selected_post_id > 0) {
+                                $remediation_audit_entries = $this->get_remediation_history_for_post($selected_post_id);
+                            }
 
                             $preview_result = $this->service_client->get_content_remediation_preview($selected_content_key, [], $allow_live_fetch);
                             if (!empty($preview_result['success'])) {
@@ -194,6 +203,7 @@ class ICap_SEO_Admin
             $latest_content_scores_meta = [];
             $remediation_preview = [];
             $remediation_preview_error = '';
+            $remediation_audit_entries = [];
             error_log('ICap SEO dashboard fallback: ' . $e->getMessage());
         }
 
@@ -700,6 +710,19 @@ class ICap_SEO_Admin
             return ['status' => 'failed', 'reason' => 'wp_update_post_failed'];
         }
 
+        $this->store_remediation_history_entry(
+            $post_id,
+            $normalized_codes,
+            [
+                'title_before' => $current_title,
+                'title_after' => $title_was_updated ? $updated_title : $current_title,
+                'title_changed' => $title_was_updated,
+                'excerpt_before' => $current_excerpt,
+                'excerpt_after' => $excerpt_was_updated ? $updated_excerpt : $current_excerpt,
+                'excerpt_changed' => $excerpt_was_updated,
+            ]
+        );
+
         return [
             'status' => 'applied',
             'reason' => 'changes_applied',
@@ -799,6 +822,9 @@ class ICap_SEO_Admin
         if ($summary === '') {
             $summary = __('Discover featured content and updates.', 'icap-seo');
         }
+        if ($this->is_generic_wordpress_description($summary)) {
+            $summary = $this->build_on_brand_meta_summary($post, $site_name);
+        }
 
         $candidate = $summary;
         if ($primary_keyword !== '' && stripos($candidate, $primary_keyword) === false) {
@@ -833,6 +859,54 @@ class ICap_SEO_Admin
         }
 
         return trim($candidate);
+    }
+
+    private function is_generic_wordpress_description(string $value): bool
+    {
+        $normalized = strtolower((string) preg_replace('/\s+/', ' ', trim($value)));
+        if ($normalized === '') {
+            return false;
+        }
+        $generic_fragments = [
+            'this is an example of a wordpress page',
+            'you could edit this to put information about yourself',
+            'so readers know where you are coming from',
+            'you can create as',
+            'wordpress page',
+        ];
+        foreach ($generic_fragments as $fragment) {
+            if (strpos($normalized, $fragment) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function build_on_brand_meta_summary(WP_Post $post, string $site_name): string
+    {
+        $title_phrase = sanitize_text_field((string) $post->post_title);
+        $title_phrase = preg_replace('/\s*[\|\-–—]\s*.*/u', '', $title_phrase);
+        if (!is_string($title_phrase)) {
+            $title_phrase = '';
+        }
+        $title_phrase = trim($title_phrase);
+        if ($title_phrase === '') {
+            $title_phrase = __('this page', 'icap-seo');
+        }
+
+        if ($site_name !== '') {
+            return sprintf(
+                __('Explore %1$s at %2$s with brand highlights, key offerings, and clear next steps for visitors.', 'icap-seo'),
+                $title_phrase,
+                $site_name
+            );
+        }
+
+        return sprintf(
+            __('Explore %s with brand highlights, key offerings, and clear next steps for visitors.', 'icap-seo'),
+            $title_phrase
+        );
     }
 
     private function extract_meta_summary_sentence(WP_Post $post): string
@@ -895,7 +969,8 @@ class ICap_SEO_Admin
             'been', 'being', 'were', 'them', 'they', 'these', 'those', 'also', 'here', 'more', 'read', 'page',
             'site', 'post', 'blog', 'home', 'https', 'http', 'www', 'com', 'org', 'net', 'and', 'the', 'for',
             'you', 'our', 'are', 'but', 'not', 'its', 'can', 'all', 'any', 'new', 'now', 'get', 'use', 'using',
-            'just', 'over', 'under', 'than', 'then', 'too', 'very', 'into', 'out', 'off', 'via'
+            'just', 'over', 'under', 'than', 'then', 'too', 'very', 'into', 'out', 'off', 'via',
+            'wordpress', 'example', 'readers', 'coming', 'yourself', 'create', 'edit', 'pages', 'like', 'information'
         ];
 
         $tokens = preg_split('/[^a-z0-9]+/', $text_blob);
@@ -927,6 +1002,120 @@ class ICap_SEO_Admin
             static fn($keyword): string => sanitize_text_field(ucfirst((string) $keyword)),
             $keywords
         );
+    }
+
+    private function get_remediation_history_for_post(int $post_id): array
+    {
+        $history = get_post_meta($post_id, self::REMEDIATION_HISTORY_META_KEY, true);
+        if (!is_array($history)) {
+            return [];
+        }
+
+        $normalized_entries = [];
+        foreach ($history as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $normalized_entries[] = [
+                'timestamp' => isset($entry['timestamp']) ? sanitize_text_field((string) $entry['timestamp']) : '',
+                'issue_codes' => isset($entry['issue_codes']) && is_array($entry['issue_codes']) ? array_map('sanitize_key', $entry['issue_codes']) : [],
+                'title_before' => isset($entry['title_before']) ? sanitize_text_field((string) $entry['title_before']) : '',
+                'title_after' => isset($entry['title_after']) ? sanitize_text_field((string) $entry['title_after']) : '',
+                'title_changed' => !empty($entry['title_changed']),
+                'excerpt_before' => isset($entry['excerpt_before']) ? sanitize_text_field((string) $entry['excerpt_before']) : '',
+                'excerpt_after' => isset($entry['excerpt_after']) ? sanitize_text_field((string) $entry['excerpt_after']) : '',
+                'excerpt_changed' => !empty($entry['excerpt_changed']),
+            ];
+        }
+
+        return $normalized_entries;
+    }
+
+    private function store_remediation_history_entry(int $post_id, array $issue_codes, array $result): void
+    {
+        $history = $this->get_remediation_history_for_post($post_id);
+        array_unshift($history, [
+            'timestamp' => current_time('mysql'),
+            'issue_codes' => array_values(array_unique(array_map(static fn($value): string => sanitize_key((string) $value), $issue_codes))),
+            'title_before' => isset($result['title_before']) ? sanitize_text_field((string) $result['title_before']) : '',
+            'title_after' => isset($result['title_after']) ? sanitize_text_field((string) $result['title_after']) : '',
+            'title_changed' => !empty($result['title_changed']),
+            'excerpt_before' => isset($result['excerpt_before']) ? sanitize_text_field((string) $result['excerpt_before']) : '',
+            'excerpt_after' => isset($result['excerpt_after']) ? sanitize_text_field((string) $result['excerpt_after']) : '',
+            'excerpt_changed' => !empty($result['excerpt_changed']),
+        ]);
+
+        if (count($history) > self::REMEDIATION_HISTORY_MAX_ENTRIES) {
+            $history = array_slice($history, 0, self::REMEDIATION_HISTORY_MAX_ENTRIES);
+        }
+
+        update_post_meta($post_id, self::REMEDIATION_HISTORY_META_KEY, $history);
+
+        $latest = $history[0];
+        $parts = [];
+        if (!empty($latest['title_changed'])) {
+            $parts[] = __('Title updated', 'icap-seo');
+        }
+        if (!empty($latest['excerpt_changed'])) {
+            $parts[] = __('Meta description/excerpt updated', 'icap-seo');
+        }
+        $summary = empty($parts) ? __('No field changes applied.', 'icap-seo') : implode('; ', $parts) . '.';
+        if (!empty($latest['issue_codes']) && is_array($latest['issue_codes'])) {
+            $summary .= ' ' . sprintf(__('Issues: %s', 'icap-seo'), implode(', ', array_map('sanitize_key', $latest['issue_codes'])));
+        }
+        update_post_meta($post_id, self::REMEDIATION_SUMMARY_META_KEY, $summary);
+    }
+
+    public function register_remediation_meta_boxes(): void
+    {
+        add_meta_box(
+            'icap-seo-remediation-log',
+            __('iCap SEO Remediation Log', 'icap-seo'),
+            [$this, 'render_remediation_meta_box'],
+            'page',
+            'side',
+            'default'
+        );
+        add_meta_box(
+            'icap-seo-remediation-log',
+            __('iCap SEO Remediation Log', 'icap-seo'),
+            [$this, 'render_remediation_meta_box'],
+            'post',
+            'side',
+            'default'
+        );
+    }
+
+    public function render_remediation_meta_box(WP_Post $post): void
+    {
+        if (!current_user_can('edit_post', $post->ID)) {
+            echo '<p>' . esc_html__('No permission to view remediation history.', 'icap-seo') . '</p>';
+            return;
+        }
+
+        $history = $this->get_remediation_history_for_post((int) $post->ID);
+        if (empty($history)) {
+            echo '<p>' . esc_html__('No remediation changes recorded yet for this content.', 'icap-seo') . '</p>';
+            return;
+        }
+
+        echo '<div class="icap-seo-remediation-meta-box">';
+        foreach (array_slice($history, 0, 5) as $entry) {
+            $when = isset($entry['timestamp']) ? (string) $entry['timestamp'] : '';
+            $issues = isset($entry['issue_codes']) && is_array($entry['issue_codes']) ? $entry['issue_codes'] : [];
+            echo '<p><strong>' . esc_html($when !== '' ? $when : __('Unknown time', 'icap-seo')) . '</strong><br>';
+            if (!empty($issues)) {
+                echo esc_html(sprintf(__('Issues: %s', 'icap-seo'), implode(', ', array_map('sanitize_key', $issues)))) . '<br>';
+            }
+            if (!empty($entry['title_changed'])) {
+                echo esc_html__('Title changed', 'icap-seo') . '<br>';
+            }
+            if (!empty($entry['excerpt_changed'])) {
+                echo esc_html__('Meta description/excerpt changed', 'icap-seo') . '<br>';
+            }
+            echo '</p><hr>';
+        }
+        echo '</div>';
     }
     private function trim_title_to_max_length(string $title, int $max_length): string
     {
