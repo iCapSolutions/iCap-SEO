@@ -58,6 +58,9 @@
     - Done: expanded customer plugin UX with content-detail drill-down for category clarity, recommendation priority metadata, and score history/trend.
     - Done: backend Phase 5 remediation contract MVP with secure site-token routes for preview/apply payloads on scored content keys.
     - Done: shipped guided remediation CTA workflow wiring (`Yes, make SEO changes`) and endpoint route parity fix in infrastructure.
+    - Planned: remediation UX polish in Content Scores detail:
+      - rename primary submit CTA to more professional copy (for example: `Apply all recommendations`).
+      - add per-item recommendation actions (for example: `Apply this recommendation`) so clients can selectively approve/fix specific items.
     - Planned: implement actual remediation job execution that writes WordPress page updates and reruns scans to validate score improvement.
     - Planned: define remediation safety boundaries (preview/diff confirmation, capability checks, reversible edits, audit trail).
 
