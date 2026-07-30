@@ -12,71 +12,12 @@ class ICap_SEO_Admin
     private const NOTICE_QUERY_KEY = 'icap_seo_notice';
     private const SEO_CHANGE_COMMENT_START = '<!-- SEO by iCap - https://icapsolutions.com -->';
     private const SEO_CHANGE_COMMENT_END = '<!-- /SEO by iCap - https://icapsolutions.com -->';
-    private const SEO_TITLE_META_KEYS = [
-        'rank_math_title',
-        '_yoast_wpseo_title',
-        '_aioseo_title',
-    ];
-    private const SEO_DESCRIPTION_META_KEYS = [
-        'rank_math_description',
-        '_yoast_wpseo_metadesc',
-        '_aioseo_description',
-    ];
 
     public function __construct(ICap_SEO_Service_Client $service_client)
     {
         $this->service_client = $service_client;
     }
 
-    private function resolve_seo_title_meta_update(int $post_id, string $candidate_title): array
-    {
-        $meta_key = '';
-        $meta_before = '';
-
-        foreach (self::SEO_TITLE_META_KEYS as $candidate_key) {
-            if (metadata_exists('post', $post_id, $candidate_key)) {
-                $meta_key = $candidate_key;
-                $meta_before = sanitize_text_field((string) get_post_meta($post_id, $candidate_key, true));
-                break;
-            }
-        }
-
-        if ($meta_key === '') {
-            $meta_key = $this->detect_preferred_seo_title_meta_key();
-            if ($meta_key !== '') {
-                $meta_before = sanitize_text_field((string) get_post_meta($post_id, $meta_key, true));
-            }
-        }
-
-        if ($meta_key === '') {
-            return [
-                'updated' => false,
-                'meta_key' => '',
-                'before' => '',
-            ];
-        }
-
-        return [
-            'updated' => $candidate_title !== '' && $candidate_title !== $meta_before,
-            'meta_key' => $meta_key,
-            'before' => $meta_before,
-        ];
-    }
-
-    private function detect_preferred_seo_title_meta_key(): string
-    {
-        if (defined('RANK_MATH_VERSION') || class_exists('RankMath')) {
-            return 'rank_math_title';
-        }
-        if (defined('WPSEO_VERSION') || class_exists('WPSEO_Options')) {
-            return '_yoast_wpseo_title';
-        }
-        if (defined('AIOSEO_VERSION') || class_exists('AIOSEO\\Plugin\\Common\\Main')) {
-            return '_aioseo_title';
-        }
-
-        return '';
-    }
 
     public function register_menu(): void
     {
@@ -610,12 +551,6 @@ class ICap_SEO_Admin
                         'content_key' => $content_key,
                         'title_before' => isset($local_apply_result['title_before']) ? (string) $local_apply_result['title_before'] : '',
                         'title_after' => isset($local_apply_result['title_after']) ? (string) $local_apply_result['title_after'] : '',
-                        'seo_title_meta_key' => isset($local_apply_result['seo_title_meta_key']) ? (string) $local_apply_result['seo_title_meta_key'] : '',
-                        'seo_title_before' => isset($local_apply_result['seo_title_before']) ? (string) $local_apply_result['seo_title_before'] : '',
-                        'seo_title_after' => isset($local_apply_result['seo_title_after']) ? (string) $local_apply_result['seo_title_after'] : '',
-                        'seo_description_meta_key' => isset($local_apply_result['seo_description_meta_key']) ? (string) $local_apply_result['seo_description_meta_key'] : '',
-                        'seo_description_before' => isset($local_apply_result['seo_description_before']) ? (string) $local_apply_result['seo_description_before'] : '',
-                        'seo_description_after' => isset($local_apply_result['seo_description_after']) ? (string) $local_apply_result['seo_description_after'] : '',
                         'excerpt_before' => isset($local_apply_result['excerpt_before']) ? (string) $local_apply_result['excerpt_before'] : '',
                         'excerpt_after' => isset($local_apply_result['excerpt_after']) ? (string) $local_apply_result['excerpt_after'] : '',
                     ]
@@ -689,53 +624,29 @@ class ICap_SEO_Admin
         $current_title = sanitize_text_field((string) $post->post_title);
         $updated_title = $current_title;
         $title_was_updated = false;
-        $seo_title_meta_update = [
-            'updated' => false,
-            'meta_key' => '',
-            'before' => '',
-        ];
-        $seo_title_meta_was_updated = false;
         if ($apply_title_recommendation) {
             $updated_title = $this->build_seo_title_with_target_length($current_title);
             $title_was_updated = $updated_title !== '' && $updated_title !== $current_title;
-            $seo_title_meta_update = $this->resolve_seo_title_meta_update($post_id, $updated_title);
-            $seo_title_meta_was_updated = !empty($seo_title_meta_update['updated']);
         }
         $current_excerpt = trim((string) preg_replace('/\s+/', ' ', sanitize_text_field((string) $post->post_excerpt)));
         $updated_excerpt = $current_excerpt;
         $excerpt_was_updated = false;
 
         $updated_meta_description = '';
-        $seo_description_meta_update = [
-            'updated' => false,
-            'meta_key' => '',
-            'before' => '',
-        ];
-        $seo_description_meta_was_updated = false;
         if ($apply_meta_description_recommendation) {
             $updated_meta_description = $this->build_seo_meta_description($post);
             $updated_excerpt = trim((string) preg_replace('/\s+/', ' ', $updated_meta_description));
             $excerpt_was_updated = $updated_excerpt !== '' && $updated_excerpt !== $current_excerpt;
-            $seo_description_meta_update = $this->resolve_seo_description_meta_update($post_id, $updated_meta_description);
-            $seo_description_meta_was_updated = !empty($seo_description_meta_update['updated']);
         }
         if (
             !$title_was_updated
-            && !$seo_title_meta_was_updated
             && !$excerpt_was_updated
-            && !$seo_description_meta_was_updated
         ) {
             $reason = 'no_effective_change_computed';
             if ($apply_meta_description_recommendation) {
-                $meta_before = isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : '';
-                $meta_length = $this->string_length($meta_before);
                 if ($updated_meta_description === '') {
                     $reason = 'meta_description_generation_failed';
                 } elseif ($current_excerpt !== '' && $this->string_length($current_excerpt) >= 120 && $this->string_length($current_excerpt) <= 170) {
-                    $reason = 'meta_description_already_within_range';
-                } elseif ((string) ($seo_description_meta_update['meta_key'] ?? '') === '' && $current_excerpt === '') {
-                    $reason = 'meta_description_storage_unavailable';
-                } elseif ($meta_before !== '' && $meta_length >= 120 && $meta_length <= 170) {
                     $reason = 'meta_description_already_within_range';
                 }
             } elseif ($apply_title_recommendation) {
@@ -750,12 +661,6 @@ class ICap_SEO_Admin
                 'reason' => $reason,
                 'title_before' => $current_title,
                 'title_after' => $current_title,
-                'seo_title_meta_key' => isset($seo_title_meta_update['meta_key']) ? (string) $seo_title_meta_update['meta_key'] : '',
-                'seo_title_before' => isset($seo_title_meta_update['before']) ? (string) $seo_title_meta_update['before'] : '',
-                'seo_title_after' => isset($seo_title_meta_update['before']) ? (string) $seo_title_meta_update['before'] : '',
-                'seo_description_meta_key' => isset($seo_description_meta_update['meta_key']) ? (string) $seo_description_meta_update['meta_key'] : '',
-                'seo_description_before' => isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : '',
-                'seo_description_after' => isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : '',
                 'excerpt_before' => $current_excerpt,
                 'excerpt_after' => $current_excerpt,
             ];
@@ -786,24 +691,11 @@ class ICap_SEO_Admin
             return ['status' => 'failed', 'reason' => 'wp_update_post_failed'];
         }
 
-        if ($seo_title_meta_was_updated && !empty($seo_title_meta_update['meta_key'])) {
-            update_post_meta($post_id, (string) $seo_title_meta_update['meta_key'], $updated_title);
-        }
-        if ($seo_description_meta_was_updated && !empty($seo_description_meta_update['meta_key'])) {
-            update_post_meta($post_id, (string) $seo_description_meta_update['meta_key'], $updated_meta_description);
-        }
-
         return [
             'status' => 'applied',
             'reason' => 'changes_applied',
             'title_before' => $current_title,
             'title_after' => $title_was_updated ? $updated_title : $current_title,
-            'seo_title_meta_key' => isset($seo_title_meta_update['meta_key']) ? (string) $seo_title_meta_update['meta_key'] : '',
-            'seo_title_before' => isset($seo_title_meta_update['before']) ? (string) $seo_title_meta_update['before'] : '',
-            'seo_title_after' => $seo_title_meta_was_updated ? $updated_title : (isset($seo_title_meta_update['before']) ? (string) $seo_title_meta_update['before'] : ''),
-            'seo_description_meta_key' => isset($seo_description_meta_update['meta_key']) ? (string) $seo_description_meta_update['meta_key'] : '',
-            'seo_description_before' => isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : '',
-            'seo_description_after' => $seo_description_meta_was_updated ? $updated_meta_description : (isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : ''),
             'excerpt_before' => $current_excerpt,
             'excerpt_after' => $excerpt_was_updated ? $updated_excerpt : $current_excerpt,
         ];
@@ -879,57 +771,6 @@ class ICap_SEO_Admin
         $site_name = str_replace(['|', '-', '_'], ' ', $site_name);
         $site_name = trim((string) preg_replace('/\s+/', ' ', $site_name));
         return $site_name;
-    }
-
-
-    private function resolve_seo_description_meta_update(int $post_id, string $candidate_description): array
-    {
-        $meta_key = '';
-        $meta_before = '';
-
-        foreach (self::SEO_DESCRIPTION_META_KEYS as $candidate_key) {
-            if (metadata_exists('post', $post_id, $candidate_key)) {
-                $meta_key = $candidate_key;
-                $meta_before = sanitize_text_field((string) get_post_meta($post_id, $candidate_key, true));
-                break;
-            }
-        }
-
-        if ($meta_key === '') {
-            $meta_key = $this->detect_preferred_seo_description_meta_key();
-            if ($meta_key !== '') {
-                $meta_before = sanitize_text_field((string) get_post_meta($post_id, $meta_key, true));
-            }
-        }
-
-        if ($meta_key === '') {
-            return [
-                'updated' => false,
-                'meta_key' => '',
-                'before' => '',
-            ];
-        }
-
-        return [
-            'updated' => $candidate_description !== '' && $candidate_description !== $meta_before,
-            'meta_key' => $meta_key,
-            'before' => $meta_before,
-        ];
-    }
-
-    private function detect_preferred_seo_description_meta_key(): string
-    {
-        if (defined('RANK_MATH_VERSION') || class_exists('RankMath')) {
-            return 'rank_math_description';
-        }
-        if (defined('WPSEO_VERSION') || class_exists('WPSEO_Options')) {
-            return '_yoast_wpseo_metadesc';
-        }
-        if (defined('AIOSEO_VERSION') || class_exists('AIOSEO\\Plugin\\Common\\Main')) {
-            return '_aioseo_description';
-        }
-
-        return '';
     }
 
     private function build_seo_meta_description(WP_Post $post): string
