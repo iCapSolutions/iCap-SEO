@@ -420,10 +420,6 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                     $detail_history = isset($content_score_detail['history']) && is_array($content_score_detail['history'])
                         ? $content_score_detail['history']
                         : [];
-                    $top_issue_code = '';
-                    if (!empty($detail_issues) && isset($detail_issues[0]['issue_code']) && is_string($detail_issues[0]['issue_code'])) {
-                        $top_issue_code = sanitize_key($detail_issues[0]['issue_code']);
-                    }
                     $trend_summary = __('Insufficient history for trend.', 'icap-seo');
                     if (count($detail_history) >= 2) {
                         $latest_history_score = isset($detail_history[0]['overall_score']) ? (int) $detail_history[0]['overall_score'] : 0;
@@ -473,6 +469,7 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                         <ol>
                             <?php foreach ($detail_issues as $issue) : ?>
                                 <?php
+                                $issue_code = isset($issue['issue_code']) ? sanitize_key((string) $issue['issue_code']) : '';
                                 $issue_severity = isset($issue['severity']) ? sanitize_text_field((string) $issue['severity']) : 'medium';
                                 $issue_description = isset($issue['description']) ? sanitize_text_field((string) $issue['description']) : '';
                                 $issue_recommended_fix = isset($issue['recommended_fix']) ? sanitize_text_field((string) $issue['recommended_fix']) : '';
@@ -487,30 +484,55 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
                                     <?php if ($issue_recommended_fix !== '') : ?>
                                         <div><em><?php echo esc_html($issue_recommended_fix); ?></em></div>
                                     <?php endif; ?>
+                                    <?php if ($issue_code !== '') : ?>
+                                        <div style="margin-top:8px;">
+                                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                                <input type="hidden" name="action" value="icap_seo_apply_remediation">
+                                                <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                                <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
+                                                <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
+                                                <button type="submit" class="button button-secondary"><?php esc_html_e('Apply this recommendation', 'icap-seo'); ?></button>
+                                            </form>
+                                        </div>
+                                    <?php endif; ?>
                                 </li>
                             <?php endforeach; ?>
                         </ol>
                     <?php endif; ?>
                     <h4><?php esc_html_e('Remediation preview and apply', 'icap-seo'); ?></h4>
-                    <p class="description"><?php esc_html_e('POC mode: this submits only the top prioritized recommendation for this content item.', 'icap-seo'); ?></p>
+                    <p class="description"><?php esc_html_e('Use the action below to submit all listed recommendations, or apply a single recommendation directly from its row above.', 'icap-seo'); ?></p>
                     <div class="icap-seo-actions">
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="icap_seo_preview_remediation">
                             <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                             <?php wp_nonce_field('icap_seo_preview_remediation'); ?>
-                            <?php if ($top_issue_code !== '') : ?>
-                                <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($top_issue_code); ?>">
-                            <?php endif; ?>
+                            <?php foreach ($detail_issues as $issue) : ?>
+                                <?php
+                                $issue_code = isset($issue['issue_code']) && is_string($issue['issue_code'])
+                                    ? sanitize_key($issue['issue_code'])
+                                    : '';
+                                ?>
+                                <?php if ($issue_code !== '') : ?>
+                                    <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
+                                <?php endif; ?>
+                            <?php endforeach; ?>
                             <button type="submit" class="button"><?php esc_html_e('Refresh remediation preview', 'icap-seo'); ?></button>
                         </form>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="icap_seo_apply_remediation">
                             <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                             <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
-                            <?php if ($top_issue_code !== '') : ?>
-                                <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($top_issue_code); ?>">
-                            <?php endif; ?>
-                            <button type="submit" class="button button-primary"><?php esc_html_e('Yes, make SEO changes', 'icap-seo'); ?></button>
+                            <?php foreach ($detail_issues as $issue) : ?>
+                                <?php
+                                $issue_code = isset($issue['issue_code']) && is_string($issue['issue_code'])
+                                    ? sanitize_key($issue['issue_code'])
+                                    : '';
+                                ?>
+                                <?php if ($issue_code !== '') : ?>
+                                    <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Apply all recommendations', 'icap-seo'); ?></button>
                         </form>
                     </div>
                     <?php if ($remediation_preview_error !== '') : ?>
