@@ -10,10 +10,67 @@ class ICap_SEO_Admin
     private const SCORE_COLUMN_KEY = 'icap_seo_score';
     private const DELTA_COLUMN_KEY = 'icap_seo_delta';
     private const NOTICE_QUERY_KEY = 'icap_seo_notice';
+    private const SEO_CHANGE_COMMENT_START = '<!-- SEO by iCap - https://icapsolutions.com -->';
+    private const SEO_CHANGE_COMMENT_END = '<!-- /SEO by iCap - https://icapsolutions.com -->';
+    private const SEO_TITLE_META_KEYS = [
+        'rank_math_title',
+        '_yoast_wpseo_title',
+        '_aioseo_title',
+    ];
 
     public function __construct(ICap_SEO_Service_Client $service_client)
     {
         $this->service_client = $service_client;
+    }
+
+    private function resolve_seo_title_meta_update(int $post_id, string $candidate_title): array
+    {
+        $meta_key = '';
+        $meta_before = '';
+
+        foreach (self::SEO_TITLE_META_KEYS as $candidate_key) {
+            if (metadata_exists('post', $post_id, $candidate_key)) {
+                $meta_key = $candidate_key;
+                $meta_before = sanitize_text_field((string) get_post_meta($post_id, $candidate_key, true));
+                break;
+            }
+        }
+
+        if ($meta_key === '') {
+            $meta_key = $this->detect_preferred_seo_title_meta_key();
+            if ($meta_key !== '') {
+                $meta_before = sanitize_text_field((string) get_post_meta($post_id, $meta_key, true));
+            }
+        }
+
+        if ($meta_key === '') {
+            return [
+                'updated' => false,
+                'meta_key' => '',
+                'before' => '',
+            ];
+        }
+
+        return [
+            'updated' => $candidate_title !== '' && $candidate_title !== $meta_before,
+            'meta_key' => $meta_key,
+            'before' => $meta_before,
+        ];
+    }
+
+    private function detect_preferred_seo_title_meta_key(): string
+    {
+        if (defined('RANK_MATH_VERSION') || class_exists('RankMath')) {
+            return 'rank_math_title';
+        }
+        if (defined('WPSEO_VERSION') || class_exists('WPSEO_Options')) {
+            return '_yoast_wpseo_title';
+        }
+        if (defined('AIOSEO_VERSION') || class_exists('AIOSEO\\Plugin\\Common\\Main')) {
+            return '_aioseo_title';
+        }
+
+        return '';
     }
 
     public function register_menu(): void
@@ -539,12 +596,35 @@ class ICap_SEO_Admin
         $result = $this->service_client->apply_content_remediation($content_key, $approved_issue_codes, true);
         if ($result['success']) {
             $local_apply_result = $this->apply_supported_local_remediation($content_key, $approved_issue_codes);
-            if (!empty($local_apply_result['applied'])) {
-                $this->redirect_with_notice('remediation_apply_title_updated', 'content-scores', ['content_key' => $content_key]);
+            $status = isset($local_apply_result['status']) ? sanitize_key((string) $local_apply_result['status']) : '';
+            if ($status === 'applied') {
+                $this->redirect_with_notice(
+                    'remediation_apply_title_updated',
+                    'content-scores',
+                    [
+                        'content_key' => $content_key,
+                        'title_before' => isset($local_apply_result['title_before']) ? (string) $local_apply_result['title_before'] : '',
+                        'title_after' => isset($local_apply_result['title_after']) ? (string) $local_apply_result['title_after'] : '',
+                        'seo_title_meta_key' => isset($local_apply_result['seo_title_meta_key']) ? (string) $local_apply_result['seo_title_meta_key'] : '',
+                        'seo_title_before' => isset($local_apply_result['seo_title_before']) ? (string) $local_apply_result['seo_title_before'] : '',
+                        'seo_title_after' => isset($local_apply_result['seo_title_after']) ? (string) $local_apply_result['seo_title_after'] : '',
+                    ]
+                );
                 return;
             }
-            if (!empty($local_apply_result['failed'])) {
+            if ($status === 'failed') {
                 $this->redirect_with_notice('remediation_apply_title_update_failed', 'content-scores', ['content_key' => $content_key]);
+                return;
+            }
+            if ($status === 'no_op') {
+                $this->redirect_with_notice(
+                    'remediation_apply_noop',
+                    'content-scores',
+                    [
+                        'content_key' => $content_key,
+                        'noop_reason' => isset($local_apply_result['reason']) ? (string) $local_apply_result['reason'] : '',
+                    ]
+                );
                 return;
             }
             $this->redirect_with_notice('remediation_apply_queued', 'content-scores', ['content_key' => $content_key]);
@@ -576,41 +656,92 @@ class ICap_SEO_Admin
         );
 
         if (!in_array('title_length_out_of_range', $normalized_codes, true)) {
-            return ['applied' => false, 'failed' => false];
+            return ['status' => 'no_op', 'reason' => 'issue_not_supported_for_local_apply'];
         }
 
         $post_id = $this->extract_post_id_from_content_key($content_key);
         if ($post_id <= 0) {
-            return ['applied' => false, 'failed' => true];
+            return ['status' => 'failed', 'reason' => 'invalid_post_id'];
         }
         if (!current_user_can('edit_post', $post_id)) {
-            return ['applied' => false, 'failed' => true];
+            return ['status' => 'failed', 'reason' => 'missing_edit_capability'];
         }
 
         $post = get_post($post_id);
         if (!$post instanceof WP_Post) {
-            return ['applied' => false, 'failed' => true];
+            return ['status' => 'failed', 'reason' => 'post_not_found'];
         }
 
         $current_title = sanitize_text_field((string) $post->post_title);
         $updated_title = $this->build_seo_title_with_target_length($current_title);
-        if ($updated_title === '' || $updated_title === $current_title) {
-            return ['applied' => false, 'failed' => false];
+        $title_was_updated = $updated_title !== '' && $updated_title !== $current_title;
+        $seo_meta_update = $this->resolve_seo_title_meta_update($post_id, $updated_title);
+        $seo_meta_was_updated = !empty($seo_meta_update['updated']);
+        if (!$title_was_updated && !$seo_meta_was_updated) {
+            $title_length = $this->string_length($current_title);
+            $reason = ($title_length >= 20 && $title_length <= 65)
+                ? 'title_already_within_range'
+                : 'no_effective_change_computed';
+            return [
+                'status' => 'no_op',
+                'reason' => $reason,
+                'title_before' => $current_title,
+                'title_after' => $current_title,
+                'seo_title_meta_key' => isset($seo_meta_update['meta_key']) ? (string) $seo_meta_update['meta_key'] : '',
+                'seo_title_before' => isset($seo_meta_update['before']) ? (string) $seo_meta_update['before'] : '',
+                'seo_title_after' => isset($seo_meta_update['before']) ? (string) $seo_meta_update['before'] : '',
+            ];
+        }
+
+        $current_content = (string) $post->post_content;
+        $updated_content = $this->wrap_content_with_seo_change_comments($current_content);
+        $content_was_updated = $updated_content !== $current_content;
+        $update_payload = [
+            'ID' => $post_id,
+        ];
+        if ($title_was_updated) {
+            $update_payload['post_title'] = $updated_title;
+        }
+        if ($content_was_updated) {
+            $update_payload['post_content'] = $updated_content;
         }
 
         $update_result = wp_update_post(
-            [
-                'ID' => $post_id,
-                'post_title' => $updated_title,
-            ],
+            $update_payload,
             true
         );
 
         if (is_wp_error($update_result)) {
-            return ['applied' => false, 'failed' => true];
+            return ['status' => 'failed', 'reason' => 'wp_update_post_failed'];
         }
 
-        return ['applied' => true, 'failed' => false];
+        if ($seo_meta_was_updated && !empty($seo_meta_update['meta_key'])) {
+            update_post_meta($post_id, (string) $seo_meta_update['meta_key'], $updated_title);
+        }
+
+        return [
+            'status' => 'applied',
+            'reason' => 'changes_applied',
+            'title_before' => $current_title,
+            'title_after' => $title_was_updated ? $updated_title : $current_title,
+            'seo_title_meta_key' => isset($seo_meta_update['meta_key']) ? (string) $seo_meta_update['meta_key'] : '',
+            'seo_title_before' => isset($seo_meta_update['before']) ? (string) $seo_meta_update['before'] : '',
+            'seo_title_after' => $seo_meta_was_updated ? $updated_title : (isset($seo_meta_update['before']) ? (string) $seo_meta_update['before'] : ''),
+        ];
+    }
+
+    private function wrap_content_with_seo_change_comments(string $content): string
+    {
+        if (strpos($content, self::SEO_CHANGE_COMMENT_START) !== false) {
+            return $content;
+        }
+
+        $normalized_content = trim($content);
+        if ($normalized_content === '') {
+            return self::SEO_CHANGE_COMMENT_START . "\n" . self::SEO_CHANGE_COMMENT_END;
+        }
+
+        return self::SEO_CHANGE_COMMENT_START . "\n" . $content . "\n" . self::SEO_CHANGE_COMMENT_END;
     }
 
     private function extract_post_id_from_content_key(string $content_key): int
