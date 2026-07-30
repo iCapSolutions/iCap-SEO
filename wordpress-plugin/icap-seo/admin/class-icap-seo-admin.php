@@ -646,8 +646,13 @@ class ICap_SEO_Admin
             if ($apply_meta_description_recommendation) {
                 if ($updated_meta_description === '') {
                     $reason = 'meta_description_generation_failed';
-                } elseif ($current_excerpt !== '' && $this->string_length($current_excerpt) >= 120 && $this->string_length($current_excerpt) <= 170) {
-                    $reason = 'meta_description_already_within_range';
+                } elseif (
+                    $current_excerpt !== ''
+                    && $updated_excerpt === $current_excerpt
+                    && $this->string_length($current_excerpt) >= 120
+                    && $this->string_length($current_excerpt) <= 170
+                ) {
+                    $reason = 'meta_description_already_optimized';
                 }
             } elseif ($apply_title_recommendation) {
                 $title_length = $this->string_length($current_title);
@@ -775,19 +780,34 @@ class ICap_SEO_Admin
 
     private function build_seo_meta_description(WP_Post $post): string
     {
-        $base = '';
-        if (has_excerpt($post)) {
-            $base = (string) $post->post_excerpt;
+        $site_name = sanitize_text_field((string) get_bloginfo('name'));
+        $summary = $this->extract_meta_summary_sentence($post);
+        $keyword_candidates = $this->extract_keyword_candidates_for_meta($post, $site_name);
+        $primary_keyword = $keyword_candidates[0] ?? '';
+        $secondary_keyword = $keyword_candidates[1] ?? '';
+        $tertiary_keyword = $keyword_candidates[2] ?? '';
+
+        if ($summary === '') {
+            $summary = trim(sanitize_text_field((string) $post->post_title));
         }
-        if ($base === '') {
-            $base = wp_strip_all_tags((string) $post->post_content, true);
-        }
-        if ($base === '') {
-            $site_name = sanitize_text_field((string) get_bloginfo('name'));
-            $base = trim(sanitize_text_field((string) $post->post_title) . ' | ' . $site_name);
+        if ($summary === '') {
+            $summary = __('Discover featured content and updates.', 'icap-seo');
         }
 
-        $candidate = preg_replace('/\s+/', ' ', trim((string) $base));
+        $candidate = $summary;
+        if ($primary_keyword !== '' && stripos($candidate, $primary_keyword) === false) {
+            $candidate .= ' Discover ' . $primary_keyword . ' insights';
+        }
+        $keyword_phrase_parts = array_values(array_filter([$secondary_keyword, $tertiary_keyword]));
+        if (!empty($keyword_phrase_parts)) {
+            $candidate .= ' with ' . implode(' and ', $keyword_phrase_parts);
+        }
+        if ($site_name !== '' && stripos($candidate, $site_name) === false) {
+            $candidate .= ' from ' . $site_name;
+        }
+        $candidate .= '.';
+
+        $candidate = preg_replace('/\s+/', ' ', trim((string) $candidate));
         if (!is_string($candidate)) {
             $candidate = '';
         }
@@ -797,10 +817,7 @@ class ICap_SEO_Admin
         }
 
         if ($this->string_length($candidate) < 120) {
-            $site_name = sanitize_text_field((string) get_bloginfo('name'));
-            if ($site_name !== '') {
-                $candidate = trim($candidate . ' Learn more at ' . $site_name . '.');
-            }
+            $candidate = trim($candidate . ' Get practical tips, highlights, and inspiration tailored to this page.');
         }
         if ($this->string_length($candidate) < 120) {
             $candidate = trim($candidate . ' Read more.');
@@ -810,6 +827,100 @@ class ICap_SEO_Admin
         }
 
         return trim($candidate);
+    }
+
+    private function extract_meta_summary_sentence(WP_Post $post): string
+    {
+        $candidates = [];
+        if (has_excerpt($post)) {
+            $candidates[] = (string) $post->post_excerpt;
+        }
+        $candidates[] = wp_strip_all_tags((string) $post->post_content, true);
+        $candidates[] = sanitize_text_field((string) $post->post_title);
+
+        foreach ($candidates as $candidate) {
+            $normalized = preg_replace('/\s+/', ' ', trim((string) $candidate));
+            if (!is_string($normalized) || $normalized === '') {
+                continue;
+            }
+            $sentences = preg_split('/(?<=[\.\!\?])\s+/', $normalized);
+            if (is_array($sentences) && !empty($sentences)) {
+                $first_sentence = trim((string) $sentences[0]);
+                if ($first_sentence !== '') {
+                    return $this->trim_text_to_max_length($first_sentence, 110);
+                }
+            }
+            return $this->trim_text_to_max_length($normalized, 110);
+        }
+
+        return '';
+    }
+
+    private function extract_keyword_candidates_for_meta(WP_Post $post, string $site_name): array
+    {
+        $post_content = (string) $post->post_content;
+        $heading_text = '';
+        if (preg_match_all('/<h[1-3][^>]*>(.*?)<\/h[1-3]>/is', $post_content, $heading_matches) > 0 && isset($heading_matches[1])) {
+            $heading_text = implode(' ', array_map(static fn($value): string => wp_strip_all_tags((string) $value), $heading_matches[1]));
+        }
+
+        $text_blob = implode(' ', [
+            sanitize_text_field((string) $post->post_title),
+            wp_strip_all_tags($heading_text, true),
+            wp_strip_all_tags($post_content, true),
+        ]);
+        $text_blob = strtolower((string) preg_replace('/\s+/', ' ', $text_blob));
+        if ($text_blob === '') {
+            return [];
+        }
+
+        $site_tokens = [];
+        $site_token_source = strtolower((string) preg_replace('/[^a-z0-9\s]+/', ' ', $site_name));
+        if ($site_token_source !== '') {
+            $site_tokens = preg_split('/\s+/', $site_token_source);
+            if (!is_array($site_tokens)) {
+                $site_tokens = [];
+            }
+        }
+
+        $stop_words = [
+            'about', 'this', 'that', 'with', 'from', 'your', 'ours', 'ourselves', 'their', 'there', 'where',
+            'when', 'what', 'which', 'into', 'onto', 'while', 'will', 'would', 'could', 'should', 'have', 'has',
+            'been', 'being', 'were', 'them', 'they', 'these', 'those', 'also', 'here', 'more', 'read', 'page',
+            'site', 'post', 'blog', 'home', 'https', 'http', 'www', 'com', 'org', 'net', 'and', 'the', 'for',
+            'you', 'our', 'are', 'but', 'not', 'its', 'can', 'all', 'any', 'new', 'now', 'get', 'use', 'using',
+            'just', 'over', 'under', 'than', 'then', 'too', 'very', 'into', 'out', 'off', 'via'
+        ];
+
+        $tokens = preg_split('/[^a-z0-9]+/', $text_blob);
+        if (!is_array($tokens)) {
+            return [];
+        }
+        $counts = [];
+        foreach ($tokens as $token) {
+            $token = trim((string) $token);
+            if ($token === '' || strlen($token) < 4) {
+                continue;
+            }
+            if (in_array($token, $stop_words, true) || in_array($token, $site_tokens, true)) {
+                continue;
+            }
+            if (!isset($counts[$token])) {
+                $counts[$token] = 0;
+            }
+            $counts[$token]++;
+        }
+
+        if (empty($counts)) {
+            return [];
+        }
+
+        arsort($counts);
+        $keywords = array_slice(array_keys($counts), 0, 3);
+        return array_map(
+            static fn($keyword): string => sanitize_text_field(ucfirst((string) $keyword)),
+            $keywords
+        );
     }
     private function trim_title_to_max_length(string $title, int $max_length): string
     {

@@ -134,6 +134,8 @@ if ($notice_code === 'remediation_apply_noop') {
     $noop_reason = isset($_GET['noop_reason']) ? sanitize_key((string) wp_unslash($_GET['noop_reason'])) : '';
     if ($noop_reason === 'title_already_within_range') {
         $notice_override_message = __('No-op: title is already within the recommended 20-65 character range.', 'icap-seo');
+    } elseif ($noop_reason === 'meta_description_already_optimized') {
+        $notice_override_message = __('No-op: meta description already matches the current page context and SEO target range.', 'icap-seo');
     } elseif ($noop_reason === 'meta_description_already_within_range') {
         $notice_override_message = __('No-op: meta description is already within the recommended 120-170 character range.', 'icap-seo');
     } elseif ($noop_reason === 'meta_description_generation_failed') {
