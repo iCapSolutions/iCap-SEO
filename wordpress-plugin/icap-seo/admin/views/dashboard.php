@@ -52,6 +52,7 @@ $notice_map = [
     'remediation_preview_ready' => ['type' => 'updated', 'message' => __('Remediation preview refreshed for this content item.', 'icap-seo')],
     'remediation_apply_queued' => ['type' => 'updated', 'message' => __('Remediation apply request was accepted and queued.', 'icap-seo')],
     'remediation_apply_title_updated' => ['type' => 'updated', 'message' => __('Title remediation applied locally for this item. Re-scan to verify score movement.', 'icap-seo')],
+    'remediation_apply_noop' => ['type' => 'error', 'message' => __('No title changes were applied for this recommendation.', 'icap-seo')],
     'remediation_apply_title_update_failed' => ['type' => 'error', 'message' => __('Remediation request was accepted, but local title update could not be applied. Verify edit permissions and content key mapping.', 'icap-seo')],
     'remediation_content_key_missing' => ['type' => 'error', 'message' => __('Remediation request failed: content key is required.', 'icap-seo')],
     'remediation_validation_error' => ['type' => 'error', 'message' => __('Remediation request failed validation. Refresh content details and retry.', 'icap-seo')],
@@ -104,6 +105,45 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
         }
     }
 }
+$notice_override_message = '';
+if ($notice_code === 'remediation_apply_title_updated') {
+    $title_before = isset($_GET['title_before']) ? sanitize_text_field((string) wp_unslash($_GET['title_before'])) : '';
+    $title_after = isset($_GET['title_after']) ? sanitize_text_field((string) wp_unslash($_GET['title_after'])) : '';
+    $meta_key = isset($_GET['seo_title_meta_key']) ? sanitize_key((string) wp_unslash($_GET['seo_title_meta_key'])) : '';
+    $meta_before = isset($_GET['seo_title_before']) ? sanitize_text_field((string) wp_unslash($_GET['seo_title_before'])) : '';
+    $meta_after = isset($_GET['seo_title_after']) ? sanitize_text_field((string) wp_unslash($_GET['seo_title_after'])) : '';
+
+    if ($title_before !== '' || $title_after !== '') {
+        $notice_override_message = sprintf(
+            __('Title updated: "%1$s" → "%2$s".', 'icap-seo'),
+            $title_before !== '' ? $title_before : __('(empty)', 'icap-seo'),
+            $title_after !== '' ? $title_after : __('(empty)', 'icap-seo')
+        );
+    }
+    if ($meta_key !== '' && ($meta_before !== '' || $meta_after !== '')) {
+        $notice_override_message .= ' ' . sprintf(
+            __('SEO title meta (%1$s) updated: "%2$s" → "%3$s".', 'icap-seo'),
+            $meta_key,
+            $meta_before !== '' ? $meta_before : __('(empty)', 'icap-seo'),
+            $meta_after !== '' ? $meta_after : __('(empty)', 'icap-seo')
+        );
+    }
+    if ($notice_override_message !== '') {
+        $notice_override_message .= ' ' . __('Re-scan to verify score movement.', 'icap-seo');
+    }
+}
+if ($notice_code === 'remediation_apply_noop') {
+    $noop_reason = isset($_GET['noop_reason']) ? sanitize_key((string) wp_unslash($_GET['noop_reason'])) : '';
+    if ($noop_reason === 'title_already_within_range') {
+        $notice_override_message = __('No-op: title is already within the recommended 20-65 character range.', 'icap-seo');
+    } elseif ($noop_reason === 'issue_not_supported_for_local_apply') {
+        $notice_override_message = __('No-op: this recommendation is not yet supported by local apply logic.', 'icap-seo');
+    } elseif ($noop_reason === 'no_effective_change_computed') {
+        $notice_override_message = __('No-op: remediation did not produce a different title value to save.', 'icap-seo');
+    } else {
+        $notice_override_message = __('No-op: no changes were required for this recommendation.', 'icap-seo');
+    }
+}
 ?>
 <div class="wrap icap-seo-wrap">
     <h1 class="icap-seo-header">
@@ -113,7 +153,7 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
     <p><?php esc_html_e('SEO intelligence for WordPress sites by iCapSolutions.', 'icap-seo'); ?></p>
     <?php if ($notice_code !== '' && isset($notice_map[$notice_code])) : ?>
         <div class="notice <?php echo esc_attr($notice_map[$notice_code]['type'] === 'error' ? 'notice-error' : 'notice-success'); ?> is-dismissible">
-            <p><?php echo esc_html($notice_map[$notice_code]['message']); ?></p>
+            <p><?php echo esc_html($notice_override_message !== '' ? $notice_override_message : $notice_map[$notice_code]['message']); ?></p>
         </div>
     <?php endif; ?>
 
