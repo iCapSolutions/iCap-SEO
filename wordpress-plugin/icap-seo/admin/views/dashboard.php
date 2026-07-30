@@ -115,6 +115,8 @@ if ($notice_code === 'remediation_apply_title_updated') {
     $description_meta_key = isset($_GET['seo_description_meta_key']) ? sanitize_key((string) wp_unslash($_GET['seo_description_meta_key'])) : '';
     $description_meta_before = isset($_GET['seo_description_before']) ? sanitize_text_field((string) wp_unslash($_GET['seo_description_before'])) : '';
     $description_meta_after = isset($_GET['seo_description_after']) ? sanitize_text_field((string) wp_unslash($_GET['seo_description_after'])) : '';
+    $excerpt_before = isset($_GET['excerpt_before']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_before'])) : '';
+    $excerpt_after = isset($_GET['excerpt_after']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_after'])) : '';
 
     if ($title_before !== '' || $title_after !== '') {
         $notice_override_message = sprintf(
@@ -139,6 +141,13 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $description_meta_after !== '' ? $description_meta_after : __('(empty)', 'icap-seo')
         );
     }
+    if ($excerpt_before !== '' || $excerpt_after !== '') {
+        $notice_override_message .= ' ' . sprintf(
+            __('Page excerpt/meta description updated: "%1$s" → "%2$s".', 'icap-seo'),
+            $excerpt_before !== '' ? $excerpt_before : __('(empty)', 'icap-seo'),
+            $excerpt_after !== '' ? $excerpt_after : __('(empty)', 'icap-seo')
+        );
+    }
     if ($notice_override_message !== '') {
         $notice_override_message .= ' ' . __('Re-scan to verify score movement.', 'icap-seo');
     }
@@ -151,6 +160,10 @@ if ($notice_code === 'remediation_apply_noop') {
         $notice_override_message = __('No-op: meta description is already within the recommended 120-170 character range.', 'icap-seo');
     } elseif ($noop_reason === 'meta_description_meta_key_unavailable') {
         $notice_override_message = __('No-op: no supported SEO meta-description field was detected on this site.', 'icap-seo');
+    } elseif ($noop_reason === 'meta_description_storage_unavailable') {
+        $notice_override_message = __('No-op: no supported storage target for meta description was available on this page.', 'icap-seo');
+    } elseif ($noop_reason === 'meta_description_generation_failed') {
+        $notice_override_message = __('No-op: a replacement meta description could not be generated from this page content.', 'icap-seo');
     } elseif ($noop_reason === 'issue_not_supported_for_local_apply') {
         $notice_override_message = __('No-op: this recommendation is not yet supported by local apply logic.', 'icap-seo');
     } elseif ($noop_reason === 'no_effective_change_computed') {

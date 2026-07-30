@@ -616,6 +616,8 @@ class ICap_SEO_Admin
                         'seo_description_meta_key' => isset($local_apply_result['seo_description_meta_key']) ? (string) $local_apply_result['seo_description_meta_key'] : '',
                         'seo_description_before' => isset($local_apply_result['seo_description_before']) ? (string) $local_apply_result['seo_description_before'] : '',
                         'seo_description_after' => isset($local_apply_result['seo_description_after']) ? (string) $local_apply_result['seo_description_after'] : '',
+                        'excerpt_before' => isset($local_apply_result['excerpt_before']) ? (string) $local_apply_result['excerpt_before'] : '',
+                        'excerpt_after' => isset($local_apply_result['excerpt_after']) ? (string) $local_apply_result['excerpt_after'] : '',
                     ]
                 );
                 return;
@@ -699,6 +701,9 @@ class ICap_SEO_Admin
             $seo_title_meta_update = $this->resolve_seo_title_meta_update($post_id, $updated_title);
             $seo_title_meta_was_updated = !empty($seo_title_meta_update['updated']);
         }
+        $current_excerpt = trim((string) preg_replace('/\s+/', ' ', sanitize_text_field((string) $post->post_excerpt)));
+        $updated_excerpt = $current_excerpt;
+        $excerpt_was_updated = false;
 
         $updated_meta_description = '';
         $seo_description_meta_update = [
@@ -709,17 +714,27 @@ class ICap_SEO_Admin
         $seo_description_meta_was_updated = false;
         if ($apply_meta_description_recommendation) {
             $updated_meta_description = $this->build_seo_meta_description($post);
+            $updated_excerpt = trim((string) preg_replace('/\s+/', ' ', $updated_meta_description));
+            $excerpt_was_updated = $updated_excerpt !== '' && $updated_excerpt !== $current_excerpt;
             $seo_description_meta_update = $this->resolve_seo_description_meta_update($post_id, $updated_meta_description);
             $seo_description_meta_was_updated = !empty($seo_description_meta_update['updated']);
         }
-
-        if (!$title_was_updated && !$seo_title_meta_was_updated && !$seo_description_meta_was_updated) {
+        if (
+            !$title_was_updated
+            && !$seo_title_meta_was_updated
+            && !$excerpt_was_updated
+            && !$seo_description_meta_was_updated
+        ) {
             $reason = 'no_effective_change_computed';
             if ($apply_meta_description_recommendation) {
                 $meta_before = isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : '';
                 $meta_length = $this->string_length($meta_before);
-                if ((string) ($seo_description_meta_update['meta_key'] ?? '') === '') {
-                    $reason = 'meta_description_meta_key_unavailable';
+                if ($updated_meta_description === '') {
+                    $reason = 'meta_description_generation_failed';
+                } elseif ($current_excerpt !== '' && $this->string_length($current_excerpt) >= 120 && $this->string_length($current_excerpt) <= 170) {
+                    $reason = 'meta_description_already_within_range';
+                } elseif ((string) ($seo_description_meta_update['meta_key'] ?? '') === '' && $current_excerpt === '') {
+                    $reason = 'meta_description_storage_unavailable';
                 } elseif ($meta_before !== '' && $meta_length >= 120 && $meta_length <= 170) {
                     $reason = 'meta_description_already_within_range';
                 }
@@ -741,6 +756,8 @@ class ICap_SEO_Admin
                 'seo_description_meta_key' => isset($seo_description_meta_update['meta_key']) ? (string) $seo_description_meta_update['meta_key'] : '',
                 'seo_description_before' => isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : '',
                 'seo_description_after' => isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : '',
+                'excerpt_before' => $current_excerpt,
+                'excerpt_after' => $current_excerpt,
             ];
         }
 
@@ -752,6 +769,9 @@ class ICap_SEO_Admin
         ];
         if ($title_was_updated) {
             $update_payload['post_title'] = $updated_title;
+        }
+        if ($excerpt_was_updated) {
+            $update_payload['post_excerpt'] = $updated_excerpt;
         }
         if ($content_was_updated) {
             $update_payload['post_content'] = $updated_content;
@@ -784,6 +804,8 @@ class ICap_SEO_Admin
             'seo_description_meta_key' => isset($seo_description_meta_update['meta_key']) ? (string) $seo_description_meta_update['meta_key'] : '',
             'seo_description_before' => isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : '',
             'seo_description_after' => $seo_description_meta_was_updated ? $updated_meta_description : (isset($seo_description_meta_update['before']) ? (string) $seo_description_meta_update['before'] : ''),
+            'excerpt_before' => $current_excerpt,
+            'excerpt_after' => $excerpt_was_updated ? $updated_excerpt : $current_excerpt,
         ];
     }
 
@@ -832,15 +854,15 @@ class ICap_SEO_Admin
         }
 
         if ($length < 20) {
-            $site_name = sanitize_text_field((string) get_bloginfo('name'));
-            if ($site_name !== '') {
-                $candidate = trim($candidate . ' | ' . $site_name);
+            $site_title_phrase = $this->build_site_title_phrase();
+            if ($site_title_phrase !== '') {
+                $candidate = trim($candidate . ' ' . $site_title_phrase);
             }
             if ($this->string_length($candidate) < 20) {
-                $candidate = trim($candidate . ' Team');
+                $candidate = trim($candidate . ' About Page');
             }
             if ($this->string_length($candidate) < 20) {
-                $candidate = trim($candidate . ' Info');
+                $candidate = trim($candidate . ' Details');
             }
             if ($this->string_length($candidate) > 65) {
                 $candidate = $this->trim_title_to_max_length($candidate, 65);
@@ -848,6 +870,15 @@ class ICap_SEO_Admin
         }
 
         return trim((string) $candidate);
+    }
+
+    private function build_site_title_phrase(): string
+    {
+        $site_name = sanitize_text_field((string) get_bloginfo('name'));
+        $site_name = (string) preg_replace('/\.[a-z0-9]{2,}$/i', '', $site_name);
+        $site_name = str_replace(['|', '-', '_'], ' ', $site_name);
+        $site_name = trim((string) preg_replace('/\s+/', ' ', $site_name));
+        return $site_name;
     }
 
 
