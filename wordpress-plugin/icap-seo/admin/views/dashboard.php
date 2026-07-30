@@ -109,17 +109,23 @@ $notice_override_message = '';
 if ($notice_code === 'remediation_apply_title_updated') {
     $title_before = isset($_GET['title_before']) ? sanitize_text_field((string) wp_unslash($_GET['title_before'])) : '';
     $title_after = isset($_GET['title_after']) ? sanitize_text_field((string) wp_unslash($_GET['title_after'])) : '';
+    $title_changed = isset($_GET['title_changed'])
+        ? sanitize_key((string) wp_unslash($_GET['title_changed'])) === '1'
+        : $title_before !== $title_after;
     $excerpt_before = isset($_GET['excerpt_before']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_before'])) : '';
     $excerpt_after = isset($_GET['excerpt_after']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_after'])) : '';
+    $excerpt_changed = isset($_GET['excerpt_changed'])
+        ? sanitize_key((string) wp_unslash($_GET['excerpt_changed'])) === '1'
+        : $excerpt_before !== $excerpt_after;
 
-    if ($title_before !== '' || $title_after !== '') {
+    if ($title_changed) {
         $notice_override_message = sprintf(
             __('Title updated: "%1$s" → "%2$s".', 'icap-seo'),
             $title_before !== '' ? $title_before : __('(empty)', 'icap-seo'),
             $title_after !== '' ? $title_after : __('(empty)', 'icap-seo')
         );
     }
-    if ($excerpt_before !== '' || $excerpt_after !== '') {
+    if ($excerpt_changed) {
         $notice_override_message .= ' ' . sprintf(
             __('Page excerpt/meta description updated: "%1$s" → "%2$s".', 'icap-seo'),
             $excerpt_before !== '' ? $excerpt_before : __('(empty)', 'icap-seo'),
