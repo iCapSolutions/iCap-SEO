@@ -551,8 +551,10 @@ class ICap_SEO_Admin
                         'content_key' => $content_key,
                         'title_before' => isset($local_apply_result['title_before']) ? (string) $local_apply_result['title_before'] : '',
                         'title_after' => isset($local_apply_result['title_after']) ? (string) $local_apply_result['title_after'] : '',
+                        'title_changed' => !empty($local_apply_result['title_changed']) ? '1' : '0',
                         'excerpt_before' => isset($local_apply_result['excerpt_before']) ? (string) $local_apply_result['excerpt_before'] : '',
                         'excerpt_after' => isset($local_apply_result['excerpt_after']) ? (string) $local_apply_result['excerpt_after'] : '',
+                        'excerpt_changed' => !empty($local_apply_result['excerpt_changed']) ? '1' : '0',
                     ]
                 );
                 return;
@@ -666,8 +668,10 @@ class ICap_SEO_Admin
                 'reason' => $reason,
                 'title_before' => $current_title,
                 'title_after' => $current_title,
+                'title_changed' => false,
                 'excerpt_before' => $current_excerpt,
                 'excerpt_after' => $current_excerpt,
+                'excerpt_changed' => false,
             ];
         }
 
@@ -701,8 +705,10 @@ class ICap_SEO_Admin
             'reason' => 'changes_applied',
             'title_before' => $current_title,
             'title_after' => $title_was_updated ? $updated_title : $current_title,
+            'title_changed' => $title_was_updated,
             'excerpt_before' => $current_excerpt,
             'excerpt_after' => $excerpt_was_updated ? $updated_excerpt : $current_excerpt,
+            'excerpt_changed' => $excerpt_was_updated,
         ];
     }
 
