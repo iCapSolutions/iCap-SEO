@@ -109,12 +109,6 @@ $notice_override_message = '';
 if ($notice_code === 'remediation_apply_title_updated') {
     $title_before = isset($_GET['title_before']) ? sanitize_text_field((string) wp_unslash($_GET['title_before'])) : '';
     $title_after = isset($_GET['title_after']) ? sanitize_text_field((string) wp_unslash($_GET['title_after'])) : '';
-    $meta_key = isset($_GET['seo_title_meta_key']) ? sanitize_key((string) wp_unslash($_GET['seo_title_meta_key'])) : '';
-    $meta_before = isset($_GET['seo_title_before']) ? sanitize_text_field((string) wp_unslash($_GET['seo_title_before'])) : '';
-    $meta_after = isset($_GET['seo_title_after']) ? sanitize_text_field((string) wp_unslash($_GET['seo_title_after'])) : '';
-    $description_meta_key = isset($_GET['seo_description_meta_key']) ? sanitize_key((string) wp_unslash($_GET['seo_description_meta_key'])) : '';
-    $description_meta_before = isset($_GET['seo_description_before']) ? sanitize_text_field((string) wp_unslash($_GET['seo_description_before'])) : '';
-    $description_meta_after = isset($_GET['seo_description_after']) ? sanitize_text_field((string) wp_unslash($_GET['seo_description_after'])) : '';
     $excerpt_before = isset($_GET['excerpt_before']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_before'])) : '';
     $excerpt_after = isset($_GET['excerpt_after']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_after'])) : '';
 
@@ -123,22 +117,6 @@ if ($notice_code === 'remediation_apply_title_updated') {
             __('Title updated: "%1$s" → "%2$s".', 'icap-seo'),
             $title_before !== '' ? $title_before : __('(empty)', 'icap-seo'),
             $title_after !== '' ? $title_after : __('(empty)', 'icap-seo')
-        );
-    }
-    if ($meta_key !== '' && ($meta_before !== '' || $meta_after !== '')) {
-        $notice_override_message .= ' ' . sprintf(
-            __('SEO title meta (%1$s) updated: "%2$s" → "%3$s".', 'icap-seo'),
-            $meta_key,
-            $meta_before !== '' ? $meta_before : __('(empty)', 'icap-seo'),
-            $meta_after !== '' ? $meta_after : __('(empty)', 'icap-seo')
-        );
-    }
-    if ($description_meta_key !== '' && ($description_meta_before !== '' || $description_meta_after !== '')) {
-        $notice_override_message .= ' ' . sprintf(
-            __('SEO meta description (%1$s) updated: "%2$s" → "%3$s".', 'icap-seo'),
-            $description_meta_key,
-            $description_meta_before !== '' ? $description_meta_before : __('(empty)', 'icap-seo'),
-            $description_meta_after !== '' ? $description_meta_after : __('(empty)', 'icap-seo')
         );
     }
     if ($excerpt_before !== '' || $excerpt_after !== '') {
@@ -158,10 +136,6 @@ if ($notice_code === 'remediation_apply_noop') {
         $notice_override_message = __('No-op: title is already within the recommended 20-65 character range.', 'icap-seo');
     } elseif ($noop_reason === 'meta_description_already_within_range') {
         $notice_override_message = __('No-op: meta description is already within the recommended 120-170 character range.', 'icap-seo');
-    } elseif ($noop_reason === 'meta_description_meta_key_unavailable') {
-        $notice_override_message = __('No-op: no supported SEO meta-description field was detected on this site.', 'icap-seo');
-    } elseif ($noop_reason === 'meta_description_storage_unavailable') {
-        $notice_override_message = __('No-op: no supported storage target for meta description was available on this page.', 'icap-seo');
     } elseif ($noop_reason === 'meta_description_generation_failed') {
         $notice_override_message = __('No-op: a replacement meta description could not be generated from this page content.', 'icap-seo');
     } elseif ($noop_reason === 'issue_not_supported_for_local_apply') {
