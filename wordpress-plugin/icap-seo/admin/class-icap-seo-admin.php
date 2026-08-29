@@ -118,7 +118,7 @@ class ICap_SEO_Admin
 
     public function render_dashboard(): void
     {
-        $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'home';
+        $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'overview';
         $notice_code = isset($_GET[self::NOTICE_QUERY_KEY]) ? sanitize_key(wp_unslash($_GET[self::NOTICE_QUERY_KEY])) : '';
         $billing_state = isset($_GET['billing']) ? sanitize_key(wp_unslash($_GET['billing'])) : '';
         if ($notice_code === '') {
@@ -157,11 +157,11 @@ class ICap_SEO_Admin
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
 
         try {
-            if ($active_tab === 'site-health' || $active_tab === 'home') {
+            if ($active_tab === 'overview') {
                 $score_snapshot = $this->service_client->get_site_score_snapshot($allow_live_fetch);
             }
 
-            if ($active_tab === 'content-scores' || $active_tab === 'site-health' || $active_tab === 'home') {
+            if ($active_tab === 'content-scores' || $active_tab === 'overview') {
                 $content_scores = $this->service_client->get_content_scores_overview($allow_live_fetch);
                 $latest_content_scores_meta = $this->service_client->get_latest_content_scores_meta();
 
@@ -226,7 +226,7 @@ class ICap_SEO_Admin
                 }
             }
 
-            if ($active_tab === 'setup-wizard') {
+            if ($active_tab === 'setup-wizard' || $active_tab === 'overview') {
                 $scan_status_result = $this->service_client->get_scan_status(null, $allow_live_fetch);
                 $scan_status_data = $scan_status_result['success'] ? $scan_status_result['data'] : [];
                 if (empty($latest_content_scores_meta)) {
@@ -373,33 +373,33 @@ class ICap_SEO_Admin
 
         $result = $this->service_client->trigger_scan('full_site');
         if ($result['success']) {
-            $this->redirect_with_notice('scan_queued', 'setup-wizard');
+            $this->redirect_with_notice('scan_queued', 'overview');
             return;
         }
 
         $error_code = $this->extract_error_code($result);
         if ($error_code === 'payment_required') {
-            $this->redirect_with_notice('payment_required', 'setup-wizard');
+            $this->redirect_with_notice('payment_required', 'overview');
             return;
         }
         if ($error_code === 'subscription_required') {
-            $this->redirect_with_notice('subscription_required', 'setup-wizard');
+            $this->redirect_with_notice('subscription_required', 'overview');
             return;
         }
         if ($error_code === 'account_suspended') {
-            $this->redirect_with_notice('account_suspended', 'setup-wizard');
+            $this->redirect_with_notice('account_suspended', 'overview');
             return;
         }
         if ($error_code === 'invalid_token') {
-            $this->redirect_with_notice('invalid_token', 'setup-wizard');
+            $this->redirect_with_notice('invalid_token', 'overview');
             return;
         }
         if ($error_code === 'rate_limited') {
-            $this->redirect_with_notice('rate_limited', 'setup-wizard');
+            $this->redirect_with_notice('rate_limited', 'overview');
             return;
         }
 
-        $this->redirect_with_notice('scan_failed', 'setup-wizard');
+        $this->redirect_with_notice('scan_failed', 'overview');
     }
 
     public function handle_rescan_content(): void
