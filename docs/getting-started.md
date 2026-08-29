@@ -37,12 +37,12 @@ credentials automatically — no manual key management needed.
 
 ## 5. Run your first scan
 
-Click **Trigger Full Scan**. Non-premium accounts run the free baseline audit; active premium subscriptions
-run the full 31-check catalog. Scan status updates in place.
+In **Overview**, click **Trigger Full Scan**. Non-premium accounts run the free baseline audit; active
+premium subscriptions run the full 31-check catalog. Scan status updates in place.
 
 ## 6. Review your results
 
-- **Site Health** shows your site-wide score and scan summary.
+- **Overview** shows your site-wide score, scan summary, and what's included in your plan.
 - **Content Scores** shows a per-page checklist — what's passing, what needs attention, and one-click fixes.
 
 ## Activating premium

@@ -36,7 +36,7 @@ gets fixed.
 2. Enter the **Registration Token** provided by iCapSolutions.
 3. Go to **Setup Wizard** and click **Test Connection**, then **Request Credentials & Register Site**.
 4. Click **Trigger Full Scan** to run your first scan.
-5. Review results in **Site Health** and **Content Scores**.
+5. Review results in **Overview** and **Content Scores**.
 
 See [`docs/getting-started.md`](docs/getting-started.md) for a full walkthrough, including premium
 activation and troubleshooting.

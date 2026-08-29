@@ -90,3 +90,49 @@
     font-size: 12px;
     color: #50575e;
 }
+
+.icap-seo-feature-summary {
+    background: #ffffff;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-top: 12px;
+}
+
+.icap-seo-feature-summary ul {
+    margin: 8px 0 0;
+    padding-left: 20px;
+    list-style: disc;
+}
+
+.icap-seo-feature-summary li {
+    margin-bottom: 4px;
+}
+
+.icap-seo-feature-summary em {
+    color: #50575e;
+    font-style: normal;
+    font-size: 12px;
+}
+
+.icap-seo-subnav {
+    display: flex;
+    gap: 4px;
+    margin: 16px 0 12px;
+    border-bottom: 1px solid #dcdcde;
+}
+
+.icap-seo-subnav-link {
+    display: inline-block;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: #50575e;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.icap-seo-subnav-link.is-active {
+    color: #1d2327;
+    border-bottom-color: #2271b1;
+    font-weight: 600;
+}
