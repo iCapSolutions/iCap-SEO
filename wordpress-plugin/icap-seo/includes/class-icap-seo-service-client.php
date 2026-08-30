@@ -45,6 +45,8 @@ class ICap_SEO_Service_Client
                 'last_sync_at' => '',
                 'last_billing_state' => '',
                 'last_billing_checked_at' => '',
+                'ai_credits_remaining' => 0,
+                'ai_credits_checked_at' => '',
             ],
             $saved
         );
@@ -856,9 +858,17 @@ class ICap_SEO_Service_Client
             $result['data']['plan_code'] = sanitize_text_field($result['data']['plan_code']);
         }
 
+        $ai_credits_remaining = 0;
+        if (isset($result['data']['ai_credits_remaining']) && is_numeric($result['data']['ai_credits_remaining'])) {
+            $ai_credits_remaining = (int) $result['data']['ai_credits_remaining'];
+        }
+        $result['data']['ai_credits_remaining'] = $ai_credits_remaining;
+
         $this->update_connection_settings([
             'last_billing_state' => $state,
             'last_billing_checked_at' => current_time('mysql'),
+            'ai_credits_remaining' => $ai_credits_remaining,
+            'ai_credits_checked_at' => current_time('mysql'),
         ]);
 
         return $result;
@@ -878,6 +888,22 @@ class ICap_SEO_Service_Client
         }
 
         return $this->api_request('POST', '/v1/billing/checkout-session', $payload);
+    }
+
+    public function create_ai_credit_checkout_session(array $payload = []): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        return $this->api_request('POST', '/v1/billing/ai-credit-checkout-session', $payload);
     }
 
     public function create_billing_portal_session(array $payload = []): array

@@ -57,6 +57,7 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_check_billing_status', [$this, 'handle_check_billing_status']);
         add_action('admin_post_icap_seo_start_billing_checkout', [$this, 'handle_start_billing_checkout']);
         add_action('admin_post_icap_seo_open_billing_portal', [$this, 'handle_open_billing_portal']);
+        add_action('admin_post_icap_seo_start_ai_credit_checkout', [$this, 'handle_start_ai_credit_checkout']);
         add_action('admin_post_icap_seo_preview_remediation', [$this, 'handle_preview_remediation']);
         add_action('admin_post_icap_seo_apply_remediation', [$this, 'handle_apply_remediation']);
         add_action('admin_post_icap_seo_preview_content_depth', [$this, 'handle_preview_content_depth']);
@@ -128,7 +129,17 @@ class ICap_SEO_Admin
                 $notice_code = 'billing_checkout_cancelled';
             } elseif ($billing_state === 'portal') {
                 $notice_code = 'billing_portal_returned';
+            } elseif ($billing_state === 'ai_credit_success') {
+                $notice_code = 'ai_credit_checkout_returned';
+            } elseif ($billing_state === 'ai_credit_cancel') {
+                $notice_code = 'ai_credit_checkout_cancelled';
             }
+        }
+        if ($billing_state === 'ai_credit_success' && $this->service_client->is_api_connection_configured_public()) {
+            // Refresh the cached AI credit balance immediately on return from a
+            // completed purchase, so the Overview tile reflects the new total right
+            // away instead of waiting for the next unrelated billing-status check.
+            $this->service_client->get_subscription_status(true);
         }
         $connection_settings = $this->service_client->get_connection_settings();
         $score_snapshot = [
@@ -493,8 +504,15 @@ class ICap_SEO_Admin
             }
         }
 
-        if ($state === 'active' || $state === 'trialing') {
+        if ($state === 'active') {
             $this->redirect_with_notice('billing_status_active', 'settings');
+            return;
+        }
+        if ($state === 'trialing') {
+            // "trialing" is the default state for a site that has never paid - there
+            // is no free premium trial period in this product, so this is the free
+            // tier, not an active/premium status.
+            $this->redirect_with_notice('billing_status_free_tier', 'settings');
             return;
         }
         if ($state === 'past_due' || $state === 'grace_period') {
@@ -599,6 +617,55 @@ class ICap_SEO_Admin
         }
 
         wp_redirect($portal_url);
+        exit;
+    }
+
+    public function handle_start_ai_credit_checkout(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_start_ai_credit_checkout');
+        $result = $this->service_client->create_ai_credit_checkout_session([
+            'success_url' => $this->build_ai_credit_checkout_return_url('ai_credit_success'),
+            'cancel_url' => $this->build_ai_credit_checkout_return_url('ai_credit_cancel'),
+        ]);
+        if (!$result['success']) {
+            $error_code = $this->extract_error_code($result);
+            if ($error_code === 'api_base_url_missing') {
+                $this->redirect_with_notice('api_base_url_missing', 'overview');
+                return;
+            }
+            if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
+                $this->redirect_with_notice('ai_credit_checkout_not_configured', 'overview');
+                return;
+            }
+            if ($error_code === 'premium_required') {
+                $this->redirect_with_notice('ai_credit_checkout_premium_required', 'overview');
+                return;
+            }
+            if ($error_code === 'validation_error') {
+                $this->redirect_with_notice('ai_credit_checkout_misconfigured', 'overview');
+                return;
+            }
+            if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
+                $this->redirect_with_notice('ai_credit_checkout_unavailable', 'overview');
+                return;
+            }
+            $this->redirect_with_notice('ai_credit_checkout_failed', 'overview');
+            return;
+        }
+
+        $checkout_url = '';
+        if (isset($result['data']['checkout_url']) && is_string($result['data']['checkout_url'])) {
+            $checkout_url = esc_url_raw($result['data']['checkout_url']);
+        }
+        if ($checkout_url === '' || !wp_http_validate_url($checkout_url)) {
+            $this->redirect_with_notice('ai_credit_checkout_failed', 'overview');
+            return;
+        }
+
+        wp_redirect($checkout_url);
         exit;
     }
 
@@ -4183,6 +4250,23 @@ class ICap_SEO_Admin
             [
                 'page' => 'icap-seo',
                 'tab' => 'settings',
+                'billing' => $normalized_state,
+            ],
+            admin_url('admin.php')
+        );
+    }
+
+    private function build_ai_credit_checkout_return_url(string $billing_state): string
+    {
+        $normalized_state = sanitize_key($billing_state);
+        if ($normalized_state === '') {
+            $normalized_state = 'ai_credit_cancel';
+        }
+
+        return add_query_arg(
+            [
+                'page' => 'icap-seo',
+                'tab' => 'overview',
                 'billing' => $normalized_state,
             ],
             admin_url('admin.php')
