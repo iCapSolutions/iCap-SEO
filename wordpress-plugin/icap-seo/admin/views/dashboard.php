@@ -53,6 +53,14 @@ $notice_map = [
     'billing_portal_unavailable' => ['type' => 'error', 'message' => __('Billing portal is temporarily unavailable. Please retry shortly.', 'icap-seo')],
     'billing_portal_failed' => ['type' => 'error', 'message' => __('Billing portal request failed. Confirm API and billing settings, then retry.', 'icap-seo')],
     'billing_portal_returned' => ['type' => 'updated', 'message' => __('Returned from billing portal.', 'icap-seo')],
+    'billing_status_free_tier' => ['type' => 'updated', 'message' => __('Billing status check: this site is on the free tier (basic scans only).', 'icap-seo')],
+    'ai_credit_checkout_not_configured' => ['type' => 'error', 'message' => __('AI credit checkout requires site registration credentials. Register this site first.', 'icap-seo')],
+    'ai_credit_checkout_premium_required' => ['type' => 'error', 'message' => __('AI credits can only be purchased on an active premium subscription. Upgrade to premium first.', 'icap-seo')],
+    'ai_credit_checkout_misconfigured' => ['type' => 'error', 'message' => __('AI credit checkout is not fully configured yet. Please try again shortly.', 'icap-seo')],
+    'ai_credit_checkout_unavailable' => ['type' => 'error', 'message' => __('AI credit checkout is temporarily unavailable. Please retry shortly.', 'icap-seo')],
+    'ai_credit_checkout_failed' => ['type' => 'error', 'message' => __('AI credit checkout request failed. Please retry.', 'icap-seo')],
+    'ai_credit_checkout_returned' => ['type' => 'updated', 'message' => __('AI credit purchase completed. Your balance has been updated below.', 'icap-seo')],
+    'ai_credit_checkout_cancelled' => ['type' => 'error', 'message' => __('AI credit purchase was canceled before completion.', 'icap-seo')],
     'remediation_preview_ready' => ['type' => 'updated', 'message' => __('Remediation preview refreshed for this content item.', 'icap-seo')],
     'remediation_apply_queued' => ['type' => 'updated', 'message' => __('Remediation apply request was accepted and queued.', 'icap-seo')],
     'remediation_apply_title_updated' => ['type' => 'updated', 'message' => __('Remediation applied locally for this item. Re-scan to verify score movement.', 'icap-seo')],
@@ -1267,6 +1275,11 @@ if ($notice_code === 'remediation_apply_noop') {
             } elseif ($overview_latest_scan_id_display === '' && $latest_scores_scan_id !== '') {
                 $overview_latest_scan_id_display = $latest_scores_scan_id;
             }
+            $overview_is_premium = $overview_scan_tier_value === 'premium';
+            $overview_ai_credits_remaining = isset($connection_settings['ai_credits_remaining'])
+                ? (int) $connection_settings['ai_credits_remaining']
+                : 0;
+            $overview_ai_credits_exhausted = $overview_is_premium && $overview_ai_credits_remaining <= 0;
             ?>
             <h2><?php esc_html_e('Overview', 'icap-seo'); ?></h2>
 
@@ -1299,7 +1312,36 @@ if ($notice_code === 'remediation_apply_noop') {
                     <h3><?php esc_html_e('Scored Content Items', 'icap-seo'); ?></h3>
                     <p><?php echo esc_html((string) max(count($content_scores), $latest_scores_item_count)); ?></p>
                 </div>
+                <div class="icap-seo-card">
+                    <h3><?php esc_html_e('AI Credits Remaining', 'icap-seo'); ?></h3>
+                    <p>
+                        <?php
+                        if ($overview_is_premium) {
+                            echo esc_html((string) $overview_ai_credits_remaining);
+                        } else {
+                            esc_html_e('Requires Premium', 'icap-seo');
+                        }
+                        ?>
+                    </p>
+                </div>
             </div>
+
+            <?php if ($overview_is_premium) : ?>
+                <?php if ($overview_ai_credits_exhausted) : ?>
+                    <p class="notice notice-warning inline" style="padding:8px 12px; margin-top:16px;">
+                        <?php esc_html_e('AI content generation is paused — this site is out of AI credits.', 'icap-seo'); ?>
+                    </p>
+                <?php endif; ?>
+                <div class="icap-seo-actions" style="margin-top:8px;">
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="icap_seo_start_ai_credit_checkout">
+                        <?php wp_nonce_field('icap_seo_start_ai_credit_checkout'); ?>
+                        <button type="submit" class="button<?php echo $overview_ai_credits_exhausted ? ' button-primary' : ''; ?>">
+                            <?php esc_html_e('Buy more AI credits', 'icap-seo'); ?>
+                        </button>
+                    </form>
+                </div>
+            <?php endif; ?>
 
             <?php if ($overview_is_connected) : ?>
                 <div class="icap-seo-actions" style="margin-top:16px;">
