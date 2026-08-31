@@ -51,6 +51,7 @@ class ICap_SEO_Admin
     {
         add_action('admin_post_icap_seo_save_settings', [$this, 'handle_save_settings']);
         add_action('admin_post_icap_seo_register_site', [$this, 'handle_register_site']);
+        add_action('admin_post_icap_seo_request_registration', [$this, 'handle_request_registration']);
         add_action('admin_post_icap_seo_test_connection', [$this, 'handle_test_connection']);
         add_action('admin_post_icap_seo_trigger_scan', [$this, 'handle_trigger_scan']);
         add_action('admin_post_icap_seo_rescan_content', [$this, 'handle_rescan_content']);
@@ -335,6 +336,56 @@ class ICap_SEO_Admin
 
         $this->redirect_with_notice('register_failed', 'settings');
     }
+
+    public function handle_request_registration(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_request_registration');
+
+        $email = isset($_POST['registration_request_email'])
+            ? sanitize_email((string) wp_unslash($_POST['registration_request_email']))
+            : '';
+        $requested_tier = isset($_POST['registration_request_tier'])
+            ? sanitize_text_field((string) wp_unslash($_POST['registration_request_tier']))
+            : '';
+        $allowed_tiers = ['baseline', 'premium', 'ai_scanning'];
+
+        if ($email === '' || !is_email($email)) {
+            $this->redirect_with_notice('registration_request_invalid_email', 'setup-wizard');
+            return;
+        }
+        if (!in_array($requested_tier, $allowed_tiers, true)) {
+            $this->redirect_with_notice('registration_request_invalid_tier', 'setup-wizard');
+            return;
+        }
+
+        $result = $this->service_client->request_registration([
+            'email' => $email,
+            'requested_tier' => $requested_tier,
+            'site_url' => home_url('/'),
+            'wp_version' => get_bloginfo('version'),
+            'plugin_version' => ICAP_SEO_VERSION,
+            'site_name' => get_bloginfo('name'),
+            'admin_email' => get_bloginfo('admin_email'),
+            'timezone' => wp_timezone_string(),
+        ]);
+
+        if ($result['success']) {
+            $this->redirect_with_notice('registration_request_submitted', 'setup-wizard');
+            return;
+        }
+        $error_code = $this->extract_error_code($result);
+
+        if ($error_code === 'api_base_url_missing') {
+            $this->redirect_with_notice('api_base_url_missing', 'settings');
+            return;
+        }
+
+        $this->redirect_with_notice('registration_request_failed', 'setup-wizard');
+    }
+
     public function handle_test_connection(): void
     {
         if (!current_user_can('manage_options')) {
