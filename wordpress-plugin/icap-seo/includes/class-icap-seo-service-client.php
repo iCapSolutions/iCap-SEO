@@ -693,6 +693,28 @@ class ICap_SEO_Service_Client
         return $result;
     }
 
+    public function request_registration(array $payload): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['api_base_url'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'api_base_url_missing',
+                    'message' => 'API Base URL is required before requesting registration.',
+                ],
+            ];
+        }
+
+        return $this->api_request(
+            'POST',
+            '/v1/registration-requests',
+            $payload,
+            [],
+            false
+        );
+    }
+
     public function trigger_scan(string $scan_type = 'full_site', array $options = []): array
     {
         $settings = $this->get_connection_settings();

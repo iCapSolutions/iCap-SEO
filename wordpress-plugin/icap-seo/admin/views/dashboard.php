@@ -16,6 +16,10 @@ $notice_map = [
     'registration_token_missing' => ['type' => 'error', 'message' => __('Site registration failed. Set Registration Token in Settings or define ICAP_SEO_REGISTRATION_TOKEN in wp-config.php.', 'icap-seo')],
     'api_base_url_missing' => ['type' => 'error', 'message' => __('Site registration failed. API Base URL is required.', 'icap-seo')],
     'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Confirm API Base URL and Registration Token, then retry.', 'icap-seo')],
+    'registration_request_submitted' => ['type' => 'updated', 'message' => __('Registration request submitted. Check your email to verify and complete registration.', 'icap-seo')],
+    'registration_request_invalid_email' => ['type' => 'error', 'message' => __('Enter a valid email address to request registration.', 'icap-seo')],
+    'registration_request_invalid_tier' => ['type' => 'error', 'message' => __('Select a plan to request registration.', 'icap-seo')],
+    'registration_request_failed' => ['type' => 'error', 'message' => __('Registration request failed. Confirm API Base URL and retry.', 'icap-seo')],
     'connection_ok_authenticated' => ['type' => 'updated', 'message' => __('Connection test succeeded. API and saved site credentials are valid.', 'icap-seo')],
     'connection_ok_reachable' => ['type' => 'updated', 'message' => __('Connection test reached the API. Next step: register this site to provision credentials.', 'icap-seo')],
     'connection_api_base_url_missing' => ['type' => 'error', 'message' => __('Connection test failed. API Base URL is required before testing.', 'icap-seo')],
@@ -375,6 +379,28 @@ if ($notice_code === 'remediation_apply_noop') {
                     <button type="submit" class="button"><?php esc_html_e('Test Connection', 'icap-seo'); ?></button>
                 </form>
             </div>
+            <?php if (!$is_connected) : ?>
+                <hr>
+                <h3><?php esc_html_e("Don't have a registration token yet?", 'icap-seo'); ?></h3>
+                <p class="description"><?php esc_html_e('Request one below. We\'ll email you a verification link, then your registration token.', 'icap-seo'); ?></p>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-registration-request-form">
+                    <input type="hidden" name="action" value="icap_seo_request_registration">
+                    <?php wp_nonce_field('icap_seo_request_registration'); ?>
+                    <p>
+                        <label for="icap-seo-registration-request-email"><?php esc_html_e('Email', 'icap-seo'); ?></label><br>
+                        <input id="icap-seo-registration-request-email" name="registration_request_email" type="email" class="regular-text" required placeholder="you@example.com">
+                    </p>
+                    <p>
+                        <label for="icap-seo-registration-request-tier"><?php esc_html_e('Plan', 'icap-seo'); ?></label><br>
+                        <select id="icap-seo-registration-request-tier" name="registration_request_tier">
+                            <option value="baseline"><?php esc_html_e('Baseline (free)', 'icap-seo'); ?></option>
+                            <option value="premium"><?php esc_html_e('Premium', 'icap-seo'); ?></option>
+                            <option value="ai_scanning"><?php esc_html_e('AI Scanning', 'icap-seo'); ?></option>
+                        </select>
+                    </p>
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Request Registration', 'icap-seo'); ?></button>
+                </form>
+            <?php endif; ?>
             <p class="description">
                 <?php esc_html_e('Connection profile:', 'icap-seo'); ?>
                 <?php esc_html_e('API Base URL', 'icap-seo'); ?>
