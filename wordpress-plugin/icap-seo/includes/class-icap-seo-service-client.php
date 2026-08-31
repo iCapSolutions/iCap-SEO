@@ -715,6 +715,28 @@ class ICap_SEO_Service_Client
         );
     }
 
+    public function get_registration_challenge(): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['api_base_url'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'api_base_url_missing',
+                    'message' => 'API Base URL is required before requesting a captcha challenge.',
+                ],
+            ];
+        }
+
+        return $this->api_request(
+            'GET',
+            '/v1/registration-requests/challenge',
+            [],
+            [],
+            false
+        );
+    }
+
     public function trigger_scan(string $scan_type = 'full_site', array $options = []): array
     {
         $settings = $this->get_connection_settings();
