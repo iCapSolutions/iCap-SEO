@@ -20,6 +20,9 @@ $notice_map = [
     'registration_request_invalid_email' => ['type' => 'error', 'message' => __('Enter a valid email address to request registration.', 'icap-seo')],
     'registration_request_invalid_tier' => ['type' => 'error', 'message' => __('Select a plan to request registration.', 'icap-seo')],
     'registration_request_failed' => ['type' => 'error', 'message' => __('Registration request failed. Confirm API Base URL and retry.', 'icap-seo')],
+    'registration_request_captcha_failed' => ['type' => 'error', 'message' => __('Registration request could not be verified. Reload the page and try again.', 'icap-seo')],
+    'registration_request_already_pending' => ['type' => 'error', 'message' => __('A registration request for this email is already pending. Check your inbox (including spam), or try again in a few minutes.', 'icap-seo')],
+    'registration_request_disposable_email' => ['type' => 'error', 'message' => __('Please use a permanent email address to register.', 'icap-seo')],
     'connection_ok_authenticated' => ['type' => 'updated', 'message' => __('Connection test succeeded. API and saved site credentials are valid.', 'icap-seo')],
     'connection_ok_reachable' => ['type' => 'updated', 'message' => __('Connection test reached the API. Next step: register this site to provision credentials.', 'icap-seo')],
     'connection_api_base_url_missing' => ['type' => 'error', 'message' => __('Connection test failed. API Base URL is required before testing.', 'icap-seo')],
@@ -383,9 +386,14 @@ if ($notice_code === 'remediation_apply_noop') {
                 <hr>
                 <h3><?php esc_html_e("Don't have a registration token yet?", 'icap-seo'); ?></h3>
                 <p class="description"><?php esc_html_e('Request one below. We\'ll email you a verification link, then your registration token.', 'icap-seo'); ?></p>
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-registration-request-form">
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-registration-request-form"<?php echo !empty($registration_challenge) ? ' data-altcha-challenge="' . esc_attr(wp_json_encode($registration_challenge)) . '"' : ''; ?>>
                     <input type="hidden" name="action" value="icap_seo_request_registration">
                     <?php wp_nonce_field('icap_seo_request_registration'); ?>
+                    <input type="hidden" name="altcha_payload" value="">
+                    <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;">
+                        <label for="icap-seo-registration-request-website"><?php esc_html_e('Leave this field blank', 'icap-seo'); ?></label>
+                        <input id="icap-seo-registration-request-website" name="website" type="text" tabindex="-1" autocomplete="off">
+                    </div>
                     <p>
                         <label for="icap-seo-registration-request-email"><?php esc_html_e('Email', 'icap-seo'); ?></label><br>
                         <input id="icap-seo-registration-request-email" name="registration_request_email" type="email" class="regular-text" required placeholder="you@example.com">
