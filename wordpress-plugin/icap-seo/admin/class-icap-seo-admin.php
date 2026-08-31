@@ -167,6 +167,7 @@ class ICap_SEO_Admin
         $readability_draft_paragraphs = [];
         $seo_recommendation_catalog = $this->get_seo_recommendation_catalog();
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
+        $registration_challenge = [];
 
         try {
             if ($active_tab === 'overview') {
@@ -252,6 +253,13 @@ class ICap_SEO_Admin
                         'scan_layers' => $latest_content_scores_meta['scan_layers'] ?? [],
                         'status' => 'completed',
                     ];
+                }
+            }
+
+            if ($active_tab === 'setup-wizard' && $connection_settings['site_id'] === '' && $connection_settings['site_token'] === '') {
+                $challenge_result = $this->service_client->get_registration_challenge();
+                if (!empty($challenge_result['success'])) {
+                    $registration_challenge = $challenge_result['data'];
                 }
             }
         } catch (Throwable $e) {
@@ -361,6 +369,14 @@ class ICap_SEO_Admin
             return;
         }
 
+        // Honeypot: a hidden field real users never fill in; naive bots often do.
+        $honeypot_value = isset($_POST['website'])
+            ? sanitize_text_field((string) wp_unslash($_POST['website']))
+            : '';
+        $altcha_payload = isset($_POST['altcha_payload'])
+            ? sanitize_text_field((string) wp_unslash($_POST['altcha_payload']))
+            : '';
+
         $result = $this->service_client->request_registration([
             'email' => $email,
             'requested_tier' => $requested_tier,
@@ -370,6 +386,8 @@ class ICap_SEO_Admin
             'site_name' => get_bloginfo('name'),
             'admin_email' => get_bloginfo('admin_email'),
             'timezone' => wp_timezone_string(),
+            'website' => $honeypot_value,
+            'altcha_payload' => $altcha_payload,
         ]);
 
         if ($result['success']) {
@@ -380,6 +398,18 @@ class ICap_SEO_Admin
 
         if ($error_code === 'api_base_url_missing') {
             $this->redirect_with_notice('api_base_url_missing', 'settings');
+            return;
+        }
+        if ($error_code === 'captcha_failed') {
+            $this->redirect_with_notice('registration_request_captcha_failed', 'setup-wizard');
+            return;
+        }
+        if ($error_code === 'request_already_pending') {
+            $this->redirect_with_notice('registration_request_already_pending', 'setup-wizard');
+            return;
+        }
+        if ($error_code === 'disposable_email_blocked') {
+            $this->redirect_with_notice('registration_request_disposable_email', 'setup-wizard');
             return;
         }
 
