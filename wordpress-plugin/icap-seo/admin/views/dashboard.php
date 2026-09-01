@@ -681,26 +681,32 @@ if ($notice_code === 'remediation_apply_noop') {
                     <p class="description"><?php esc_html_e('Every check iCap SEO can run against this page: whether it currently passes, which plan it requires, and how it gets fixed.', 'icap-seo'); ?></p>
                     <?php
                     $seo_recommendation_catalog = isset($seo_recommendation_catalog) && is_array($seo_recommendation_catalog) ? $seo_recommendation_catalog : [];
-                    $catalog_fired_issue_codes = [];
+                    $catalog_label_by_code = [];
+                    foreach ($seo_recommendation_catalog as $catalog_label_lookup_item) {
+                        if (!is_array($catalog_label_lookup_item) || !isset($catalog_label_lookup_item['issue_code'])) {
+                            continue;
+                        }
+                        $catalog_label_by_code[sanitize_key((string) $catalog_label_lookup_item['issue_code'])] =
+                            isset($catalog_label_lookup_item['label']) ? (string) $catalog_label_lookup_item['label'] : '';
+                    }
+                    // Full issue rows keyed by code (not just presence) so an open row's Details/Fix
+                    // column can show the same description/fix/Apply button that used to live in the
+                    // separate "Open recommendations" list below this table.
+                    $catalog_issue_rows_by_code = [];
                     foreach ($detail_issues as $catalog_issue_row) {
                         if (is_array($catalog_issue_row) && isset($catalog_issue_row['issue_code'])) {
-                            $catalog_fired_issue_codes[sanitize_key((string) $catalog_issue_row['issue_code'])] = true;
+                            $catalog_issue_rows_by_code[sanitize_key((string) $catalog_issue_row['issue_code'])] = $catalog_issue_row;
                         }
                     }
                     $catalog_is_premium_scan = $latest_scores_scan_tier === 'premium';
                     $catalog_has_scan_data = $latest_scores_scan_tier !== '';
-                    $catalog_apply_labels = [
-                        'auto' => __('Auto-fix available', 'icap-seo'),
-                        'preview' => __('Preview & publish', 'icap-seo'),
-                        'guidance' => __('Guidance only', 'icap-seo'),
-                    ];
                     $catalog_status_colors = [
                         'good' => ['bg' => '#eafaf0', 'fg' => '#1e7f4f', 'label' => __('Passing', 'icap-seo')],
                         'warn' => ['bg' => '#fdf0e0', 'fg' => '#9a5b0a', 'label' => __('Needs attention', 'icap-seo')],
                         'applied' => ['bg' => '#eef3fc', 'fg' => '#2455c7', 'label' => __('Applied — pending rescan', 'icap-seo')],
                         'locked_plan' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Premium — not included in current plan', 'icap-seo')],
                         'not_scanned' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Not yet scanned', 'icap-seo')],
-                        'not_evaluated' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Not evaluated — blocked by another issue', 'icap-seo')],
+                        'not_evaluated' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Not evaluated', 'icap-seo')],
                     ];
                     ?>
                     <?php if (empty($seo_recommendation_catalog)) : ?>
@@ -714,7 +720,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                         <th><?php esc_html_e('Layer', 'icap-seo'); ?></th>
                                         <th><?php esc_html_e('Plan', 'icap-seo'); ?></th>
                                         <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
-                                        <th><?php esc_html_e('Fix', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Details / Fix', 'icap-seo'); ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -724,19 +730,19 @@ if ($notice_code === 'remediation_apply_noop') {
                                         $catalog_label = isset($catalog_item['label']) ? (string) $catalog_item['label'] : $catalog_code;
                                         $catalog_layer = isset($catalog_item['layer']) ? (string) $catalog_item['layer'] : '';
                                         $catalog_premium = !empty($catalog_item['premium']);
-                                        $catalog_apply_type = isset($catalog_item['apply_type']) ? (string) $catalog_item['apply_type'] : 'guidance';
-                                        $catalog_apply_label = $catalog_apply_labels[$catalog_apply_type] ?? $catalog_apply_labels['guidance'];
 
                                         $catalog_is_applied = in_array($catalog_code, $locally_applied_issue_codes, true);
-                                        $catalog_is_open = isset($catalog_fired_issue_codes[$catalog_code]);
+                                        $catalog_open_issue = $catalog_issue_rows_by_code[$catalog_code] ?? null;
+                                        $catalog_is_open = $catalog_open_issue !== null;
                                         $catalog_preempted_by = isset($catalog_item['preempted_by']) && is_array($catalog_item['preempted_by']) ? $catalog_item['preempted_by'] : [];
-                                        $catalog_is_preempted = false;
+                                        $catalog_blocking_codes = [];
                                         foreach ($catalog_preempted_by as $catalog_preempt_code) {
-                                            if (isset($catalog_fired_issue_codes[sanitize_key((string) $catalog_preempt_code)])) {
-                                                $catalog_is_preempted = true;
-                                                break;
+                                            $catalog_preempt_code = sanitize_key((string) $catalog_preempt_code);
+                                            if (isset($catalog_issue_rows_by_code[$catalog_preempt_code])) {
+                                                $catalog_blocking_codes[] = $catalog_label_by_code[$catalog_preempt_code] ?? $catalog_preempt_code;
                                             }
                                         }
+                                        $catalog_is_preempted = !empty($catalog_blocking_codes);
 
                                         if ($catalog_is_applied) {
                                             $catalog_status_key = 'applied';
@@ -763,53 +769,61 @@ if ($notice_code === 'remediation_apply_noop') {
                                                     <?php echo esc_html($catalog_status['label']); ?>
                                                 </span>
                                             </td>
-                                            <td><?php echo esc_html($catalog_apply_label); ?></td>
+                                            <td style="min-width:260px;">
+                                                <?php if ($catalog_status_key === 'warn' && $catalog_open_issue !== null) : ?>
+                                                    <?php
+                                                    $issue_severity = isset($catalog_open_issue['severity']) ? sanitize_text_field((string) $catalog_open_issue['severity']) : 'medium';
+                                                    $issue_description = isset($catalog_open_issue['description']) ? sanitize_text_field((string) $catalog_open_issue['description']) : '';
+                                                    $issue_recommended_fix = isset($catalog_open_issue['recommended_fix']) ? sanitize_text_field((string) $catalog_open_issue['recommended_fix']) : '';
+                                                    $issue_effort = isset($catalog_open_issue['estimated_effort']) ? sanitize_text_field((string) $catalog_open_issue['estimated_effort']) : '';
+                                                    $is_content_depth_code = in_array($catalog_code, ['thin_content', 'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement'], true);
+                                                    ?>
+                                                    <div>
+                                                        <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
+                                                        <?php if ($issue_effort !== '') : ?>
+                                                            <span>(<?php echo esc_html(sprintf(__('effort: %s', 'icap-seo'), $issue_effort)); ?>)</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div><?php echo esc_html($issue_description !== '' ? $issue_description : __('No issue description provided.', 'icap-seo')); ?></div>
+                                                    <?php if ($issue_recommended_fix !== '') : ?>
+                                                        <div><em><?php echo esc_html($issue_recommended_fix); ?></em></div>
+                                                    <?php endif; ?>
+                                                    <?php if ($is_content_depth_code) : ?>
+                                                        <div style="margin-top:6px;"><em><?php esc_html_e('Use Content depth expansion on the AI Drafts tab — this recommendation requires reviewing generated content before publishing.', 'icap-seo'); ?></em></div>
+                                                    <?php else : ?>
+                                                        <div style="margin-top:6px;">
+                                                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                                                <input type="hidden" name="action" value="icap_seo_apply_remediation">
+                                                                <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                                                <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($catalog_code); ?>">
+                                                                <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
+                                                                <button type="submit" class="button button-secondary"><?php esc_html_e('Apply this recommendation', 'icap-seo'); ?></button>
+                                                            </form>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php elseif ($catalog_status_key === 'not_evaluated') : ?>
+                                                    <?php
+                                                    echo esc_html(sprintf(
+                                                        /* translators: %s: comma-separated list of blocking check names */
+                                                        __('Blocked by: %s — fix that first.', 'icap-seo'),
+                                                        implode(', ', $catalog_blocking_codes)
+                                                    ));
+                                                    ?>
+                                                <?php elseif ($catalog_status_key === 'applied') : ?>
+                                                    <?php esc_html_e('Applied locally — will show Passing after the next rescan confirms it.', 'icap-seo'); ?>
+                                                <?php elseif ($catalog_status_key === 'locked_plan') : ?>
+                                                    <?php esc_html_e('Upgrade to Premium to unlock this check.', 'icap-seo'); ?>
+                                                <?php elseif ($catalog_status_key === 'not_scanned') : ?>
+                                                    <?php esc_html_e('Runs on your next scan.', 'icap-seo'); ?>
+                                                <?php else : ?>
+                                                    <span aria-hidden="true">&mdash;</span>
+                                                <?php endif; ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
-                    <?php endif; ?>
-                    <h4><?php esc_html_e('Open recommendations', 'icap-seo'); ?></h4>
-                    <p class="description"><?php esc_html_e('Recommendations still open from the latest scan. Locally applied fixes stay marked applied until the next rescan confirms cloud score updates.', 'icap-seo'); ?></p>
-                    <?php if (empty($open_detail_issues)) : ?>
-                        <p><?php esc_html_e('No open recommendations remain for this content item.', 'icap-seo'); ?></p>
-                    <?php else : ?>
-                        <ol>
-                            <?php foreach ($open_detail_issues as $issue) : ?>
-                                <?php
-                                $issue_code = isset($issue['issue_code']) ? sanitize_key((string) $issue['issue_code']) : '';
-                                $issue_severity = isset($issue['severity']) ? sanitize_text_field((string) $issue['severity']) : 'medium';
-                                $issue_description = isset($issue['description']) ? sanitize_text_field((string) $issue['description']) : '';
-                                $issue_recommended_fix = isset($issue['recommended_fix']) ? sanitize_text_field((string) $issue['recommended_fix']) : '';
-                                $issue_effort = isset($issue['estimated_effort']) ? sanitize_text_field((string) $issue['estimated_effort']) : '';
-                                $is_content_depth_code = in_array($issue_code, ['thin_content', 'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement'], true);
-                                ?>
-                                <li>
-                                    <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
-                                    <?php if ($issue_effort !== '') : ?>
-                                        <span>(<?php echo esc_html(sprintf(__('effort: %s', 'icap-seo'), $issue_effort)); ?>)</span>
-                                    <?php endif; ?>
-                                    <div><?php echo esc_html($issue_description !== '' ? $issue_description : __('No issue description provided.', 'icap-seo')); ?></div>
-                                    <?php if ($issue_recommended_fix !== '') : ?>
-                                        <div><em><?php echo esc_html($issue_recommended_fix); ?></em></div>
-                                    <?php endif; ?>
-                                    <?php if ($is_content_depth_code) : ?>
-                                        <div style="margin-top:8px;"><em><?php esc_html_e('Use Content depth expansion below — this recommendation requires reviewing generated content before publishing.', 'icap-seo'); ?></em></div>
-                                    <?php elseif ($issue_code !== '') : ?>
-                                        <div style="margin-top:8px;">
-                                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                                                <input type="hidden" name="action" value="icap_seo_apply_remediation">
-                                                <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                                                <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
-                                                <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
-                                                <button type="submit" class="button button-secondary"><?php esc_html_e('Apply this recommendation', 'icap-seo'); ?></button>
-                                            </form>
-                                        </div>
-                                    <?php endif; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        </ol>
                     <?php endif; ?>
                     <?php endif; // content_detail_tab === 'recommendations' ?>
                     <?php if ($content_detail_tab === 'ai-drafts') : ?>
