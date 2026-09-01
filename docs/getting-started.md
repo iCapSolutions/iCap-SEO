@@ -27,7 +27,9 @@ You'll get a verification email — click the link to confirm it's you. What hap
 - **Premium** and **AI Scanning** requests go to iCapSolutions for a quick review after verification. You'll
   get a second email with your registration token once it's approved.
 
-Already have a registration token from a previous request or your account contact? Skip ahead to step 3.
+Already have a registration token from your account contact? Skip ahead to step 3. Note that each registration
+token is single-use and tied to the specific site it was issued for — a token from a previous request, or one
+already used to connect a different site, won't work.
 
 ## 3. Connect your site
 
