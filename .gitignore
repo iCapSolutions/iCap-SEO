@@ -4,3 +4,4 @@ vendor/
 *.zip
 *.sha256
 *.log
+CLAUDE.local.md
