@@ -487,6 +487,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 <code><?php echo esc_html($is_connected ? 'present' : 'missing'); ?></code>
             </p>
         <?php elseif ($active_tab === 'content-scores') : ?>
+            <?php if ($selected_content_key === '') : ?>
             <h2><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
             <?php if ($latest_scores_scan_id !== '') : ?>
                 <p class="icap-seo-meta-line">
@@ -536,9 +537,8 @@ if ($notice_code === 'remediation_apply_noop') {
                                 $row_content_key = (isset($row['content_key']) && is_string($row['content_key']))
                                     ? sanitize_text_field($row['content_key'])
                                     : '';
-                                $row_is_selected = $row_content_key !== '' && $selected_content_key !== '' && $row_content_key === $selected_content_key;
                                 ?>
-                                <tr<?php echo $row_is_selected ? ' style="background-color:#eef6ff;"' : ''; ?>>
+                                <tr>
                                     <td>
                                         <a href="<?php echo esc_url($row['edit_link']); ?>">
                                             <?php echo esc_html($row['title']); ?>
@@ -571,7 +571,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                             );
                                             ?>
                                             <a href="<?php echo esc_url($detail_link); ?>">
-                                                <?php echo esc_html($row_is_selected ? __('Viewing details', 'icap-seo') : __('View details', 'icap-seo')); ?>
+                                                <?php esc_html_e('View details', 'icap-seo'); ?>
                                             </a>
                                         <?php else : ?>
                                             <span>&mdash;</span>
@@ -590,9 +590,12 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php esc_html_e('Data source: placeholder fallback (API results unavailable for this view).', 'icap-seo'); ?>
                 <?php endif; ?>
             </p>
+            <?php endif; // selected_content_key === '' ?>
             <?php if ($selected_content_key !== '') : ?>
-                <hr>
-                <h3><?php esc_html_e('Content Detail', 'icap-seo'); ?></h3>
+                <p class="icap-seo-breadcrumb">
+                    <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'content-scores'], admin_url('admin.php'))); ?>">&larr; <?php esc_html_e('Back to Content Scores', 'icap-seo'); ?></a>
+                </p>
+                <h2><?php esc_html_e('Content Detail', 'icap-seo'); ?></h2>
                 <?php if ($content_score_detail_error !== '') : ?>
                     <div class="notice notice-error inline">
                         <p><?php echo esc_html($content_score_detail_error); ?></p>
