@@ -13,6 +13,18 @@
     margin-top: 16px;
 }
 
+.icap-seo-meta-line {
+    margin: 4px 0;
+    font-size: 13px;
+    font-style: normal;
+    color: #50575e;
+}
+
+.icap-seo-meta-value {
+    font-weight: 600;
+    color: #1d2327;
+}
+
 .icap-seo-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -89,6 +101,11 @@
 
 .icap-seo-card-subtext + .icap-seo-card-subtext {
     margin-top: 2px;
+}
+
+.icap-seo-card-subtext-value {
+    font-weight: 600;
+    color: #3c434a;
 }
 
 .icap-seo-card--meter {
