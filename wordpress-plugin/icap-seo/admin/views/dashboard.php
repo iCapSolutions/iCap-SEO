@@ -50,6 +50,28 @@ if (!function_exists('icap_seo_meter_gradient')) {
     }
 }
 
+if (!function_exists('icap_seo_friendly_layer_names')) {
+    // Maps raw backend scan-layer names to the same category labels used in
+    // the Overview tab's feature summary, so scan-coverage text reads
+    // consistently across tabs. Layers that share one Overview bullet
+    // (robots/crawler policy + security headers) collapse into it.
+    function icap_seo_friendly_layer_names(array $raw_names): array
+    {
+        $map = [
+            'Robots and crawler policy' => __('Crawlability & security', 'icap-seo'),
+            'Security headers' => __('Crawlability & security', 'icap-seo'),
+            'Content quality and readability' => __('Content quality & readability', 'icap-seo'),
+            'Structured data schema' => __('Structured data', 'icap-seo'),
+            'Internal and broken links' => __('Internal & external links', 'icap-seo'),
+        ];
+        $friendly = array_map(
+            static fn(string $raw_name): string => $map[$raw_name] ?? $raw_name,
+            $raw_names
+        );
+        return array_values(array_unique($friendly));
+    }
+}
+
 $tabs = [
     'overview' => __('Overview', 'icap-seo'),
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
@@ -467,23 +489,23 @@ if ($notice_code === 'remediation_apply_noop') {
         <?php elseif ($active_tab === 'content-scores') : ?>
             <h2><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
             <?php if ($latest_scores_scan_id !== '') : ?>
-                <p class="description">
+                <p class="icap-seo-meta-line">
                     <?php esc_html_e('Latest scan:', 'icap-seo'); ?>
-                    <code><?php echo esc_html($latest_scores_scan_id); ?></code>
+                    <span class="icap-seo-meta-value"><?php echo esc_html($latest_scores_scan_id); ?></span>
                     <?php if ($latest_scores_scan_tier !== '') : ?>
-                        |
+                        &middot;
                         <?php esc_html_e('Tier:', 'icap-seo'); ?>
-                        <code><?php echo esc_html($latest_scores_scan_tier); ?></code>
+                        <span class="icap-seo-meta-value"><?php echo esc_html($latest_scores_scan_tier); ?></span>
                     <?php endif; ?>
-                    |
+                    &middot;
                     <?php esc_html_e('Scored items:', 'icap-seo'); ?>
-                    <code><?php echo esc_html((string) $latest_scores_item_count); ?></code>
+                    <span class="icap-seo-meta-value"><?php echo esc_html((string) $latest_scores_item_count); ?></span>
                 </p>
             <?php endif; ?>
             <?php if (!empty($latest_scores_executed_layer_names)) : ?>
-                <p class="description">
+                <p class="icap-seo-meta-line">
                     <?php esc_html_e('Executed layers:', 'icap-seo'); ?>
-                    <code><?php echo esc_html(implode(', ', $latest_scores_executed_layer_names)); ?></code>
+                    <span class="icap-seo-meta-value"><?php echo esc_html(implode(', ', icap_seo_friendly_layer_names($latest_scores_executed_layer_names))); ?></span>
                 </p>
             <?php endif; ?>
             <div class="icap-seo-table-wrap">
@@ -1397,10 +1419,10 @@ if ($notice_code === 'remediation_apply_noop') {
                         <h3><?php esc_html_e('Last Scan', 'icap-seo'); ?></h3>
                         <p class="icap-seo-card-value"><?php echo esc_html($score_snapshot['last_scan'] ?? __('Not available', 'icap-seo')); ?></p>
                         <?php if ($overview_latest_scan_id_display !== '') : ?>
-                            <p class="icap-seo-card-subtext"><?php esc_html_e('ID:', 'icap-seo'); ?> <code><?php echo esc_html($overview_latest_scan_id_display); ?></code></p>
+                            <p class="icap-seo-card-subtext"><?php esc_html_e('ID:', 'icap-seo'); ?> <span class="icap-seo-card-subtext-value"><?php echo esc_html($overview_latest_scan_id_display); ?></span></p>
                         <?php endif; ?>
                         <?php if ($overview_scan_tier_value !== '') : ?>
-                            <p class="icap-seo-card-subtext"><?php esc_html_e('Tier:', 'icap-seo'); ?> <code><?php echo esc_html($overview_scan_tier_value); ?></code></p>
+                            <p class="icap-seo-card-subtext"><?php esc_html_e('Tier:', 'icap-seo'); ?> <span class="icap-seo-card-subtext-value"><?php echo esc_html($overview_scan_tier_value); ?></span></p>
                         <?php endif; ?>
                     </div>
                 </div>
