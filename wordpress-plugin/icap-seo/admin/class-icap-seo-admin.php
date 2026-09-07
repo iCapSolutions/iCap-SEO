@@ -8,7 +8,6 @@ class ICap_SEO_Admin
 {
     private ICap_SEO_Service_Client $service_client;
     private const SCORE_COLUMN_KEY = 'icap_seo_score';
-    private const DELTA_COLUMN_KEY = 'icap_seo_delta';
     private const NOTICE_QUERY_KEY = 'icap_seo_notice';
     private const SEO_CHANGE_COMMENT_START = '<!-- SEO by iCap - https://icapsolutions.com -->';
     private const SEO_CHANGE_COMMENT_END = '<!-- /SEO by iCap - https://icapsolutions.com -->';
@@ -87,7 +86,6 @@ class ICap_SEO_Admin
 
             if ($key === 'title') {
                 $inserted[self::SCORE_COLUMN_KEY] = __('iCap Score', 'icap-seo');
-                $inserted[self::DELTA_COLUMN_KEY] = __('iCap vs Rank Math', 'icap-seo');
             }
         }
 
@@ -96,25 +94,19 @@ class ICap_SEO_Admin
 
     public function render_score_columns(string $column_name, int $post_id): void
     {
-        if ($column_name !== self::SCORE_COLUMN_KEY && $column_name !== self::DELTA_COLUMN_KEY) {
+        if ($column_name !== self::SCORE_COLUMN_KEY) {
             return;
         }
 
         $score_data = $this->service_client->get_content_score_for_post($post_id);
 
-        if ($column_name === self::SCORE_COLUMN_KEY) {
-            echo esc_html($score_data['icap_score']);
-            return;
-        }
-
-        echo esc_html($score_data['rank_math_delta']);
+        echo esc_html($score_data['icap_score']);
     }
 
     public function output_list_column_styles(): void
     {
         echo '<style>
             .column-icap_seo_score { width: 9%; }
-            .column-icap_seo_delta { width: 11%; }
         </style>';
     }
 

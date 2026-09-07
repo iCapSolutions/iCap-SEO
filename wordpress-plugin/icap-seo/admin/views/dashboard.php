@@ -447,15 +447,13 @@ if ($notice_code === 'remediation_apply_noop') {
                             <th><?php esc_html_e('Type', 'icap-seo'); ?></th>
                             <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
                             <th><?php esc_html_e('iCap Score', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('Rank Math (baseline)', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('Delta', 'icap-seo'); ?></th>
                             <th><?php esc_html_e('Details', 'icap-seo'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($content_scores)) : ?>
                             <tr>
-                                <td colspan="7">
+                                <td colspan="5">
                                     <?php if ($latest_scores_source === 'api') : ?>
                                         <?php esc_html_e('No scored content rows were returned for the latest scan yet.', 'icap-seo'); ?>
                                     <?php else : ?>
@@ -480,8 +478,6 @@ if ($notice_code === 'remediation_apply_noop') {
                                     <td><?php echo esc_html($row['type']); ?></td>
                                     <td><?php echo esc_html($row['status']); ?></td>
                                     <td><?php echo esc_html($row['icap_score']); ?></td>
-                                    <td><?php echo esc_html($row['rank_math_score']); ?></td>
-                                    <td><?php echo esc_html($row['rank_math_delta']); ?></td>
                                     <td>
                                         <?php if ($row_content_key !== '') : ?>
                                             <?php
@@ -538,12 +534,6 @@ if ($notice_code === 'remediation_apply_noop') {
                         ? esc_url_raw($content_score_detail['permalink'])
                         : '';
                     $detail_score = isset($content_score_detail['overall_score']) ? (int) $content_score_detail['overall_score'] : 0;
-                    $detail_rank_math = (isset($content_score_detail['rank_math_score']) && $content_score_detail['rank_math_score'] !== null)
-                        ? (int) $content_score_detail['rank_math_score']
-                        : null;
-                    $detail_delta = (isset($content_score_detail['delta_vs_rank_math']) && $content_score_detail['delta_vs_rank_math'] !== null)
-                        ? (int) $content_score_detail['delta_vs_rank_math']
-                        : null;
                     $detail_category_scores = isset($content_score_detail['category_scores']) && is_array($content_score_detail['category_scores'])
                         ? $content_score_detail['category_scores']
                         : [];
@@ -604,10 +594,6 @@ if ($notice_code === 'remediation_apply_noop') {
                         <?php esc_html_e('Status:', 'icap-seo'); ?> <code><?php echo esc_html($detail_status !== '' ? $detail_status : 'n/a'); ?></code>
                         |
                         <?php esc_html_e('Overall score:', 'icap-seo'); ?> <code><?php echo esc_html(sprintf('%d/100', $detail_score)); ?></code>
-                        |
-                        <?php esc_html_e('Rank Math:', 'icap-seo'); ?> <code><?php echo esc_html($detail_rank_math === null ? 'n/a' : sprintf('%d/100', $detail_rank_math)); ?></code>
-                        |
-                        <?php esc_html_e('Delta:', 'icap-seo'); ?> <code><?php echo esc_html($detail_delta === null ? 'n/a' : sprintf('%+d', $detail_delta)); ?></code>
                     </p>
                     <?php if ($detail_permalink !== '') : ?>
                         <p><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View published URL', 'icap-seo'); ?></a></p>

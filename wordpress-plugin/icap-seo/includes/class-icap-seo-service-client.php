@@ -214,8 +214,6 @@ class ICap_SEO_Service_Client
                 'edit_link' => get_edit_post_link((int) $post->ID, ''),
                 'icap_score' => $score_data['icap_score'],
                 'icap_score_numeric' => $icap_score_numeric,
-                'rank_math_score' => $score_data['rank_math_score'],
-                'rank_math_delta' => $score_data['rank_math_delta'],
                 'source' => 'placeholder',
             ];
         }
@@ -326,8 +324,6 @@ class ICap_SEO_Service_Client
             'status' => isset($data['status']) ? sanitize_key((string) $data['status']) : '',
             'permalink' => isset($data['permalink']) ? esc_url_raw((string) $data['permalink']) : '',
             'overall_score' => isset($data['overall_score']) ? (int) $data['overall_score'] : 0,
-            'rank_math_score' => isset($data['rank_math_score']) && $data['rank_math_score'] !== null ? (int) $data['rank_math_score'] : null,
-            'delta_vs_rank_math' => isset($data['delta_vs_rank_math']) && $data['delta_vs_rank_math'] !== null ? (int) $data['delta_vs_rank_math'] : null,
             'last_scored_at' => isset($data['last_scored_at']) ? sanitize_text_field((string) $data['last_scored_at']) : '',
             'category_scores' => $category_scores,
             'issues' => $issues,
@@ -1188,19 +1184,6 @@ class ICap_SEO_Service_Client
 
             $post_id = isset($item['wp_post_id']) ? (int) $item['wp_post_id'] : 0;
             $overall_score = isset($item['overall_score']) ? (int) $item['overall_score'] : 0;
-            $rank_math_score = isset($item['rank_math_score']) ? (int) $item['rank_math_score'] : null;
-            $delta = isset($item['delta_vs_rank_math']) ? (int) $item['delta_vs_rank_math'] : null;
-
-            if ($delta === null && $rank_math_score !== null) {
-                $delta = $overall_score - $rank_math_score;
-            }
-
-            $delta_display = 'n/a';
-            if ($delta !== null) {
-                $delta_display = sprintf('%s%d', $delta > 0 ? '+' : '', $delta);
-            }
-
-            $rank_math_display = $rank_math_score !== null ? sprintf('%d/100', $rank_math_score) : 'n/a';
 
             $rows[] = [
                 'id' => $post_id,
@@ -1213,8 +1196,6 @@ class ICap_SEO_Service_Client
                 'edit_link' => $post_id > 0 ? get_edit_post_link($post_id, '') : '',
                 'icap_score' => sprintf('%d/100', $overall_score),
                 'icap_score_numeric' => $overall_score,
-                'rank_math_score' => $rank_math_display,
-                'rank_math_delta' => $delta_display,
                 'source' => 'api',
             ];
         }
@@ -1242,8 +1223,6 @@ class ICap_SEO_Service_Client
             }
             $index[(int) $row['id']] = [
                 'icap_score' => (string) $row['icap_score'],
-                'rank_math_score' => (string) $row['rank_math_score'],
-                'rank_math_delta' => (string) $row['rank_math_delta'],
             ];
         }
 
@@ -1255,14 +1234,9 @@ class ICap_SEO_Service_Client
     private function build_placeholder_score_data(int $post_id): array
     {
         $icap_score_value = 60 + ($post_id % 35);
-        $rank_math_value = 55 + ($post_id % 40);
-        $delta = $icap_score_value - $rank_math_value;
-        $delta_prefix = $delta > 0 ? '+' : '';
 
         return [
             'icap_score' => sprintf('%d/100', $icap_score_value),
-            'rank_math_score' => sprintf('%d/100', $rank_math_value),
-            'rank_math_delta' => sprintf('%s%d', $delta_prefix, $delta),
         ];
     }
 
