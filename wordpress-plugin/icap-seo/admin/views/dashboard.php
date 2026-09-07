@@ -1283,16 +1283,6 @@ if ($notice_code === 'remediation_apply_noop') {
             if (empty($overview_scan_layers_data) && !empty($latest_scores_scan_layers)) {
                 $overview_scan_layers_data = $latest_scores_scan_layers;
             }
-            $overview_executed_layer_names = [];
-            if (isset($overview_scan_layers_data['executed']) && is_array($overview_scan_layers_data['executed'])) {
-                foreach ($overview_scan_layers_data['executed'] as $layer_row) {
-                    if (is_array($layer_row) && isset($layer_row['name']) && is_string($layer_row['name'])) {
-                        $overview_executed_layer_names[] = sanitize_text_field($layer_row['name']);
-                    } elseif (is_string($layer_row)) {
-                        $overview_executed_layer_names[] = sanitize_text_field($layer_row);
-                    }
-                }
-            }
             $overview_premium_locked_layer_names = [];
             if (isset($overview_scan_layers_data['premium_locked']) && is_array($overview_scan_layers_data['premium_locked'])) {
                 foreach ($overview_scan_layers_data['premium_locked'] as $layer_row) {
@@ -1395,6 +1385,12 @@ if ($notice_code === 'remediation_apply_noop') {
                     <div class="icap-seo-card-text">
                         <h3><?php esc_html_e('Last Scan', 'icap-seo'); ?></h3>
                         <p class="icap-seo-card-value"><?php echo esc_html($score_snapshot['last_scan'] ?? __('Not available', 'icap-seo')); ?></p>
+                        <?php if ($overview_latest_scan_id_display !== '') : ?>
+                            <p class="icap-seo-card-subtext"><?php esc_html_e('ID:', 'icap-seo'); ?> <code><?php echo esc_html($overview_latest_scan_id_display); ?></code></p>
+                        <?php endif; ?>
+                        <?php if ($overview_scan_tier_value !== '') : ?>
+                            <p class="icap-seo-card-subtext"><?php esc_html_e('Tier:', 'icap-seo'); ?> <code><?php echo esc_html($overview_scan_tier_value); ?></code></p>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="icap-seo-card icap-seo-card--meter">
@@ -1487,23 +1483,6 @@ if ($notice_code === 'remediation_apply_noop') {
                 </p>
             <?php endif; ?>
 
-            <?php if ($overview_latest_scan_id_display !== '') : ?>
-                <p class="description">
-                    <?php esc_html_e('Latest scan ID:', 'icap-seo'); ?>
-                    <code><?php echo esc_html($overview_latest_scan_id_display); ?></code>
-                    <?php if ($overview_scan_tier_value !== '') : ?>
-                        |
-                        <?php esc_html_e('Tier:', 'icap-seo'); ?>
-                        <code><?php echo esc_html($overview_scan_tier_value); ?></code>
-                    <?php endif; ?>
-                </p>
-            <?php endif; ?>
-            <?php if (!empty($overview_executed_layer_names)) : ?>
-                <p class="description">
-                    <?php esc_html_e('Executed scan layers:', 'icap-seo'); ?>
-                    <code><?php echo esc_html(implode(', ', $overview_executed_layer_names)); ?></code>
-                </p>
-            <?php endif; ?>
             <?php if (!empty($overview_premium_locked_layer_names)) : ?>
                 <p class="description">
                     <?php esc_html_e('Premium-only layers not included in this scan:', 'icap-seo'); ?>
