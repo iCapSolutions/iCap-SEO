@@ -31,6 +31,98 @@
     margin: 0 0 8px;
 }
 
+.icap-seo-card--icon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.icap-seo-card--icon h3 {
+    margin: 0 0 2px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #50575e;
+}
+
+.icap-seo-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #f0f6fc;
+    color: #2271b1;
+}
+
+.icap-seo-status-icon--connected {
+    background: #edfaef;
+    color: #00a32a;
+}
+
+.icap-seo-status-icon--disconnected {
+    background: #fcf0f1;
+    color: #d63638;
+}
+
+.icap-seo-card-value {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.icap-seo-card-value--muted {
+    font-size: 13px;
+    font-weight: 500;
+    color: #787c82;
+}
+
+.icap-seo-card--meter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+}
+
+.icap-seo-card--meter h3 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #50575e;
+}
+
+.icap-seo-meter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+}
+
+.icap-seo-meter-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+.icap-seo-meter-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1d2327;
+}
+
 .icap-seo-table-wrap {
     margin-top: 12px;
 }
