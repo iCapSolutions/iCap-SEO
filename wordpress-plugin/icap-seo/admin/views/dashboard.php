@@ -1328,8 +1328,88 @@ if ($notice_code === 'remediation_apply_noop') {
                 ? (int) $connection_settings['ai_credits_remaining']
                 : 0;
             $overview_ai_credits_exhausted = $overview_is_premium && $overview_ai_credits_remaining <= 0;
+
+            if (!function_exists('icap_seo_meter_color')) {
+                // Maps a 0-100 value onto a red->green hue: flat red at/below
+                // $red_below, flat green at/above $green_at, interpolated between.
+                function icap_seo_meter_color(int $percent, int $red_below = 50, int $green_at = 90): string
+                {
+                    $percent = max(0, min(100, $percent));
+                    if ($percent <= $red_below) {
+                        $hue = 0;
+                    } elseif ($percent >= $green_at) {
+                        $hue = 120;
+                    } else {
+                        $hue = (($percent - $red_below) / max(1, ($green_at - $red_below))) * 120;
+                    }
+                    return sprintf('hsl(%d, 70%%, 45%%)', (int) round($hue));
+                }
+            }
+
+            $overview_score_percent = null;
+            if (!empty($score_snapshot['score']) && preg_match('/(\d+)\s*\/\s*100/', (string) $score_snapshot['score'], $overview_score_match)) {
+                $overview_score_percent = max(0, min(100, (int) $overview_score_match[1]));
+            }
+            $overview_score_color = $overview_score_percent !== null ? icap_seo_meter_color($overview_score_percent, 55, 90) : '#dcdcde';
+            $overview_score_fill = $overview_score_percent ?? 0;
+            $overview_score_display = $overview_score_percent !== null ? $overview_score_percent . '%' : __('Pending', 'icap-seo');
+
+            $overview_ai_credit_fill = $overview_is_premium ? max(0, min(100, $overview_ai_credits_remaining)) : 0;
+            $overview_ai_credit_color = $overview_is_premium ? icap_seo_meter_color($overview_ai_credit_fill, 0, 100) : '#dcdcde';
+
+            $overview_scored_items_count = max(count($content_scores), $latest_scores_item_count);
             ?>
             <h2><?php esc_html_e('Overview', 'icap-seo'); ?></h2>
+
+            <div class="icap-seo-cards">
+                <div class="icap-seo-card icap-seo-card--icon">
+                    <div class="icap-seo-card-icon icap-seo-status-icon icap-seo-status-icon--<?php echo $overview_is_connected ? 'connected' : 'disconnected'; ?>" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v4M15 2v4M7.5 8h9a1.5 1.5 0 0 1 1.5 1.5V11a6 6 0 0 1-6 6h0a6 6 0 0 1-6-6V9.5A1.5 1.5 0 0 1 7.5 8Z"/><path d="M12 17v3M9 22h6"/></svg>
+                    </div>
+                    <div class="icap-seo-card-text">
+                        <h3><?php esc_html_e('Connection Status', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html($overview_is_connected ? __('Connected', 'icap-seo') : __('Not Connected', 'icap-seo')); ?></p>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--icon">
+                    <div class="icap-seo-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>
+                    </div>
+                    <div class="icap-seo-card-text">
+                        <h3><?php esc_html_e('Last Scan', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html($score_snapshot['last_scan'] ?? __('Not available', 'icap-seo')); ?></p>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--meter">
+                    <h3><?php esc_html_e('Overall SEO Score', 'icap-seo'); ?></h3>
+                    <div class="icap-seo-meter" style="background: conic-gradient(<?php echo esc_attr($overview_score_color); ?> 0% <?php echo esc_attr((string) $overview_score_fill); ?>%, #e5e5e5 <?php echo esc_attr((string) $overview_score_fill); ?>% 100%);">
+                        <div class="icap-seo-meter-inner">
+                            <span class="icap-seo-meter-value"><?php echo esc_html($overview_score_display); ?></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--icon">
+                    <div class="icap-seo-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5 12 3l8 3.5-8 3.5-8-3.5Z"/><path d="M4 12l8 3.5 8-3.5M4 17.5l8 3.5 8-3.5"/></svg>
+                    </div>
+                    <div class="icap-seo-card-text">
+                        <h3><?php esc_html_e('Scored Content Items', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html((string) $overview_scored_items_count); ?></p>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--meter">
+                    <h3><?php esc_html_e('AI Credits Remaining', 'icap-seo'); ?></h3>
+                    <?php if ($overview_is_premium) : ?>
+                        <div class="icap-seo-meter" style="background: conic-gradient(<?php echo esc_attr($overview_ai_credit_color); ?> 0% <?php echo esc_attr((string) $overview_ai_credit_fill); ?>%, #e5e5e5 <?php echo esc_attr((string) $overview_ai_credit_fill); ?>% 100%);">
+                            <div class="icap-seo-meter-inner">
+                                <span class="icap-seo-meter-value"><?php echo esc_html((string) $overview_ai_credits_remaining); ?></span>
+                            </div>
+                        </div>
+                    <?php else : ?>
+                        <p class="icap-seo-card-value icap-seo-card-value--muted"><?php esc_html_e('Requires Premium', 'icap-seo'); ?></p>
+                    <?php endif; ?>
+                </div>
+            </div>
 
             <div class="icap-seo-feature-summary">
                 <p><?php esc_html_e('iCap SEO runs a cloud-connected scan of your site — 31 checks across 6 categories — and fixes most of what it finds, automatically or with a preview you approve first.', 'icap-seo'); ?></p>
@@ -1341,37 +1421,6 @@ if ($notice_code === 'remediation_apply_noop') {
                     <li><?php esc_html_e('Image optimization — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Internal & external links — discoverability and broken-link detection', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                 </ul>
-            </div>
-
-            <div class="icap-seo-cards">
-                <div class="icap-seo-card">
-                    <h3><?php esc_html_e('Connection Status', 'icap-seo'); ?></h3>
-                    <p><?php echo esc_html($score_snapshot['status']); ?></p>
-                </div>
-                <div class="icap-seo-card">
-                    <h3><?php esc_html_e('Overall SEO Score', 'icap-seo'); ?></h3>
-                    <p><?php echo esc_html($score_snapshot['score'] ?? 'Pending'); ?></p>
-                </div>
-                <div class="icap-seo-card">
-                    <h3><?php esc_html_e('Last Scan', 'icap-seo'); ?></h3>
-                    <p><?php echo esc_html($score_snapshot['last_scan'] ?? 'Not available'); ?></p>
-                </div>
-                <div class="icap-seo-card">
-                    <h3><?php esc_html_e('Scored Content Items', 'icap-seo'); ?></h3>
-                    <p><?php echo esc_html((string) max(count($content_scores), $latest_scores_item_count)); ?></p>
-                </div>
-                <div class="icap-seo-card">
-                    <h3><?php esc_html_e('AI Credits Remaining', 'icap-seo'); ?></h3>
-                    <p>
-                        <?php
-                        if ($overview_is_premium) {
-                            echo esc_html((string) $overview_ai_credits_remaining);
-                        } else {
-                            esc_html_e('Requires Premium', 'icap-seo');
-                        }
-                        ?>
-                    </p>
-                </div>
             </div>
 
             <?php if ($overview_is_premium) : ?>
