@@ -1329,10 +1329,10 @@ if ($notice_code === 'remediation_apply_noop') {
                 : 0;
             $overview_ai_credits_exhausted = $overview_is_premium && $overview_ai_credits_remaining <= 0;
 
-            if (!function_exists('icap_seo_meter_color')) {
+            if (!function_exists('icap_seo_meter_hue')) {
                 // Maps a 0-100 value onto a red->green hue: flat red at/below
                 // $red_below, flat green at/above $green_at, interpolated between.
-                function icap_seo_meter_color(int $percent, int $red_below = 50, int $green_at = 90): string
+                function icap_seo_meter_hue(int $percent, int $red_below = 50, int $green_at = 90): int
                 {
                     $percent = max(0, min(100, $percent));
                     if ($percent <= $red_below) {
@@ -1342,7 +1342,37 @@ if ($notice_code === 'remediation_apply_noop') {
                     } else {
                         $hue = (($percent - $red_below) / max(1, ($green_at - $red_below))) * 120;
                     }
-                    return sprintf('hsl(%d, 70%%, 45%%)', (int) round($hue));
+                    return (int) round($hue);
+                }
+            }
+
+            if (!function_exists('icap_seo_meter_color')) {
+                function icap_seo_meter_color(int $percent, int $red_below = 50, int $green_at = 90): string
+                {
+                    return sprintf('hsl(%d, 70%%, 45%%)', icap_seo_meter_hue($percent, $red_below, $green_at));
+                }
+            }
+
+            if (!function_exists('icap_seo_meter_gradient')) {
+                // Builds a conic-gradient spanning the full red->green hue range
+                // (0-100), so the ring always shows where the current value sits
+                // on the whole scale. The segment above $filled_percent is kept
+                // at the same hue but faded (lower alpha) so it reads as unfilled.
+                function icap_seo_meter_gradient(int $filled_percent, int $red_below = 50, int $green_at = 90): string
+                {
+                    $filled_percent = max(0, min(100, $filled_percent));
+                    $stops = range(0, 100, 5);
+                    if (!in_array($filled_percent, $stops, true)) {
+                        $stops[] = $filled_percent;
+                        sort($stops);
+                    }
+                    $segments = [];
+                    foreach ($stops as $stop) {
+                        $hue = icap_seo_meter_hue($stop, $red_below, $green_at);
+                        $alpha = $stop <= $filled_percent ? 1 : 0.2;
+                        $segments[] = sprintf('hsla(%d, 70%%, 45%%, %s) %d%%', $hue, rtrim(rtrim(sprintf('%.2f', $alpha), '0'), '.'), $stop);
+                    }
+                    return 'conic-gradient(' . implode(', ', $segments) . ')';
                 }
             }
 
@@ -1350,8 +1380,9 @@ if ($notice_code === 'remediation_apply_noop') {
             if (!empty($score_snapshot['score']) && preg_match('/(\d+)\s*\/\s*100/', (string) $score_snapshot['score'], $overview_score_match)) {
                 $overview_score_percent = max(0, min(100, (int) $overview_score_match[1]));
             }
-            $overview_score_color = $overview_score_percent !== null ? icap_seo_meter_color($overview_score_percent, 55, 90) : '#dcdcde';
+            $overview_score_color = $overview_score_percent !== null ? icap_seo_meter_color($overview_score_percent, 10, 90) : '#8c8f94';
             $overview_score_fill = $overview_score_percent ?? 0;
+            $overview_score_gradient = $overview_score_percent !== null ? icap_seo_meter_gradient($overview_score_fill, 10, 90) : '#e5e5e5';
             $overview_score_display = $overview_score_percent !== null ? $overview_score_percent . '%' : __('Pending', 'icap-seo');
 
             $overview_ai_credit_fill = $overview_is_premium ? max(0, min(100, $overview_ai_credits_remaining)) : 0;
@@ -1382,9 +1413,9 @@ if ($notice_code === 'remediation_apply_noop') {
                 </div>
                 <div class="icap-seo-card icap-seo-card--meter">
                     <h3><?php esc_html_e('Overall SEO Score', 'icap-seo'); ?></h3>
-                    <div class="icap-seo-meter" style="background: conic-gradient(<?php echo esc_attr($overview_score_color); ?> 0% <?php echo esc_attr((string) $overview_score_fill); ?>%, #e5e5e5 <?php echo esc_attr((string) $overview_score_fill); ?>% 100%);">
+                    <div class="icap-seo-meter" style="background: <?php echo esc_attr($overview_score_gradient); ?>;">
                         <div class="icap-seo-meter-inner">
-                            <span class="icap-seo-meter-value"><?php echo esc_html($overview_score_display); ?></span>
+                            <span class="icap-seo-meter-value" style="color: <?php echo esc_attr($overview_score_color); ?>;"><?php echo esc_html($overview_score_display); ?></span>
                         </div>
                     </div>
                 </div>
