@@ -137,6 +137,37 @@
     margin-top: 12px;
 }
 
+.icap-seo-score-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.icap-seo-score-bar-track {
+    position: relative;
+    width: 90px;
+    height: 10px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #e5e5e5;
+    overflow: hidden;
+}
+
+.icap-seo-score-bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    border-radius: 999px;
+}
+
+.icap-seo-score-bar-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1d2327;
+    white-space: nowrap;
+}
+
 .icap-seo-actions {
     display: flex;
     gap: 10px;
