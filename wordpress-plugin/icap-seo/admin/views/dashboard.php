@@ -629,6 +629,13 @@ if ($notice_code === 'remediation_apply_noop') {
                     <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'content-scores'], admin_url('admin.php'))); ?>">&larr; <?php esc_html_e('Back to Content Scores', 'icap-seo'); ?></a>
                 </p>
                 <h2><?php esc_html_e('Content Detail', 'icap-seo'); ?></h2>
+                <?php if (!empty($content_detail_is_posts_page)) : ?>
+                    <div class="notice notice-warning inline" style="margin: 0 0 12px;">
+                        <p>
+                            <?php esc_html_e('This page is set as your site\'s Posts page (Settings > Reading), so WordPress shows your latest posts here instead of this page\'s own content. Title, meta description, canonical URL, and structured data recommendations still work. Content-body recommendations (headings, paragraphs, images, links, content depth) can\'t be verified or fixed here, because the content that would contain them is never displayed.', 'icap-seo'); ?>
+                        </p>
+                    </div>
+                <?php endif; ?>
                 <?php if ($content_score_detail_error !== '') : ?>
                     <div class="notice notice-error inline">
                         <p><?php echo esc_html($content_score_detail_error); ?></p>
@@ -881,6 +888,27 @@ if ($notice_code === 'remediation_apply_noop') {
                                                     $is_content_depth_code = in_array($catalog_code, ['thin_content', 'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement'], true);
                                                     $is_readability_code = in_array($catalog_code, ['readability_score_low'], true);
                                                     $catalog_apply_type = isset($catalog_item['apply_type']) ? sanitize_key((string) $catalog_item['apply_type']) : '';
+                                                    // These evaluate/fix content that lives in post_content - meaningless on a
+                                                    // page assigned as the site's Posts page, since WordPress never renders
+                                                    // that page's own content there (see the notice above this table).
+                                                    $is_content_body_code = in_array($catalog_code, [
+                                                        'missing_h1',
+                                                        'limited_heading_structure',
+                                                        'limited_paragraph_structure',
+                                                        'images_missing_alt',
+                                                        'images_missing_dimensions',
+                                                        'images_not_lazy_loaded',
+                                                        'low_internal_linking',
+                                                        'no_links_detected',
+                                                        'broken_internal_link_detected',
+                                                        'broken_external_link_detected',
+                                                        'no_external_references',
+                                                        'thin_content',
+                                                        'no_visible_content',
+                                                        'insufficient_content_depth',
+                                                        'content_depth_improvement',
+                                                        'readability_score_low',
+                                                    ], true);
                                                     ?>
                                                     <div>
                                                         <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
@@ -892,7 +920,9 @@ if ($notice_code === 'remediation_apply_noop') {
                                                     <?php if ($issue_recommended_fix !== '') : ?>
                                                         <div><em><?php echo esc_html($issue_recommended_fix); ?></em></div>
                                                     <?php endif; ?>
-                                                    <?php if ($is_content_depth_code) : ?>
+                                                    <?php if (!empty($content_detail_is_posts_page) && $is_content_body_code) : ?>
+                                                        <div style="margin-top:6px;"><em><?php esc_html_e('This page\'s content isn\'t displayed here (see the notice above) — applying this fix would have no visible effect.', 'icap-seo'); ?></em></div>
+                                                    <?php elseif ($is_content_depth_code) : ?>
                                                         <div style="margin-top:6px;"><em><?php esc_html_e('Use Content depth expansion on the AI Drafts tab — this recommendation requires reviewing generated content before publishing.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($is_readability_code) : ?>
                                                         <div style="margin-top:6px;"><em><?php esc_html_e('Use the Readability rewrite on the AI Drafts tab — this recommendation requires reviewing generated content before publishing.', 'icap-seo'); ?></em></div>
