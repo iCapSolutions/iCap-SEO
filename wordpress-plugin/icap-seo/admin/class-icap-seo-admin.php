@@ -1093,7 +1093,10 @@ class ICap_SEO_Admin
             return;
         }
 
-        update_post_meta($post_id, self::READABILITY_DRAFT_META_KEY, wp_json_encode($draft['paragraphs']));
+        // wp_slash() cancels out update_post_meta()'s internal wp_unslash(), which would
+        // otherwise strip backslashes out of JSON escape sequences and corrupt this on
+        // the way in (see the same fix on the JSON-LD schema apply path above).
+        update_post_meta($post_id, self::READABILITY_DRAFT_META_KEY, wp_slash((string) wp_json_encode($draft['paragraphs'])));
 
         $this->redirect_with_notice('readability_rewrite_preview_ready', 'content-scores', ['content_key' => $content_key]);
     }
@@ -1629,7 +1632,12 @@ class ICap_SEO_Admin
         }
         if ($jsonld_schema_was_updated) {
             update_post_meta($post_id, self::JSONLD_SCHEMA_TYPE_META_KEY, $updated_jsonld_schema_type);
-            update_post_meta($post_id, self::JSONLD_SCHEMA_JSON_META_KEY, $generated_jsonld_schema_json);
+            // update_post_meta() runs the value through wp_unslash() before storing (it
+            // assumes input may already be slashed, as if from $_POST), which strips any
+            // backslash out of JSON escape sequences (unicode escapes, escaped quotes),
+            // corrupting the stored JSON. wp_slash() here cancels that out so the raw
+            // JSON string round-trips intact.
+            update_post_meta($post_id, self::JSONLD_SCHEMA_JSON_META_KEY, wp_slash($generated_jsonld_schema_json));
         }
 
         $this->mark_issue_codes_applied($post_id, $normalized_codes);
