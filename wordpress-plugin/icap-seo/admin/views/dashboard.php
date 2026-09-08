@@ -879,6 +879,8 @@ if ($notice_code === 'remediation_apply_noop') {
                                                     $issue_recommended_fix = isset($catalog_open_issue['recommended_fix']) ? sanitize_text_field((string) $catalog_open_issue['recommended_fix']) : '';
                                                     $issue_effort = isset($catalog_open_issue['estimated_effort']) ? sanitize_text_field((string) $catalog_open_issue['estimated_effort']) : '';
                                                     $is_content_depth_code = in_array($catalog_code, ['thin_content', 'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement'], true);
+                                                    $is_readability_code = in_array($catalog_code, ['readability_score_low'], true);
+                                                    $catalog_apply_type = isset($catalog_item['apply_type']) ? sanitize_key((string) $catalog_item['apply_type']) : '';
                                                     ?>
                                                     <div>
                                                         <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
@@ -892,7 +894,9 @@ if ($notice_code === 'remediation_apply_noop') {
                                                     <?php endif; ?>
                                                     <?php if ($is_content_depth_code) : ?>
                                                         <div style="margin-top:6px;"><em><?php esc_html_e('Use Content depth expansion on the AI Drafts tab — this recommendation requires reviewing generated content before publishing.', 'icap-seo'); ?></em></div>
-                                                    <?php else : ?>
+                                                    <?php elseif ($is_readability_code) : ?>
+                                                        <div style="margin-top:6px;"><em><?php esc_html_e('Use the Readability rewrite on the AI Drafts tab — this recommendation requires reviewing generated content before publishing.', 'icap-seo'); ?></em></div>
+                                                    <?php elseif ($catalog_apply_type === 'auto') : ?>
                                                         <div style="margin-top:6px;">
                                                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                                                 <input type="hidden" name="action" value="icap_seo_apply_remediation">
@@ -902,6 +906,8 @@ if ($notice_code === 'remediation_apply_noop') {
                                                                 <button type="submit" class="button button-secondary"><?php esc_html_e('Apply this recommendation', 'icap-seo'); ?></button>
                                                             </form>
                                                         </div>
+                                                    <?php else : ?>
+                                                        <div style="margin-top:6px;"><em><?php esc_html_e('No automatic fix available for this check yet — make the change above manually, then rescan to confirm.', 'icap-seo'); ?></em></div>
                                                     <?php endif; ?>
                                                 <?php elseif ($catalog_status_key === 'not_evaluated') : ?>
                                                     <?php
