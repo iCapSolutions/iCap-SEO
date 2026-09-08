@@ -2443,11 +2443,27 @@ class ICap_SEO_Admin
         $site_name = trim((string) get_bloginfo('name'));
 
         if (empty($insert_before)) {
-            $ai_headings = $this->build_heading_texts_via_ai($post, $content_key, $site_name, 1);
-            $heading_text = !empty($ai_headings)
-                ? array_shift($ai_headings)
-                : $this->trim_title_to_max_length($fallback_phrase, 60);
-            $heading_html = '<h2>' . esc_html($heading_text) . '</h2>';
+            // Content too thin to have 2+ paragraph breaks to space headings across
+            // (e.g. a single short paragraph) - insert all $needed headings together
+            // at the top instead of just one, or a page needing 2 headings would
+            // never reach the >=2 threshold this function itself checks above, no
+            // matter how many times "Apply" gets clicked with unchanged content.
+            $ai_headings = $this->build_heading_texts_via_ai($post, $content_key, $site_name, $needed);
+            $fallback_texts = [
+                $this->trim_title_to_max_length($fallback_phrase, 60),
+                __('More Information', 'icap-seo'),
+                __('Additional Details', 'icap-seo'),
+            ];
+            $heading_texts = [];
+            for ($i = 0; $i < $needed; $i++) {
+                $heading_texts[] = !empty($ai_headings)
+                    ? array_shift($ai_headings)
+                    : ($fallback_texts[$i] ?? $fallback_texts[0]);
+            }
+            $heading_html = implode("\n\n", array_map(
+                static fn(string $text): string => '<h2>' . esc_html($text) . '</h2>',
+                $heading_texts
+            ));
             $trimmed = ltrim($normalized_content);
             $updated = $trimmed === '' ? $heading_html : $heading_html . "\n\n" . $normalized_content;
 
@@ -2455,7 +2471,7 @@ class ICap_SEO_Admin
                 'changed' => true,
                 'reason' => 'heading_inserted_top_fallback',
                 'content' => $updated,
-                'headings_added' => 1,
+                'headings_added' => count($heading_texts),
             ];
         }
 
