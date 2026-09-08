@@ -145,6 +145,8 @@ class ICap_SEO_Admin
             'source' => 'placeholder',
         ];
         $content_scores = [];
+        $content_scores_orderby = 'title';
+        $content_scores_order = 'asc';
         $scan_status_data = [];
         $latest_content_scores_meta = [];
         $selected_content_key = '';
@@ -171,6 +173,27 @@ class ICap_SEO_Admin
                 $latest_content_scores_meta = $this->service_client->get_latest_content_scores_meta();
 
                 if ($active_tab === 'content-scores') {
+                    $content_scores_orderby = isset($_GET['orderby']) ? sanitize_key(wp_unslash($_GET['orderby'])) : 'title';
+                    if (!in_array($content_scores_orderby, ['title', 'score'], true)) {
+                        $content_scores_orderby = 'title';
+                    }
+                    $content_scores_order = isset($_GET['order']) ? strtolower(sanitize_key(wp_unslash($_GET['order']))) : 'asc';
+                    if (!in_array($content_scores_order, ['asc', 'desc'], true)) {
+                        $content_scores_order = 'asc';
+                    }
+                    usort($content_scores, static function (array $a, array $b) use ($content_scores_orderby, $content_scores_order): int {
+                        if ($content_scores_orderby === 'score') {
+                            $a_value = isset($a['icap_score_numeric']) ? (int) $a['icap_score_numeric'] : 0;
+                            $b_value = isset($b['icap_score_numeric']) ? (int) $b['icap_score_numeric'] : 0;
+                            $comparison = $a_value <=> $b_value;
+                        } else {
+                            $a_value = (isset($a['title']) && is_string($a['title'])) ? $a['title'] : '';
+                            $b_value = (isset($b['title']) && is_string($b['title'])) ? $b['title'] : '';
+                            $comparison = strcasecmp($a_value, $b_value);
+                        }
+                        return $content_scores_order === 'desc' ? -$comparison : $comparison;
+                    });
+
                     $selected_content_key = isset($_GET['content_key'])
                         ? sanitize_text_field((string) wp_unslash($_GET['content_key']))
                         : '';

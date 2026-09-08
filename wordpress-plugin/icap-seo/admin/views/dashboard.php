@@ -509,14 +509,47 @@ if ($notice_code === 'remediation_apply_noop') {
                     <span class="icap-seo-meta-value"><?php echo esc_html(implode(', ', icap_seo_friendly_layer_names($latest_scores_executed_layer_names))); ?></span>
                 </p>
             <?php endif; ?>
+            <?php
+            $content_scores_orderby = $content_scores_orderby ?? 'title';
+            $content_scores_order = $content_scores_order ?? 'asc';
+            $content_scores_sort_link = static function (string $column, string $default_order) use ($content_scores_orderby, $content_scores_order): string {
+                $next_order = $default_order;
+                if ($content_scores_orderby === $column) {
+                    $next_order = ($content_scores_order === 'asc') ? 'desc' : 'asc';
+                }
+                return esc_url(add_query_arg(
+                    [
+                        'page' => 'icap-seo',
+                        'tab' => 'content-scores',
+                        'orderby' => $column,
+                        'order' => $next_order,
+                    ],
+                    admin_url('admin.php')
+                ));
+            };
+            ?>
             <div class="icap-seo-table-wrap">
                 <table class="widefat striped">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e('Title', 'icap-seo'); ?></th>
+                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'title' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'title' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
+                                <a href="<?php echo $content_scores_sort_link('title', 'asc'); ?>">
+                                    <span><?php esc_html_e('Title', 'icap-seo'); ?></span>
+                                    <?php if ($content_scores_orderby === 'title') : ?>
+                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
                             <th><?php esc_html_e('Type', 'icap-seo'); ?></th>
                             <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('iCap Score', 'icap-seo'); ?></th>
+                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'score' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'score' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
+                                <a href="<?php echo $content_scores_sort_link('score', 'desc'); ?>">
+                                    <span><?php esc_html_e('iCap Score', 'icap-seo'); ?></span>
+                                    <?php if ($content_scores_orderby === 'score') : ?>
+                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
                             <th><?php esc_html_e('Details', 'icap-seo'); ?></th>
                         </tr>
                     </thead>

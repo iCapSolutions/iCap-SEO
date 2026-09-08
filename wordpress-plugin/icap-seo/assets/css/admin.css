@@ -167,6 +167,28 @@
     margin-top: 12px;
 }
 
+.icap-seo-sortable-col a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #1d2327;
+    text-decoration: none;
+}
+
+.icap-seo-sortable-col a:hover {
+    color: #2271b1;
+}
+
+.icap-seo-sortable-col.is-sorted a {
+    color: #2271b1;
+}
+
+.icap-seo-sort-arrow {
+    font-size: 9px;
+    line-height: 1;
+    color: #2271b1;
+}
+
 .icap-seo-score-bar-wrap {
     display: flex;
     align-items: center;
