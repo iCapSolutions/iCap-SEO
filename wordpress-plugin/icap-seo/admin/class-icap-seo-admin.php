@@ -159,6 +159,7 @@ class ICap_SEO_Admin
         $current_meta_description_value = '';
         $content_depth_draft = ['html' => '', 'word_count' => 0];
         $readability_draft_paragraphs = [];
+        $content_detail_is_posts_page = false;
         $seo_recommendation_catalog = $this->get_seo_recommendation_catalog();
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
         $registration_challenge = [];
@@ -211,6 +212,13 @@ class ICap_SEO_Admin
                                 }
                                 $content_depth_draft = $this->get_content_depth_draft_for_post($selected_post_id);
                                 $readability_draft_paragraphs = $this->get_readability_draft_for_post($selected_post_id);
+                                // A page assigned as the site's Posts page (Settings > Reading) never
+                                // renders its own post_content on the front end - WordPress shows the
+                                // blog loop there instead - so content-body recommendations (headings,
+                                // paragraphs, images, links, content depth) can never be verified fixed
+                                // there, no matter how many times they're applied and rescanned.
+                                $content_detail_is_posts_page = get_option('show_on_front') === 'page'
+                                    && (int) get_option('page_for_posts') === $selected_post_id;
                             }
 
                             $open_issue_codes = $this->filter_open_issue_codes(
