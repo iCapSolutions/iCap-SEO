@@ -53,9 +53,20 @@ class ICap_SEO_Plugin
         );
     }
 
+    /**
+     * A page configured as the site's Posts page (Settings > Reading) is
+     * queried as the blog index, so is_singular() is false even though
+     * get_queried_object() still returns that page's own WP_Post. Treat it
+     * like a singular page here so its meta tags aren't silently dropped.
+     */
+    private function is_singular_or_posts_page(): bool
+    {
+        return is_singular() || (is_home() && !is_front_page());
+    }
+
     public function output_meta_description_fallback(): void
     {
-        if (is_admin() || !is_singular()) {
+        if (is_admin() || !$this->is_singular_or_posts_page()) {
             return;
         }
         // If another SEO plugin is active, let it own the description tag.
@@ -114,7 +125,7 @@ class ICap_SEO_Plugin
 
     public function output_canonical_fallback(): void
     {
-        if (is_admin() || !is_singular()) {
+        if (is_admin() || !$this->is_singular_or_posts_page()) {
             return;
         }
         // If another SEO plugin is active, let it own the canonical tag.
@@ -128,8 +139,11 @@ class ICap_SEO_Plugin
         ) {
             return;
         }
-        // WordPress core (or another plugin) already emits a canonical link tag by default.
-        if (has_action('wp_head', 'rel_canonical')) {
+        // WordPress core's own rel_canonical() only fires for is_singular() queries
+        // (see wp-includes/link-template.php), so only defer to it there. On the
+        // Posts-page case (is_home() && !is_front_page()) core emits nothing, so we
+        // still need to.
+        if (is_singular() && has_action('wp_head', 'rel_canonical')) {
             return;
         }
 
@@ -151,7 +165,7 @@ class ICap_SEO_Plugin
 
     public function output_jsonld_schema_fallback(): void
     {
-        if (is_admin() || !is_singular()) {
+        if (is_admin() || !$this->is_singular_or_posts_page()) {
             return;
         }
         // If another SEO plugin is active, let it own schema markup output.
