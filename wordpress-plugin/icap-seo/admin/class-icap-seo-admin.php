@@ -3521,7 +3521,12 @@ class ICap_SEO_Admin
         if ($post_id <= 0) {
             return;
         }
-        delete_post_meta($post_id, self::APPLIED_ISSUE_CODES_META_KEY);
+        // Store an empty array rather than deleting the meta key. get_applied_issue_codes_for_post()
+        // falls back to re-deriving "applied" codes from the permanent remediation history log when
+        // the stored value isn't an array (a migration path for installs that applied fixes before
+        // this meta key existed) - deleting the key here would trigger that same fallback on every
+        // rescan and immediately resurrect codes from old history entries, defeating the clear.
+        update_post_meta($post_id, self::APPLIED_ISSUE_CODES_META_KEY, []);
     }
 
     private function extract_issue_codes_from_detail(array $detail): array
