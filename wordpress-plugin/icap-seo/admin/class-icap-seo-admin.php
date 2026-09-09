@@ -3152,7 +3152,7 @@ class ICap_SEO_Admin
         ];
     }
 
-    private function build_content_depth_paragraph_templates(string $title_phrase, string $site_name, string $post_type): array
+    private function build_content_depth_filler_templates(string $title_phrase, string $site_name, string $post_type): array
     {
         $brand = $site_name !== '' ? $site_name : __('this site', 'icap-seo');
         $kind = $post_type === 'post' ? __('article', 'icap-seo') : __('page', 'icap-seo');
@@ -3176,11 +3176,38 @@ class ICap_SEO_Admin
                 $title_phrase
             ),
             sprintf(
-                __('This draft paragraph is a starting point, not a finished version — replace it with real detail about %1$s, add specifics only %2$s would know, and remove anything that still reads as generic before publishing.', 'icap-seo'),
+                __('Common questions about %1$s tend to circle back to the same handful of practical concerns. Answering those directly, in plain language, does more for both readers and search visibility than any amount of generic marketing copy.', 'icap-seo'),
+                $title_phrase
+            ),
+            sprintf(
+                __('The background behind %1$s is worth spelling out too: how it fits into what %2$s offers overall, and why it earned its own %3$s rather than a passing mention elsewhere on the site.', 'icap-seo'),
+                $title_phrase,
+                $brand,
+                $kind
+            ),
+            sprintf(
+                __('Concrete detail beats broad claims here - specifics about %1$s that only someone close to %2$s would actually know are what turn a placeholder %3$s into one people find useful.', 'icap-seo'),
+                $title_phrase,
+                $brand,
+                $kind
+            ),
+            sprintf(
+                __('Once %1$s has real detail in place, the natural next step is linking it to related content on %2$s so visitors - and search engines - can trace how it connects to the rest of the site.', 'icap-seo'),
                 $title_phrase,
                 $brand
             ),
         ];
+    }
+
+    private function build_content_depth_disclaimer_paragraph(string $title_phrase, string $site_name): string
+    {
+        $brand = $site_name !== '' ? $site_name : __('this site', 'icap-seo');
+
+        return sprintf(
+            __('This draft paragraph is a starting point, not a finished version — replace it with real detail about %1$s, add specifics only %2$s would know, and remove anything that still reads as generic before publishing.', 'icap-seo'),
+            $title_phrase,
+            $brand
+        );
     }
 
     private function build_content_depth_draft(WP_Post $post, string $content_key = ''): array
@@ -3210,10 +3237,27 @@ class ICap_SEO_Admin
             $title_phrase = __('this page', 'icap-seo');
         }
 
-        $paragraphs = $this->build_content_depth_paragraph_templates($title_phrase, $site_name, (string) $post->post_type);
+        // Match the same target the AI path requests (enough new words to reach the
+        // 600-word competitive threshold, floored at 150) instead of always emitting a
+        // fixed ~150-word block regardless of how thin the starting content is - a page
+        // starting from a single sentence would otherwise still land far short of even
+        // the 300-word baseline check after "generating" content for it.
+        $target_word_count = max(self::CONTENT_DEPTH_TARGET_WORD_COUNT - $current_word_count, 150);
+        $filler_templates = $this->build_content_depth_filler_templates($title_phrase, $site_name, (string) $post->post_type);
+        $filler_count = count($filler_templates);
+        $selected_paragraphs = [];
+        $running_word_count = 0;
+        $max_iterations = $filler_count * 4;
+        for ($i = 0; $i < $max_iterations && $running_word_count < $target_word_count; $i++) {
+            $text = $filler_templates[$i % $filler_count];
+            $selected_paragraphs[] = $text;
+            $running_word_count += $this->count_words_in_html($text);
+        }
+        $selected_paragraphs[] = $this->build_content_depth_disclaimer_paragraph($title_phrase, $site_name);
+
         $html_paragraphs = array_map(
             static fn(string $text): string => '<p>' . esc_html($text) . '</p>',
-            $paragraphs
+            $selected_paragraphs
         );
         $html = implode("\n", $html_paragraphs);
 
