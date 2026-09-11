@@ -57,6 +57,8 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_check_billing_status', [$this, 'handle_check_billing_status']);
         add_action('admin_post_icap_seo_start_billing_checkout', [$this, 'handle_start_billing_checkout']);
         add_action('admin_post_icap_seo_open_billing_portal', [$this, 'handle_open_billing_portal']);
+        add_action('admin_post_icap_seo_google_connect_start', [$this, 'handle_google_connect_start']);
+        add_action('admin_post_icap_seo_google_disconnect', [$this, 'handle_google_disconnect']);
         add_action('admin_post_icap_seo_start_ai_credit_checkout', [$this, 'handle_start_ai_credit_checkout']);
         add_action('admin_post_icap_seo_preview_remediation', [$this, 'handle_preview_remediation']);
         add_action('admin_post_icap_seo_apply_remediation', [$this, 'handle_apply_remediation']);
@@ -115,6 +117,8 @@ class ICap_SEO_Admin
         $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'overview';
         $notice_code = isset($_GET[self::NOTICE_QUERY_KEY]) ? sanitize_key(wp_unslash($_GET[self::NOTICE_QUERY_KEY])) : '';
         $billing_state = isset($_GET['billing']) ? sanitize_key(wp_unslash($_GET['billing'])) : '';
+        $google_connected = isset($_GET['google_connected']) ? sanitize_key(wp_unslash($_GET['google_connected'])) : '';
+        $google_connect_error = isset($_GET['google_connect_error']) ? sanitize_key(wp_unslash($_GET['google_connect_error'])) : '';
         if ($notice_code === '') {
             if ($billing_state === 'success') {
                 $notice_code = 'billing_checkout_returned';
@@ -126,6 +130,14 @@ class ICap_SEO_Admin
                 $notice_code = 'ai_credit_checkout_returned';
             } elseif ($billing_state === 'ai_credit_cancel') {
                 $notice_code = 'ai_credit_checkout_cancelled';
+            } elseif ($google_connected === '1') {
+                $notice_code = 'google_connected';
+            } elseif ($google_connect_error === 'invalid_state') {
+                $notice_code = 'google_connect_invalid_state';
+            } elseif ($google_connect_error === 'consent_denied') {
+                $notice_code = 'google_connect_consent_denied';
+            } elseif ($google_connect_error !== '') {
+                $notice_code = 'google_connect_failed';
             }
         }
         if ($billing_state === 'ai_credit_success' && $this->service_client->is_api_connection_configured_public()) {
@@ -135,6 +147,17 @@ class ICap_SEO_Admin
             $this->service_client->get_subscription_status(true);
         }
         $connection_settings = $this->service_client->get_connection_settings();
+        $google_connection_status = ['status' => 'not_connected'];
+        if ($this->service_client->is_api_connection_configured_public()) {
+            // Live check (cheap read on the backend, no Google API call) rather than
+            // cached in icap_seo_settings like billing status - this tab should always
+            // reflect the real connection state, and unlike billing there's no Stripe
+            // API cost on the other end to avoid.
+            $google_status_result = $this->service_client->get_google_connection_status();
+            if ($google_status_result['success'] && isset($google_status_result['data']) && is_array($google_status_result['data'])) {
+                $google_connection_status = $google_status_result['data'];
+            }
+        }
         $score_snapshot = [
             'score' => null,
             'last_scan' => $connection_settings['last_sync_at'] ?: null,
@@ -722,6 +745,60 @@ class ICap_SEO_Admin
 
         wp_redirect($portal_url);
         exit;
+    }
+
+    public function handle_google_connect_start(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_google_connect_start');
+        $result = $this->service_client->start_google_connection([
+            'return_url' => $this->build_google_connect_return_url(),
+        ]);
+        if (!$result['success']) {
+            $error_code = $this->extract_error_code($result);
+            if ($error_code === 'api_base_url_missing') {
+                $this->redirect_with_notice('api_base_url_missing', 'settings');
+                return;
+            }
+            if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
+                $this->redirect_with_notice('google_connect_not_configured', 'settings');
+                return;
+            }
+            if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
+                $this->redirect_with_notice('google_connect_unavailable', 'settings');
+                return;
+            }
+            $this->redirect_with_notice('google_connect_failed', 'settings');
+            return;
+        }
+
+        $authorization_url = '';
+        if (isset($result['data']['authorization_url']) && is_string($result['data']['authorization_url'])) {
+            $authorization_url = esc_url_raw($result['data']['authorization_url']);
+        }
+        if ($authorization_url === '' || !wp_http_validate_url($authorization_url)) {
+            $this->redirect_with_notice('google_connect_failed', 'settings');
+            return;
+        }
+
+        wp_redirect($authorization_url);
+        exit;
+    }
+
+    public function handle_google_disconnect(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_google_disconnect');
+        $result = $this->service_client->disconnect_google_connection();
+        if (!$result['success']) {
+            $this->redirect_with_notice('google_disconnect_failed', 'settings');
+            return;
+        }
+        $this->redirect_with_notice('google_disconnected', 'settings');
     }
 
     public function handle_start_ai_credit_checkout(): void
@@ -4445,6 +4522,20 @@ class ICap_SEO_Admin
                 'page' => 'icap-seo',
                 'tab' => 'overview',
                 'billing' => $normalized_state,
+            ],
+            admin_url('admin.php')
+        );
+    }
+
+    private function build_google_connect_return_url(): string
+    {
+        // No extra query arg needed here (unlike the billing return URLs above) - the
+        // backend's own OAuth callback appends google_connected=1 or
+        // google_connect_error=<code> itself once the flow resolves.
+        return add_query_arg(
+            [
+                'page' => 'icap-seo',
+                'tab' => 'settings',
             ],
             admin_url('admin.php')
         );
