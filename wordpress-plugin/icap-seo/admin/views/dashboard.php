@@ -129,6 +129,14 @@ $notice_map = [
     'billing_portal_unavailable' => ['type' => 'error', 'message' => __('Billing portal is temporarily unavailable. Please retry shortly.', 'icap-seo')],
     'billing_portal_failed' => ['type' => 'error', 'message' => __('Billing portal request failed. Confirm API and billing settings, then retry.', 'icap-seo')],
     'billing_portal_returned' => ['type' => 'updated', 'message' => __('Returned from billing portal.', 'icap-seo')],
+    'google_connected' => ['type' => 'updated', 'message' => __('Google Search Console connected. Real indexing data will appear alongside content scores after the next scan.', 'icap-seo')],
+    'google_connect_not_configured' => ['type' => 'error', 'message' => __('Connecting Google Search Console requires site registration credentials. Register this site first.', 'icap-seo')],
+    'google_connect_unavailable' => ['type' => 'error', 'message' => __('Connecting Google Search Console is temporarily unavailable. Please retry shortly.', 'icap-seo')],
+    'google_connect_invalid_state' => ['type' => 'error', 'message' => __('Google connection could not be verified (the request may have expired). Please try connecting again.', 'icap-seo')],
+    'google_connect_consent_denied' => ['type' => 'error', 'message' => __('Google Search Console connection was not completed - access was not granted.', 'icap-seo')],
+    'google_connect_failed' => ['type' => 'error', 'message' => __('Google Search Console connection failed. Please try again.', 'icap-seo')],
+    'google_disconnected' => ['type' => 'updated', 'message' => __('Google Search Console disconnected.', 'icap-seo')],
+    'google_disconnect_failed' => ['type' => 'error', 'message' => __('Disconnecting Google Search Console failed. Please try again.', 'icap-seo')],
     'billing_status_free_tier' => ['type' => 'updated', 'message' => __('Billing status check: this site is on the free tier (basic scans only).', 'icap-seo')],
     'ai_credit_checkout_not_configured' => ['type' => 'error', 'message' => __('AI credit checkout requires site registration credentials. Register this site first.', 'icap-seo')],
     'ai_credit_checkout_premium_required' => ['type' => 'error', 'message' => __('AI credits can only be purchased on an active premium subscription. Upgrade to premium first.', 'icap-seo')],
@@ -718,6 +726,26 @@ if ($notice_code === 'remediation_apply_noop') {
                         |
                         <?php esc_html_e('Overall score:', 'icap-seo'); ?> <code><?php echo esc_html(sprintf('%d/100', $detail_score)); ?></code>
                     </p>
+                    <?php
+                    $detail_google_verification = isset($content_score_detail['google_verification']) && is_array($content_score_detail['google_verification'])
+                        ? $content_score_detail['google_verification']
+                        : null;
+                    ?>
+                    <?php if ($detail_google_verification !== null && ($detail_google_verification['coverage_state'] ?? '') !== '') : ?>
+                        <p class="description">
+                            <?php
+                            echo esc_html(
+                                sprintf(
+                                    /* translators: 1: Google Search Console coverage state, 2: verdict, 3: when it was checked */
+                                    __('Google Search Console says: %1$s (verdict: %2$s, checked %3$s)', 'icap-seo'),
+                                    $detail_google_verification['coverage_state'],
+                                    $detail_google_verification['verdict'] !== '' ? $detail_google_verification['verdict'] : 'n/a',
+                                    $detail_google_verification['checked_at'] !== '' ? $detail_google_verification['checked_at'] : 'n/a'
+                                )
+                            );
+                            ?>
+                        </p>
+                    <?php endif; ?>
                     <?php if ($detail_permalink !== '') : ?>
                         <p><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View published URL', 'icap-seo'); ?></a></p>
                     <?php endif; ?>
@@ -1386,6 +1414,55 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php esc_html_e('Last successful score sync:', 'icap-seo'); ?>
                 <code><?php echo esc_html($connection_settings['last_sync_at'] ?: 'n/a'); ?></code>
             </p>
+
+            <hr>
+            <h3><?php esc_html_e('Google Search Console', 'icap-seo'); ?></h3>
+            <p class="description"><?php esc_html_e('Connect your own Google account to show real Search Console indexing status alongside content scores.', 'icap-seo'); ?></p>
+            <?php
+            $google_status_value = isset($google_connection_status['status']) ? (string) $google_connection_status['status'] : 'not_connected';
+            $google_account_email_value = isset($google_connection_status['google_account_email']) ? (string) $google_connection_status['google_account_email'] : '';
+            $google_last_verified_value = isset($google_connection_status['last_verified_at']) ? (string) $google_connection_status['last_verified_at'] : '';
+            $google_last_error_value = isset($google_connection_status['last_error']) ? (string) $google_connection_status['last_error'] : '';
+            ?>
+            <?php if ($google_status_value === 'connected') : ?>
+                <p class="description">
+                    <?php
+                    echo esc_html(
+                        sprintf(
+                            /* translators: %s: connected Google account email address */
+                            __('Connected as %s.', 'icap-seo'),
+                            $google_account_email_value !== '' ? $google_account_email_value : __('unknown account', 'icap-seo')
+                        )
+                    );
+                    ?>
+                    <?php if ($google_last_verified_value !== '') : ?>
+                        <?php esc_html_e('Last verified:', 'icap-seo'); ?> <code><?php echo esc_html($google_last_verified_value); ?></code>
+                    <?php endif; ?>
+                </p>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                    <input type="hidden" name="action" value="icap_seo_google_disconnect">
+                    <?php wp_nonce_field('icap_seo_google_disconnect'); ?>
+                    <p>
+                        <button type="submit" class="button"><?php esc_html_e('Disconnect', 'icap-seo'); ?></button>
+                    </p>
+                </form>
+            <?php else : ?>
+                <?php if ($google_status_value === 'error') : ?>
+                    <p class="description">
+                        <?php esc_html_e('Connection needs attention:', 'icap-seo'); ?>
+                        <code><?php echo esc_html($google_last_error_value !== '' ? $google_last_error_value : 'unknown_error'); ?></code>
+                    </p>
+                <?php else : ?>
+                    <p class="description"><?php esc_html_e('Not connected.', 'icap-seo'); ?></p>
+                <?php endif; ?>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                    <input type="hidden" name="action" value="icap_seo_google_connect_start">
+                    <?php wp_nonce_field('icap_seo_google_connect_start'); ?>
+                    <p>
+                        <button type="submit" class="button button-primary"><?php echo esc_html($google_status_value === 'error' ? __('Reconnect Google Search Console', 'icap-seo') : __('Connect Google Search Console', 'icap-seo')); ?></button>
+                    </p>
+                </form>
+            <?php endif; ?>
 
             <hr>
             <h3><?php esc_html_e('Billing', 'icap-seo'); ?></h3>

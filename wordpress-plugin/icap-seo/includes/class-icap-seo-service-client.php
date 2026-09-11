@@ -316,6 +316,23 @@ class ICap_SEO_Service_Client
             }
         }
 
+        // Nullable and only ever passed through when the API actually included it - a
+        // tenant with no Google connection (or a run that skipped this URL) must never
+        // see a fabricated verification value.
+        $google_verification = null;
+        if (isset($data['google_verification']) && is_array($data['google_verification'])) {
+            $google_verification = [
+                'coverage_state' => isset($data['google_verification']['coverage_state'])
+                    ? sanitize_text_field((string) $data['google_verification']['coverage_state']) : '',
+                'verdict' => isset($data['google_verification']['verdict'])
+                    ? sanitize_text_field((string) $data['google_verification']['verdict']) : '',
+                'last_crawl_time' => isset($data['google_verification']['last_crawl_time'])
+                    ? sanitize_text_field((string) $data['google_verification']['last_crawl_time']) : '',
+                'checked_at' => isset($data['google_verification']['checked_at'])
+                    ? sanitize_text_field((string) $data['google_verification']['checked_at']) : '',
+            ];
+        }
+
         $result['data'] = [
             'content_key' => isset($data['content_key']) ? sanitize_text_field((string) $data['content_key']) : $resolved_content_key,
             'wp_post_id' => isset($data['wp_post_id']) ? (int) $data['wp_post_id'] : 0,
@@ -328,6 +345,7 @@ class ICap_SEO_Service_Client
             'category_scores' => $category_scores,
             'issues' => $issues,
             'history' => $history,
+            'google_verification' => $google_verification,
         ];
 
         return $result;
@@ -960,6 +978,80 @@ class ICap_SEO_Service_Client
         }
 
         return $this->api_request('POST', '/v1/billing/portal-session', $payload);
+    }
+
+    public function start_google_connection(array $payload = []): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        return $this->api_request(
+            'POST',
+            sprintf('/v1/sites/%s/google-connection/start', rawurlencode((string) $settings['site_id'])),
+            $payload
+        );
+    }
+
+    public function get_google_connection_status(): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        $result = $this->api_request(
+            'GET',
+            sprintf('/v1/sites/%s/google-connection', rawurlencode((string) $settings['site_id']))
+        );
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
+        $result['data'] = [
+            'status' => isset($data['status']) ? sanitize_key((string) $data['status']) : 'not_connected',
+            'google_account_email' => isset($data['google_account_email']) ? sanitize_email((string) $data['google_account_email']) : '',
+            'granted_scopes' => isset($data['granted_scopes']) && is_array($data['granted_scopes'])
+                ? array_map('sanitize_text_field', $data['granted_scopes']) : [],
+            'connected_at' => isset($data['connected_at']) ? sanitize_text_field((string) $data['connected_at']) : '',
+            'last_verified_at' => isset($data['last_verified_at']) ? sanitize_text_field((string) $data['last_verified_at']) : '',
+            'last_error' => isset($data['last_error']) ? sanitize_text_field((string) $data['last_error']) : '',
+        ];
+
+        return $result;
+    }
+
+    public function disconnect_google_connection(): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        return $this->api_request(
+            'DELETE',
+            sprintf('/v1/sites/%s/google-connection', rawurlencode((string) $settings['site_id']))
+        );
     }
 
     public function test_connection(): array
