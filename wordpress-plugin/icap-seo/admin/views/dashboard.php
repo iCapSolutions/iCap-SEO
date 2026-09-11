@@ -559,13 +559,29 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </a>
                             </th>
                             <th><?php esc_html_e('Search Console', 'icap-seo'); ?></th>
+                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'clicks' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'clicks' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
+                                <a href="<?php echo $content_scores_sort_link('clicks', 'desc'); ?>">
+                                    <span><?php esc_html_e('Clicks (28d)', 'icap-seo'); ?></span>
+                                    <?php if ($content_scores_orderby === 'clicks') : ?>
+                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
+                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'position' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'position' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
+                                <a href="<?php echo $content_scores_sort_link('position', 'asc'); ?>">
+                                    <span><?php esc_html_e('Avg Position', 'icap-seo'); ?></span>
+                                    <?php if ($content_scores_orderby === 'position') : ?>
+                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
                             <th><?php esc_html_e('Details', 'icap-seo'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($content_scores)) : ?>
                             <tr>
-                                <td colspan="6">
+                                <td colspan="8">
                                     <?php if ($latest_scores_source === 'api') : ?>
                                         <?php esc_html_e('No scored content rows were returned for the latest scan yet.', 'icap-seo'); ?>
                                     <?php else : ?>
@@ -622,6 +638,22 @@ if ($notice_code === 'remediation_apply_noop') {
                                         <span style="display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; background:<?php echo esc_attr($row_google_bg); ?>; color:<?php echo esc_attr($row_google_fg); ?>;">
                                             <?php echo esc_html($row_google_label); ?>
                                         </span>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        // null means "no data for this window", never rendered as 0 - a real
+                                        // zero-click page (google_clicks === 0) must still show "0", not "—".
+                                        echo isset($row['google_clicks']) && $row['google_clicks'] !== null
+                                            ? esc_html((string) (int) $row['google_clicks'])
+                                            : '&mdash;';
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        echo isset($row['google_position']) && $row['google_position'] !== null
+                                            ? esc_html(number_format((float) $row['google_position'], 1))
+                                            : '&mdash;';
+                                        ?>
                                     </td>
                                     <td>
                                         <?php if ($row_content_key !== '') : ?>
@@ -765,6 +797,27 @@ if ($notice_code === 'remediation_apply_noop') {
                                     $detail_google_verification['coverage_state'],
                                     $detail_google_verification['verdict'] !== '' ? $detail_google_verification['verdict'] : 'n/a',
                                     $detail_google_verification['checked_at'] !== '' ? $detail_google_verification['checked_at'] : 'n/a'
+                                )
+                            );
+                            ?>
+                        </p>
+                    <?php endif; ?>
+                    <?php
+                    $detail_google_performance = isset($content_score_detail['google_performance']) && is_array($content_score_detail['google_performance'])
+                        ? $content_score_detail['google_performance']
+                        : null;
+                    ?>
+                    <?php if ($detail_google_performance !== null) : ?>
+                        <p class="description">
+                            <?php
+                            echo esc_html(
+                                sprintf(
+                                    /* translators: 1: clicks, 2: impressions, 3: CTR percentage, 4: average position, all from Google Search Console, last 28 days */
+                                    __('Search Console (last 28 days): %1$d clicks, %2$d impressions, %3$s CTR, average position %4$s', 'icap-seo'),
+                                    (int) $detail_google_performance['clicks'],
+                                    (int) $detail_google_performance['impressions'],
+                                    number_format((float) $detail_google_performance['ctr'] * 100, 1) . '%',
+                                    number_format((float) $detail_google_performance['position'], 1)
                                 )
                             );
                             ?>
@@ -1678,6 +1731,39 @@ if ($notice_code === 'remediation_apply_noop') {
                             <p class="icap-seo-card-subtext">
                                 <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php'))); ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
                             </p>
+                        <?php else : ?>
+                            <?php
+                            // Site-wide totals computed client-side from the already-fetched
+                            // content-scores rows, not a separate API call. Only pages with
+                            // real position data count toward the average - a page with no
+                            // data yet must not drag the average toward zero.
+                            $overview_google_total_clicks = 0;
+                            $overview_google_position_sum = 0.0;
+                            $overview_google_position_count = 0;
+                            foreach ($content_scores as $overview_google_row) {
+                                if (isset($overview_google_row['google_clicks']) && $overview_google_row['google_clicks'] !== null) {
+                                    $overview_google_total_clicks += (int) $overview_google_row['google_clicks'];
+                                }
+                                if (isset($overview_google_row['google_position']) && $overview_google_row['google_position'] !== null) {
+                                    $overview_google_position_sum += (float) $overview_google_row['google_position'];
+                                    $overview_google_position_count++;
+                                }
+                            }
+                            ?>
+                            <?php if ($overview_google_position_count > 0) : ?>
+                                <p class="icap-seo-card-subtext">
+                                    <?php
+                                    echo esc_html(
+                                        sprintf(
+                                            /* translators: 1: total clicks across all scored pages in the last 28 days, 2: average search position across pages with data */
+                                            __('%1$d clicks (28d), avg position %2$s', 'icap-seo'),
+                                            $overview_google_total_clicks,
+                                            number_format($overview_google_position_sum / $overview_google_position_count, 1)
+                                        )
+                                    );
+                                    ?>
+                                </p>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
