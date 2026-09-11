@@ -836,12 +836,15 @@ class ICap_SEO_Service_Client
 
         // Scan execution runs synchronously on the backend within a single request -
         // for a full-site scan that can legitimately take several seconds (page
-        // fetches, plus phases like broken-link checking with their own budget),
-        // right up against the backend Lambda's own function timeout. The default
-        // 3s client timeout used for fast metadata calls is too short here and was
-        // causing this call to time out client-side while the scan kept running and
-        // completed successfully server-side - use a longer timeout that comfortably
-        // covers the backend's own worst case instead.
+        // fetches, plus phases like broken-link checking and Google Search Console
+        // verification with their own budgets), right up against the backend
+        // Lambda's own function timeout (25s). The default 3s client timeout used
+        // for fast metadata calls is too short here and was causing this call to
+        // time out client-side while the scan kept running and completed
+        // successfully server-side - live-reproduced again on 2026-09-10 with the
+        // previous 15s value once Google verification added real latency. Use a
+        // timeout that comfortably exceeds the backend's own worst case instead of
+        // trying to track its exact budget here.
         $result = $this->api_request(
             'POST',
             sprintf('/v1/sites/%s/scans', rawurlencode($settings['site_id'])),
@@ -849,7 +852,7 @@ class ICap_SEO_Service_Client
             [],
             true,
             [],
-            15
+            30
         );
 
         if ($result['success'] && !empty($result['data']['scan_id'])) {
