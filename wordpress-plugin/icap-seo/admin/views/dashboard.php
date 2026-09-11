@@ -558,13 +558,14 @@ if ($notice_code === 'remediation_apply_noop') {
                                     <?php endif; ?>
                                 </a>
                             </th>
+                            <th><?php esc_html_e('Search Console', 'icap-seo'); ?></th>
                             <th><?php esc_html_e('Details', 'icap-seo'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($content_scores)) : ?>
                             <tr>
-                                <td colspan="5">
+                                <td colspan="6">
                                     <?php if ($latest_scores_source === 'api') : ?>
                                         <?php esc_html_e('No scored content rows were returned for the latest scan yet.', 'icap-seo'); ?>
                                     <?php else : ?>
@@ -598,6 +599,29 @@ if ($notice_code === 'remediation_apply_noop') {
                                             </div>
                                             <span class="icap-seo-score-bar-label"><?php echo esc_html($row['icap_score']); ?></span>
                                         </div>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $row_google_coverage_state = isset($row['google_coverage_state']) && is_string($row['google_coverage_state'])
+                                            ? $row['google_coverage_state']
+                                            : '';
+                                        if ($row_google_coverage_state === '') {
+                                            $row_google_bg = '#f1f1f1';
+                                            $row_google_fg = '#6b7481';
+                                            $row_google_label = __('No signal yet', 'icap-seo');
+                                        } elseif (stripos($row_google_coverage_state, 'not indexed') === false && stripos($row_google_coverage_state, 'indexed') !== false) {
+                                            $row_google_bg = '#eafaf0';
+                                            $row_google_fg = '#1e7f4f';
+                                            $row_google_label = $row_google_coverage_state;
+                                        } else {
+                                            $row_google_bg = '#fdf0e0';
+                                            $row_google_fg = '#9a5b0a';
+                                            $row_google_label = $row_google_coverage_state;
+                                        }
+                                        ?>
+                                        <span style="display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; background:<?php echo esc_attr($row_google_bg); ?>; color:<?php echo esc_attr($row_google_fg); ?>;">
+                                            <?php echo esc_html($row_google_label); ?>
+                                        </span>
                                     </td>
                                     <td>
                                         <?php if ($row_content_key !== '') : ?>
@@ -1447,7 +1471,12 @@ if ($notice_code === 'remediation_apply_noop') {
                     </p>
                 </form>
             <?php else : ?>
-                <?php if ($google_status_value === 'error') : ?>
+                <?php $google_needs_reconnect = in_array($google_status_value, ['error', 'revoked'], true); ?>
+                <?php if ($google_status_value === 'revoked') : ?>
+                    <p class="description">
+                        <?php esc_html_e('Connection was revoked. Reconnect to resume real Search Console indexing status.', 'icap-seo'); ?>
+                    </p>
+                <?php elseif ($google_status_value === 'error') : ?>
                     <p class="description">
                         <?php esc_html_e('Connection needs attention:', 'icap-seo'); ?>
                         <code><?php echo esc_html($google_last_error_value !== '' ? $google_last_error_value : 'unknown_error'); ?></code>
@@ -1459,7 +1488,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <input type="hidden" name="action" value="icap_seo_google_connect_start">
                     <?php wp_nonce_field('icap_seo_google_connect_start'); ?>
                     <p>
-                        <button type="submit" class="button button-primary"><?php echo esc_html($google_status_value === 'error' ? __('Reconnect Google Search Console', 'icap-seo') : __('Connect Google Search Console', 'icap-seo')); ?></button>
+                        <button type="submit" class="button button-primary"><?php echo esc_html($google_needs_reconnect ? __('Reconnect Google Search Console', 'icap-seo') : __('Connect Google Search Console', 'icap-seo')); ?></button>
                     </p>
                 </form>
             <?php endif; ?>
@@ -1550,6 +1579,24 @@ if ($notice_code === 'remediation_apply_noop') {
             ?>
             <h2><?php esc_html_e('Overview', 'icap-seo'); ?></h2>
 
+            <?php if (isset($google_connection_status['status']) && $google_connection_status['status'] === 'revoked') : ?>
+                <?php
+                $google_reconnect_url = add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php'));
+                ?>
+                <p class="notice notice-warning inline" style="padding:8px 12px; margin-bottom:16px;">
+                    <?php
+                    echo wp_kses(
+                        sprintf(
+                            /* translators: %s: link to the Settings tab */
+                            __('Your Google Search Console connection was revoked. Content scores will keep working, but real indexing status won\'t update until you reconnect it in %s.', 'icap-seo'),
+                            '<a href="' . esc_url($google_reconnect_url) . '">' . esc_html__('Settings', 'icap-seo') . '</a>'
+                        ),
+                        ['a' => ['href' => []]]
+                    );
+                    ?>
+                </p>
+            <?php endif; ?>
+
             <div class="icap-seo-cards">
                 <div class="icap-seo-card icap-seo-card--icon">
                     <div class="icap-seo-card-icon icap-seo-status-icon icap-seo-status-icon--<?php echo $overview_is_connected ? 'connected' : 'disconnected'; ?>" aria-hidden="true">
@@ -1603,6 +1650,36 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php else : ?>
                         <p class="icap-seo-card-value icap-seo-card-value--muted"><?php esc_html_e('Requires Premium', 'icap-seo'); ?></p>
                     <?php endif; ?>
+                </div>
+                <div class="icap-seo-card icap-seo-card--icon">
+                    <div class="icap-seo-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                    </div>
+                    <div class="icap-seo-card-text">
+                        <h3><?php esc_html_e('Search Console', 'icap-seo'); ?></h3>
+                        <?php
+                        $overview_google_status = isset($google_connection_status['status']) ? (string) $google_connection_status['status'] : 'not_connected';
+                        if ($overview_google_status === 'connected') {
+                            $overview_google_value = __('Connected', 'icap-seo');
+                            $overview_google_value_class = '';
+                        } elseif ($overview_google_status === 'revoked') {
+                            $overview_google_value = __('Revoked — reconnect', 'icap-seo');
+                            $overview_google_value_class = ' icap-seo-card-value--muted';
+                        } elseif ($overview_google_status === 'error') {
+                            $overview_google_value = __('Needs attention', 'icap-seo');
+                            $overview_google_value_class = ' icap-seo-card-value--muted';
+                        } else {
+                            $overview_google_value = __('Not connected', 'icap-seo');
+                            $overview_google_value_class = ' icap-seo-card-value--muted';
+                        }
+                        ?>
+                        <p class="icap-seo-card-value<?php echo esc_attr($overview_google_value_class); ?>"><?php echo esc_html($overview_google_value); ?></p>
+                        <?php if ($overview_google_status !== 'connected') : ?>
+                            <p class="icap-seo-card-subtext">
+                                <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php'))); ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
+                            </p>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
 

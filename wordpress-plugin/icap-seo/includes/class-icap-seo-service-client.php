@@ -214,6 +214,7 @@ class ICap_SEO_Service_Client
                 'edit_link' => get_edit_post_link((int) $post->ID, ''),
                 'icap_score' => $score_data['icap_score'],
                 'icap_score_numeric' => $icap_score_numeric,
+                'google_coverage_state' => '',
                 'source' => 'placeholder',
             ];
         }
@@ -1279,6 +1280,12 @@ class ICap_SEO_Service_Client
 
             $post_id = isset($item['wp_post_id']) ? (int) $item['wp_post_id'] : 0;
             $overall_score = isset($item['overall_score']) ? (int) $item['overall_score'] : 0;
+            $google_verification_item = isset($item['google_verification']) && is_array($item['google_verification'])
+                ? $item['google_verification']
+                : null;
+            $google_coverage_state = ($google_verification_item !== null && isset($google_verification_item['coverage_state']))
+                ? sanitize_text_field((string) $google_verification_item['coverage_state'])
+                : '';
 
             $rows[] = [
                 'id' => $post_id,
@@ -1291,6 +1298,9 @@ class ICap_SEO_Service_Client
                 'edit_link' => $post_id > 0 ? get_edit_post_link($post_id, '') : '',
                 'icap_score' => sprintf('%d/100', $overall_score),
                 'icap_score_numeric' => $overall_score,
+                // '' means "no signal yet" (not connected, or not yet checked) - never
+                // fabricated, mirrors the detail view's google_verification handling.
+                'google_coverage_state' => $google_coverage_state,
                 'source' => 'api',
             ];
         }
