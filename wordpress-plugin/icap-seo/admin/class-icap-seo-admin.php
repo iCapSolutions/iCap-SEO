@@ -198,7 +198,7 @@ class ICap_SEO_Admin
 
                 if ($active_tab === 'content-scores') {
                     $content_scores_orderby = isset($_GET['orderby']) ? sanitize_key(wp_unslash($_GET['orderby'])) : 'title';
-                    if (!in_array($content_scores_orderby, ['title', 'score'], true)) {
+                    if (!in_array($content_scores_orderby, ['title', 'score', 'clicks', 'position'], true)) {
                         $content_scores_orderby = 'title';
                     }
                     $content_scores_order = isset($_GET['order']) ? strtolower(sanitize_key(wp_unslash($_GET['order']))) : 'asc';
@@ -209,6 +209,18 @@ class ICap_SEO_Admin
                         if ($content_scores_orderby === 'score') {
                             $a_value = isset($a['icap_score_numeric']) ? (int) $a['icap_score_numeric'] : 0;
                             $b_value = isset($b['icap_score_numeric']) ? (int) $b['icap_score_numeric'] : 0;
+                            $comparison = $a_value <=> $b_value;
+                        } elseif ($content_scores_orderby === 'clicks') {
+                            // No-data (null) rows sort as if they had zero clicks - there's
+                            // no meaningful "worse than zero" for a count.
+                            $a_value = isset($a['google_clicks']) ? (int) $a['google_clicks'] : 0;
+                            $b_value = isset($b['google_clicks']) ? (int) $b['google_clicks'] : 0;
+                            $comparison = $a_value <=> $b_value;
+                        } elseif ($content_scores_orderby === 'position') {
+                            // Lower position is better (position 1 = top result). No-data
+                            // rows sort as the worst possible position, not zero/best.
+                            $a_value = isset($a['google_position']) ? (float) $a['google_position'] : PHP_FLOAT_MAX;
+                            $b_value = isset($b['google_position']) ? (float) $b['google_position'] : PHP_FLOAT_MAX;
                             $comparison = $a_value <=> $b_value;
                         } else {
                             $a_value = (isset($a['title']) && is_string($a['title'])) ? $a['title'] : '';

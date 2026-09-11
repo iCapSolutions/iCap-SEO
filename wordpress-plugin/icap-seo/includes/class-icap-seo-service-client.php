@@ -215,6 +215,8 @@ class ICap_SEO_Service_Client
                 'icap_score' => $score_data['icap_score'],
                 'icap_score_numeric' => $icap_score_numeric,
                 'google_coverage_state' => '',
+                'google_clicks' => null,
+                'google_position' => null,
                 'source' => 'placeholder',
             ];
         }
@@ -334,6 +336,19 @@ class ICap_SEO_Service_Client
             ];
         }
 
+        // Same nullable, only-when-present handling as google_verification above.
+        // clicks/impressions are whole counts; ctr/position are genuine fractional
+        // values (a (float) cast, not (int), or a ~3% CTR would silently become 0).
+        $google_performance = null;
+        if (isset($data['google_performance']) && is_array($data['google_performance'])) {
+            $google_performance = [
+                'clicks' => isset($data['google_performance']['clicks']) ? (int) $data['google_performance']['clicks'] : 0,
+                'impressions' => isset($data['google_performance']['impressions']) ? (int) $data['google_performance']['impressions'] : 0,
+                'ctr' => isset($data['google_performance']['ctr']) ? (float) $data['google_performance']['ctr'] : 0.0,
+                'position' => isset($data['google_performance']['position']) ? (float) $data['google_performance']['position'] : 0.0,
+            ];
+        }
+
         $result['data'] = [
             'content_key' => isset($data['content_key']) ? sanitize_text_field((string) $data['content_key']) : $resolved_content_key,
             'wp_post_id' => isset($data['wp_post_id']) ? (int) $data['wp_post_id'] : 0,
@@ -347,6 +362,7 @@ class ICap_SEO_Service_Client
             'issues' => $issues,
             'history' => $history,
             'google_verification' => $google_verification,
+            'google_performance' => $google_performance,
         ];
 
         return $result;
@@ -1286,6 +1302,18 @@ class ICap_SEO_Service_Client
             $google_coverage_state = ($google_verification_item !== null && isset($google_verification_item['coverage_state']))
                 ? sanitize_text_field((string) $google_verification_item['coverage_state'])
                 : '';
+            // null (not 0) means "no data for this window" - could be zero traffic, a
+            // brand-new page GSC hasn't reported on yet, or no Google connection at all.
+            // A real zero-click page is a genuine value and must render as "0", not "—".
+            $google_performance_item = isset($item['google_performance']) && is_array($item['google_performance'])
+                ? $item['google_performance']
+                : null;
+            $google_clicks = ($google_performance_item !== null && isset($google_performance_item['clicks']))
+                ? (int) $google_performance_item['clicks']
+                : null;
+            $google_position = ($google_performance_item !== null && isset($google_performance_item['position']))
+                ? (float) $google_performance_item['position']
+                : null;
 
             $rows[] = [
                 'id' => $post_id,
@@ -1301,6 +1329,8 @@ class ICap_SEO_Service_Client
                 // '' means "no signal yet" (not connected, or not yet checked) - never
                 // fabricated, mirrors the detail view's google_verification handling.
                 'google_coverage_state' => $google_coverage_state,
+                'google_clicks' => $google_clicks,
+                'google_position' => $google_position,
                 'source' => 'api',
             ];
         }
