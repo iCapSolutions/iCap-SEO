@@ -1104,9 +1104,22 @@ class ICap_SEO_Service_Client
             ];
         }
 
+        // Discovery makes one Admin API call plus one more per property found on the
+        // backend, capped there at a 15s budget - live-reproduced 2026-09-11: a real
+        // discovery call already took 3.6s server-side against a single-account test
+        // account, well past the default 3s client timeout used for fast metadata
+        // calls, causing this to fail client-side while the backend completed
+        // successfully (the exact failure class trigger_scan() already documented and
+        // fixed once for the scan endpoint, now hit here too). 20s gives comfortable
+        // margin under the backend's 25s function ceiling.
         $result = $this->api_request(
             'GET',
-            sprintf('/v1/sites/%s/google-connection/analytics-properties', rawurlencode((string) $settings['site_id']))
+            sprintf('/v1/sites/%s/google-connection/analytics-properties', rawurlencode((string) $settings['site_id'])),
+            [],
+            [],
+            true,
+            [],
+            20
         );
         if (!$result['success']) {
             return $result;
