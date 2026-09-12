@@ -164,6 +164,11 @@ class ICap_SEO_Admin
         // granted but no property picked yet), not on every tab load like the status check
         // above.
         $analytics_property_candidates = [];
+        // Distinct from "discovery ran and genuinely found zero" - a failed discovery
+        // call (e.g. a misconfigured Google Cloud project) must never render as "no
+        // properties found," which would be a real, false statement about the tenant's
+        // Google account rather than a report of our own error.
+        $analytics_discovery_failed = false;
         $analytics_scope_granted = in_array(
             'https://www.googleapis.com/auth/analytics.readonly',
             $google_connection_status['granted_scopes'] ?? [],
@@ -173,6 +178,8 @@ class ICap_SEO_Admin
             $candidates_result = $this->service_client->get_analytics_property_candidates();
             if ($candidates_result['success'] && isset($candidates_result['data']['candidates'])) {
                 $analytics_property_candidates = $candidates_result['data']['candidates'];
+            } else {
+                $analytics_discovery_failed = true;
             }
         }
         $score_snapshot = [
