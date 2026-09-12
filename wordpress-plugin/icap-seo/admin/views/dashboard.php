@@ -137,6 +137,9 @@ $notice_map = [
     'google_connect_failed' => ['type' => 'error', 'message' => __('Google Search Console connection failed. Please try again.', 'icap-seo')],
     'google_disconnected' => ['type' => 'updated', 'message' => __('Google Search Console disconnected.', 'icap-seo')],
     'google_disconnect_failed' => ['type' => 'error', 'message' => __('Disconnecting Google Search Console failed. Please try again.', 'icap-seo')],
+    'analytics_property_saved' => ['type' => 'updated', 'message' => __('Google Analytics property saved. Real traffic data will appear alongside content scores after the next scan.', 'icap-seo')],
+    'analytics_property_invalid' => ['type' => 'error', 'message' => __('Please choose a valid Google Analytics property.', 'icap-seo')],
+    'analytics_property_save_failed' => ['type' => 'error', 'message' => __('Saving the Google Analytics property failed. Please try again.', 'icap-seo')],
     'billing_status_free_tier' => ['type' => 'updated', 'message' => __('Billing status check: this site is on the free tier (basic scans only).', 'icap-seo')],
     'ai_credit_checkout_not_configured' => ['type' => 'error', 'message' => __('AI credit checkout requires site registration credentials. Register this site first.', 'icap-seo')],
     'ai_credit_checkout_premium_required' => ['type' => 'error', 'message' => __('AI credits can only be purchased on an active premium subscription. Upgrade to premium first.', 'icap-seo')],
@@ -575,13 +578,29 @@ if ($notice_code === 'remediation_apply_noop') {
                                     <?php endif; ?>
                                 </a>
                             </th>
+                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'sessions' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'sessions' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
+                                <a href="<?php echo $content_scores_sort_link('sessions', 'desc'); ?>">
+                                    <span><?php esc_html_e('Sessions (28d)', 'icap-seo'); ?></span>
+                                    <?php if ($content_scores_orderby === 'sessions') : ?>
+                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
+                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'engagement' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'engagement' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
+                                <a href="<?php echo $content_scores_sort_link('engagement', 'desc'); ?>">
+                                    <span><?php esc_html_e('Engagement Rate', 'icap-seo'); ?></span>
+                                    <?php if ($content_scores_orderby === 'engagement') : ?>
+                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
                             <th><?php esc_html_e('Details', 'icap-seo'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($content_scores)) : ?>
                             <tr>
-                                <td colspan="8">
+                                <td colspan="10">
                                     <?php if ($latest_scores_source === 'api') : ?>
                                         <?php esc_html_e('No scored content rows were returned for the latest scan yet.', 'icap-seo'); ?>
                                     <?php else : ?>
@@ -652,6 +671,21 @@ if ($notice_code === 'remediation_apply_noop') {
                                         <?php
                                         echo isset($row['google_position']) && $row['google_position'] !== null
                                             ? esc_html(number_format((float) $row['google_position'], 1))
+                                            : '&mdash;';
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        // Same null-vs-real-zero discipline as clicks/position above, for GA4.
+                                        echo isset($row['google_sessions']) && $row['google_sessions'] !== null
+                                            ? esc_html((string) (int) $row['google_sessions'])
+                                            : '&mdash;';
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        echo isset($row['google_engagement_rate']) && $row['google_engagement_rate'] !== null
+                                            ? esc_html(number_format((float) $row['google_engagement_rate'] * 100, 1)) . '%'
                                             : '&mdash;';
                                         ?>
                                     </td>
@@ -818,6 +852,27 @@ if ($notice_code === 'remediation_apply_noop') {
                                     (int) $detail_google_performance['impressions'],
                                     number_format((float) $detail_google_performance['ctr'] * 100, 1) . '%',
                                     number_format((float) $detail_google_performance['position'], 1)
+                                )
+                            );
+                            ?>
+                        </p>
+                    <?php endif; ?>
+                    <?php
+                    $detail_google_analytics = isset($content_score_detail['google_analytics']) && is_array($content_score_detail['google_analytics'])
+                        ? $content_score_detail['google_analytics']
+                        : null;
+                    ?>
+                    <?php if ($detail_google_analytics !== null) : ?>
+                        <p class="description">
+                            <?php
+                            echo esc_html(
+                                sprintf(
+                                    /* translators: 1: sessions, 2: page views, 3: engagement rate percentage, 4: average session duration in seconds, all from Google Analytics, last 28 days */
+                                    __('Google Analytics (last 28 days): %1$d sessions, %2$d page views, %3$s engagement rate, %4$ss average session duration', 'icap-seo'),
+                                    (int) $detail_google_analytics['sessions'],
+                                    (int) $detail_google_analytics['page_views'],
+                                    number_format((float) $detail_google_analytics['engagement_rate'] * 100, 1) . '%',
+                                    number_format((float) $detail_google_analytics['avg_session_duration'], 0)
                                 )
                             );
                             ?>
@@ -1523,6 +1578,55 @@ if ($notice_code === 'remediation_apply_noop') {
                         <button type="submit" class="button"><?php esc_html_e('Disconnect', 'icap-seo'); ?></button>
                     </p>
                 </form>
+
+                <?php
+                $analytics_property_id_value = isset($google_connection_status['analytics_property_id'])
+                    ? (string) $google_connection_status['analytics_property_id']
+                    : '';
+                ?>
+                <?php if (!$analytics_scope_granted) : ?>
+                    <p class="notice notice-info inline" style="padding:8px 12px; margin-top:12px;">
+                        <?php esc_html_e('New: iCap SEO can also show real traffic data from Google Analytics. Reconnect Google to add it — your existing Search Console connection won\'t be affected.', 'icap-seo'); ?>
+                    </p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                        <input type="hidden" name="action" value="icap_seo_google_connect_start">
+                        <?php wp_nonce_field('icap_seo_google_connect_start'); ?>
+                        <p>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Reconnect Google (add Analytics)', 'icap-seo'); ?></button>
+                        </p>
+                    </form>
+                <?php elseif ($analytics_property_id_value !== '') : ?>
+                    <p class="description">
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %s: the connected Google Analytics property id */
+                                __('Google Analytics property: %s', 'icap-seo'),
+                                $analytics_property_id_value
+                            )
+                        );
+                        ?>
+                    </p>
+                <?php elseif (!empty($analytics_property_candidates)) : ?>
+                    <p class="description"><?php esc_html_e('We couldn\'t auto-detect your Google Analytics property. Select one:', 'icap-seo'); ?></p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                        <input type="hidden" name="action" value="icap_seo_save_analytics_property">
+                        <?php wp_nonce_field('icap_seo_save_analytics_property'); ?>
+                        <p>
+                            <select name="analytics_property_id">
+                                <?php foreach ($analytics_property_candidates as $candidate) : ?>
+                                    <option value="<?php echo esc_attr($candidate['property_id']); ?>">
+                                        <?php echo esc_html($candidate['display_name'] !== '' ? $candidate['display_name'] : $candidate['property_id']); ?>
+                                        (<?php echo esc_html($candidate['property_id']); ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Save', 'icap-seo'); ?></button>
+                        </p>
+                    </form>
+                <?php else : ?>
+                    <p class="description"><?php esc_html_e('No Google Analytics properties found for this Google account.', 'icap-seo'); ?></p>
+                <?php endif; ?>
             <?php else : ?>
                 <?php $google_needs_reconnect = in_array($google_status_value, ['error', 'revoked'], true); ?>
                 <?php if ($google_status_value === 'revoked') : ?>
@@ -1764,6 +1868,68 @@ if ($notice_code === 'remediation_apply_noop') {
                                     ?>
                                 </p>
                             <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--icon">
+                    <div class="icap-seo-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+                    </div>
+                    <div class="icap-seo-card-text">
+                        <h3><?php esc_html_e('Google Analytics', 'icap-seo'); ?></h3>
+                        <?php
+                        $overview_analytics_scope_granted = in_array(
+                            'https://www.googleapis.com/auth/analytics.readonly',
+                            $google_connection_status['granted_scopes'] ?? [],
+                            true
+                        );
+                        $overview_analytics_property_set = !empty($google_connection_status['analytics_property_id']);
+                        $overview_analytics_is_connected = $overview_google_status === 'connected' && $overview_analytics_scope_granted && $overview_analytics_property_set;
+                        if ($overview_analytics_is_connected) {
+                            $overview_analytics_value = __('Connected', 'icap-seo');
+                            $overview_analytics_value_class = '';
+                        } else {
+                            $overview_analytics_value = __('Not connected', 'icap-seo');
+                            $overview_analytics_value_class = ' icap-seo-card-value--muted';
+                        }
+                        ?>
+                        <p class="icap-seo-card-value<?php echo esc_attr($overview_analytics_value_class); ?>"><?php echo esc_html($overview_analytics_value); ?></p>
+                        <?php if ($overview_analytics_is_connected) : ?>
+                            <?php
+                            // Same client-side aggregation approach as the Search Console
+                            // card above - no separate API call, just summed from the
+                            // content-scores rows already fetched for this page load.
+                            $overview_analytics_total_sessions = 0;
+                            $overview_analytics_engagement_sum = 0.0;
+                            $overview_analytics_engagement_count = 0;
+                            foreach ($content_scores as $overview_analytics_row) {
+                                if (isset($overview_analytics_row['google_sessions']) && $overview_analytics_row['google_sessions'] !== null) {
+                                    $overview_analytics_total_sessions += (int) $overview_analytics_row['google_sessions'];
+                                }
+                                if (isset($overview_analytics_row['google_engagement_rate']) && $overview_analytics_row['google_engagement_rate'] !== null) {
+                                    $overview_analytics_engagement_sum += (float) $overview_analytics_row['google_engagement_rate'];
+                                    $overview_analytics_engagement_count++;
+                                }
+                            }
+                            ?>
+                            <?php if ($overview_analytics_engagement_count > 0) : ?>
+                                <p class="icap-seo-card-subtext">
+                                    <?php
+                                    echo esc_html(
+                                        sprintf(
+                                            /* translators: 1: total sessions across all scored pages in the last 28 days, 2: average engagement rate percentage across pages with data */
+                                            __('%1$d sessions (28d), %2$s%% avg engagement', 'icap-seo'),
+                                            $overview_analytics_total_sessions,
+                                            number_format(($overview_analytics_engagement_sum / $overview_analytics_engagement_count) * 100, 1)
+                                        )
+                                    );
+                                    ?>
+                                </p>
+                            <?php endif; ?>
+                        <?php else : ?>
+                            <p class="icap-seo-card-subtext">
+                                <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php'))); ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
+                            </p>
                         <?php endif; ?>
                     </div>
                 </div>

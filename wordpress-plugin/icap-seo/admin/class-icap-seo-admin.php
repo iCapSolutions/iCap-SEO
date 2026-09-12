@@ -59,6 +59,7 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_open_billing_portal', [$this, 'handle_open_billing_portal']);
         add_action('admin_post_icap_seo_google_connect_start', [$this, 'handle_google_connect_start']);
         add_action('admin_post_icap_seo_google_disconnect', [$this, 'handle_google_disconnect']);
+        add_action('admin_post_icap_seo_save_analytics_property', [$this, 'handle_save_analytics_property']);
         add_action('admin_post_icap_seo_start_ai_credit_checkout', [$this, 'handle_start_ai_credit_checkout']);
         add_action('admin_post_icap_seo_preview_remediation', [$this, 'handle_preview_remediation']);
         add_action('admin_post_icap_seo_apply_remediation', [$this, 'handle_apply_remediation']);
@@ -158,6 +159,22 @@ class ICap_SEO_Admin
                 $google_connection_status = $google_status_result['data'];
             }
         }
+        // Discovery is a handful of live Google Admin API calls, not a cheap status read -
+        // only run it on the Settings tab, and only when it's actually needed (Analytics
+        // granted but no property picked yet), not on every tab load like the status check
+        // above.
+        $analytics_property_candidates = [];
+        $analytics_scope_granted = in_array(
+            'https://www.googleapis.com/auth/analytics.readonly',
+            $google_connection_status['granted_scopes'] ?? [],
+            true
+        );
+        if ($active_tab === 'settings' && $analytics_scope_granted && empty($google_connection_status['analytics_property_id'])) {
+            $candidates_result = $this->service_client->get_analytics_property_candidates();
+            if ($candidates_result['success'] && isset($candidates_result['data']['candidates'])) {
+                $analytics_property_candidates = $candidates_result['data']['candidates'];
+            }
+        }
         $score_snapshot = [
             'score' => null,
             'last_scan' => $connection_settings['last_sync_at'] ?: null,
@@ -198,7 +215,7 @@ class ICap_SEO_Admin
 
                 if ($active_tab === 'content-scores') {
                     $content_scores_orderby = isset($_GET['orderby']) ? sanitize_key(wp_unslash($_GET['orderby'])) : 'title';
-                    if (!in_array($content_scores_orderby, ['title', 'score', 'clicks', 'position'], true)) {
+                    if (!in_array($content_scores_orderby, ['title', 'score', 'clicks', 'position', 'sessions', 'engagement'], true)) {
                         $content_scores_orderby = 'title';
                     }
                     $content_scores_order = isset($_GET['order']) ? strtolower(sanitize_key(wp_unslash($_GET['order']))) : 'asc';
@@ -221,6 +238,14 @@ class ICap_SEO_Admin
                             // rows sort as the worst possible position, not zero/best.
                             $a_value = isset($a['google_position']) ? (float) $a['google_position'] : PHP_FLOAT_MAX;
                             $b_value = isset($b['google_position']) ? (float) $b['google_position'] : PHP_FLOAT_MAX;
+                            $comparison = $a_value <=> $b_value;
+                        } elseif ($content_scores_orderby === 'sessions') {
+                            $a_value = isset($a['google_sessions']) ? (int) $a['google_sessions'] : 0;
+                            $b_value = isset($b['google_sessions']) ? (int) $b['google_sessions'] : 0;
+                            $comparison = $a_value <=> $b_value;
+                        } elseif ($content_scores_orderby === 'engagement') {
+                            $a_value = isset($a['google_engagement_rate']) ? (float) $a['google_engagement_rate'] : 0.0;
+                            $b_value = isset($b['google_engagement_rate']) ? (float) $b['google_engagement_rate'] : 0.0;
                             $comparison = $a_value <=> $b_value;
                         } else {
                             $a_value = (isset($a['title']) && is_string($a['title'])) ? $a['title'] : '';
@@ -811,6 +836,30 @@ class ICap_SEO_Admin
             return;
         }
         $this->redirect_with_notice('google_disconnected', 'settings');
+    }
+
+    public function handle_save_analytics_property(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_save_analytics_property');
+        $property_id = isset($_POST['analytics_property_id']) ? sanitize_text_field((string) wp_unslash($_POST['analytics_property_id'])) : '';
+        if ($property_id === '') {
+            $this->redirect_with_notice('analytics_property_invalid', 'settings');
+            return;
+        }
+        $result = $this->service_client->save_analytics_property_id($property_id);
+        if (!$result['success']) {
+            $error_code = $this->extract_error_code($result);
+            if ($error_code === 'validation_error') {
+                $this->redirect_with_notice('analytics_property_invalid', 'settings');
+                return;
+            }
+            $this->redirect_with_notice('analytics_property_save_failed', 'settings');
+            return;
+        }
+        $this->redirect_with_notice('analytics_property_saved', 'settings');
     }
 
     public function handle_start_ai_credit_checkout(): void

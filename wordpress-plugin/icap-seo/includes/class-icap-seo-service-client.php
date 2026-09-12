@@ -217,6 +217,8 @@ class ICap_SEO_Service_Client
                 'google_coverage_state' => '',
                 'google_clicks' => null,
                 'google_position' => null,
+                'google_sessions' => null,
+                'google_engagement_rate' => null,
                 'source' => 'placeholder',
             ];
         }
@@ -349,6 +351,19 @@ class ICap_SEO_Service_Client
             ];
         }
 
+        // Same nullable, only-when-present handling as google_verification/google_performance
+        // above. sessions/page_views are whole counts; engagement_rate/avg_session_duration
+        // are genuine fractional values.
+        $google_analytics = null;
+        if (isset($data['google_analytics']) && is_array($data['google_analytics'])) {
+            $google_analytics = [
+                'sessions' => isset($data['google_analytics']['sessions']) ? (int) $data['google_analytics']['sessions'] : 0,
+                'page_views' => isset($data['google_analytics']['page_views']) ? (int) $data['google_analytics']['page_views'] : 0,
+                'engagement_rate' => isset($data['google_analytics']['engagement_rate']) ? (float) $data['google_analytics']['engagement_rate'] : 0.0,
+                'avg_session_duration' => isset($data['google_analytics']['avg_session_duration']) ? (float) $data['google_analytics']['avg_session_duration'] : 0.0,
+            ];
+        }
+
         $result['data'] = [
             'content_key' => isset($data['content_key']) ? sanitize_text_field((string) $data['content_key']) : $resolved_content_key,
             'wp_post_id' => isset($data['wp_post_id']) ? (int) $data['wp_post_id'] : 0,
@@ -363,6 +378,7 @@ class ICap_SEO_Service_Client
             'history' => $history,
             'google_verification' => $google_verification,
             'google_performance' => $google_performance,
+            'google_analytics' => $google_analytics,
         ];
 
         return $result;
@@ -1050,6 +1066,7 @@ class ICap_SEO_Service_Client
             'connected_at' => isset($data['connected_at']) ? sanitize_text_field((string) $data['connected_at']) : '',
             'last_verified_at' => isset($data['last_verified_at']) ? sanitize_text_field((string) $data['last_verified_at']) : '',
             'last_error' => isset($data['last_error']) ? sanitize_text_field((string) $data['last_error']) : '',
+            'analytics_property_id' => isset($data['analytics_property_id']) ? sanitize_text_field((string) $data['analytics_property_id']) : '',
         ];
 
         return $result;
@@ -1071,6 +1088,64 @@ class ICap_SEO_Service_Client
         return $this->api_request(
             'DELETE',
             sprintf('/v1/sites/%s/google-connection', rawurlencode((string) $settings['site_id']))
+        );
+    }
+
+    public function get_analytics_property_candidates(): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        $result = $this->api_request(
+            'GET',
+            sprintf('/v1/sites/%s/google-connection/analytics-properties', rawurlencode((string) $settings['site_id']))
+        );
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
+        $candidates = [];
+        foreach (($data['candidates'] ?? []) as $candidate) {
+            if (!is_array($candidate) || !isset($candidate['property_id'])) {
+                continue;
+            }
+            $candidates[] = [
+                'property_id' => sanitize_text_field((string) $candidate['property_id']),
+                'display_name' => isset($candidate['display_name']) ? sanitize_text_field((string) $candidate['display_name']) : '',
+                'matches_site_url' => !empty($candidate['matches_site_url']),
+            ];
+        }
+        $result['data'] = ['candidates' => $candidates];
+
+        return $result;
+    }
+
+    public function save_analytics_property_id(string $property_id): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        return $this->api_request(
+            'POST',
+            sprintf('/v1/sites/%s/google-connection/analytics-property', rawurlencode((string) $settings['site_id'])),
+            ['analytics_property_id' => $property_id]
         );
     }
 
@@ -1314,6 +1389,17 @@ class ICap_SEO_Service_Client
             $google_position = ($google_performance_item !== null && isset($google_performance_item['position']))
                 ? (float) $google_performance_item['position']
                 : null;
+            // Same null-vs-real-zero discipline as clicks/position above, for GA4 traffic
+            // data instead of Search Console performance.
+            $google_analytics_item = isset($item['google_analytics']) && is_array($item['google_analytics'])
+                ? $item['google_analytics']
+                : null;
+            $google_sessions = ($google_analytics_item !== null && isset($google_analytics_item['sessions']))
+                ? (int) $google_analytics_item['sessions']
+                : null;
+            $google_engagement_rate = ($google_analytics_item !== null && isset($google_analytics_item['engagement_rate']))
+                ? (float) $google_analytics_item['engagement_rate']
+                : null;
 
             $rows[] = [
                 'id' => $post_id,
@@ -1331,6 +1417,8 @@ class ICap_SEO_Service_Client
                 'google_coverage_state' => $google_coverage_state,
                 'google_clicks' => $google_clicks,
                 'google_position' => $google_position,
+                'google_sessions' => $google_sessions,
+                'google_engagement_rate' => $google_engagement_rate,
                 'source' => 'api',
             ];
         }
