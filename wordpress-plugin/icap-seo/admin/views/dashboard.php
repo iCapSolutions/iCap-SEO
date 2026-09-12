@@ -1624,6 +1624,8 @@ if ($notice_code === 'remediation_apply_noop') {
                             <button type="submit" class="button button-primary"><?php esc_html_e('Save', 'icap-seo'); ?></button>
                         </p>
                     </form>
+                <?php elseif (!empty($analytics_discovery_failed)) : ?>
+                    <p class="description"><?php esc_html_e('Looking up your Google Analytics properties failed. Please retry shortly.', 'icap-seo'); ?></p>
                 <?php else : ?>
                     <p class="description"><?php esc_html_e('No Google Analytics properties found for this Google account.', 'icap-seo'); ?></p>
                 <?php endif; ?>
