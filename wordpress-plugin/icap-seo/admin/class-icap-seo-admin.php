@@ -76,6 +76,7 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_discard_readability_rewrite', [$this, 'handle_discard_readability_rewrite']);
         add_action('admin_post_icap_seo_add_redirect', [$this, 'handle_add_redirect']);
         add_action('admin_post_icap_seo_delete_redirect', [$this, 'handle_delete_redirect']);
+        add_action('admin_post_icap_seo_dismiss_404', [$this, 'handle_dismiss_404']);
         add_action('add_meta_boxes', [$this, 'register_remediation_meta_boxes']);
         add_filter('allowed_redirect_hosts', [$this, 'add_allowed_redirect_hosts']);
     }
@@ -236,6 +237,7 @@ class ICap_SEO_Admin
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
         $registration_challenge = [];
         $redirects = $active_tab === 'redirects' ? $this->get_redirects() : [];
+        $log_404 = $active_tab === 'redirects' ? $this->get_404_log() : [];
 
         try {
             if ($active_tab === 'overview') {
@@ -509,6 +511,34 @@ class ICap_SEO_Admin
         update_option('icap_seo_redirects', $redirects, false);
 
         $this->redirect_with_notice('redirect_deleted', 'redirects');
+    }
+
+    private function get_404_log(): array
+    {
+        $log = get_option('icap_seo_404_log', []);
+        $log = is_array($log) ? array_values(array_filter($log, 'is_array')) : [];
+
+        usort($log, static fn($a, $b): int => (int) ($b['hits'] ?? 0) <=> (int) ($a['hits'] ?? 0));
+
+        return array_slice($log, 0, 50);
+    }
+
+    public function handle_dismiss_404(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_dismiss_404');
+
+        $path = isset($_POST['404_path']) ? sanitize_text_field((string) wp_unslash($_POST['404_path'])) : '';
+        $log = get_option('icap_seo_404_log', []);
+        $log = is_array($log) ? array_values(array_filter(
+            $log,
+            static fn($row): bool => !is_array($row) || ($row['path'] ?? '') !== $path
+        )) : [];
+        update_option('icap_seo_404_log', $log, false);
+
+        $this->redirect_with_notice('404_dismissed', 'redirects');
     }
 
     public function handle_register_site(): void

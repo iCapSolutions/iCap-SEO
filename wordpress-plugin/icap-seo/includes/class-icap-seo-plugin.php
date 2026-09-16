@@ -25,6 +25,8 @@ class ICap_SEO_Plugin
         add_action('wp_head', [$this, 'output_social_meta_fallback'], 20);
         add_action('template_redirect', [$this, 'maybe_apply_redirect'], 1);
         add_action('template_redirect', [$this, 'serve_indexnow_key_file'], 1);
+        add_action('template_redirect', [$this, 'serve_llms_txt'], 1);
+        add_action('template_redirect', [$this, 'maybe_log_404'], 5);
         add_action('save_post', [$this, 'ping_indexnow_on_publish'], 20, 3);
         add_action('before_delete_post', [$this, 'ping_indexnow_on_delete']);
         add_action('wp_trash_post', [$this, 'ping_indexnow_on_delete']);
@@ -294,11 +296,7 @@ class ICap_SEO_Plugin
             return;
         }
 
-        $request_uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
-        $request_path = '/' . ltrim((string) wp_parse_url($request_uri, PHP_URL_PATH), '/');
-        if ($request_path !== '/') {
-            $request_path = rtrim($request_path, '/');
-        }
+        $request_path = $this->get_current_request_path();
 
         foreach ($redirects as $row) {
             if (!is_array($row) || ($row['source'] ?? '') !== $request_path) {
@@ -335,17 +333,32 @@ class ICap_SEO_Plugin
 
     public function serve_indexnow_key_file(): void
     {
-        $request_uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
-        $request_path = trim((string) wp_parse_url($request_uri, PHP_URL_PATH), '/');
         $key = $this->get_or_create_indexnow_key();
 
-        if ($request_path !== $key . '.txt') {
+        if ($this->get_current_request_path() !== '/' . $key . '.txt') {
             return;
         }
 
         header('Content-Type: text/plain; charset=utf-8');
         echo esc_html($key);
         exit;
+    }
+
+    /**
+     * Shared by every feature that dispatches on the current request path
+     * (redirects, the IndexNow key file, llms.txt) - a single normalized
+     * form (leading slash, no trailing slash except root) so all of them
+     * compare against the same shape.
+     */
+    private function get_current_request_path(): string
+    {
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
+        $path = '/' . ltrim((string) wp_parse_url($request_uri, PHP_URL_PATH), '/');
+        if ($path !== '/') {
+            $path = rtrim($path, '/');
+        }
+
+        return $path;
     }
 
     /**
@@ -397,5 +410,113 @@ class ICap_SEO_Plugin
         if (is_string($url)) {
             $this->ping_indexnow_for_url($url);
         }
+    }
+
+    /**
+     * llms.txt (emerging convention, not an official standard) - a plain-text
+     * map of a site's key content for AI assistants/crawlers, analogous to
+     * robots.txt. Generated on request rather than cached, so it always
+     * reflects current published content; reuses the same request-path
+     * dispatch as the IndexNow key file and the same description-resolution
+     * helper as the meta/social tags.
+     */
+    public function serve_llms_txt(): void
+    {
+        if ($this->get_current_request_path() !== '/llms.txt' || $this->is_another_seo_plugin_active()) {
+            return;
+        }
+
+        $site_name = get_bloginfo('name');
+        $tagline = get_bloginfo('description');
+
+        $lines = ['# ' . $site_name];
+        if ($tagline !== '') {
+            $lines[] = '';
+            $lines[] = '> ' . $tagline;
+        }
+        $lines[] = '';
+        $lines[] = '## Pages';
+        $lines[] = '';
+
+        $posts = get_posts([
+            'post_type' => ['page', 'post'],
+            'post_status' => 'publish',
+            'posts_per_page' => 50,
+            'orderby' => 'modified',
+            'order' => 'DESC',
+            'no_found_rows' => true,
+        ]);
+        foreach ($posts as $listed_post) {
+            $listed_title = trim((string) $listed_post->post_title);
+            if ($listed_title === '') {
+                continue;
+            }
+            $listed_url = get_permalink($listed_post);
+            $listed_description = $this->get_effective_meta_description($listed_post, 120);
+            $line = '- [' . $listed_title . '](' . $listed_url . ')';
+            if ($listed_description !== '') {
+                $line .= ': ' . $listed_description;
+            }
+            $lines[] = $line;
+        }
+
+        header('Content-Type: text/plain; charset=utf-8');
+        echo esc_html(implode("\n", $lines));
+        exit;
+    }
+
+    /**
+     * A lightweight 404 log (icap_seo_404_log option, capped at 200 rows,
+     * evicting the oldest by last-seen when full) so the Redirects tab can
+     * surface real broken links to fix instead of requiring the user to
+     * already know what's missing. Only counts genuine WordPress 404s that
+     * reach this point - a request this plugin's own redirect/IndexNow/
+     * llms.txt handlers already served above never reaches here, since each
+     * of those exits immediately on a match.
+     */
+    public function maybe_log_404(): void
+    {
+        if (!is_404() || is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST)) {
+            return;
+        }
+
+        $path = $this->get_current_request_path();
+        if ($path === '/') {
+            return;
+        }
+
+        $log = get_option('icap_seo_404_log', []);
+        if (!is_array($log)) {
+            $log = [];
+        }
+
+        $now = gmdate('c');
+        $found = false;
+        foreach ($log as &$row) {
+            if (is_array($row) && ($row['path'] ?? '') === $path) {
+                $row['hits'] = (int) ($row['hits'] ?? 0) + 1;
+                $row['last_seen'] = $now;
+                $found = true;
+                break;
+            }
+        }
+        unset($row);
+
+        if (!$found) {
+            $referrer = wp_get_referer();
+            $log[] = [
+                'path' => $path,
+                'hits' => 1,
+                'last_seen' => $now,
+                'referrer' => is_string($referrer) ? $referrer : '',
+            ];
+        }
+
+        if (count($log) > 200) {
+            usort($log, static fn($a, $b): int => strcmp((string) ($a['last_seen'] ?? ''), (string) ($b['last_seen'] ?? '')));
+            $log = array_slice($log, count($log) - 200);
+        }
+
+        update_option('icap_seo_404_log', $log, false);
     }
 }
