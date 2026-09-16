@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.81
+Stable tag: 0.1.82
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,9 @@ The in-plugin dashboard lists every check with its category and current status u
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.82 =
+* Replaced the generic search-icon mark (sidebar and dashboard header) with the real iCapSolutions logo mark, so the plugin visually matches the parent brand.
 
 = 0.1.81 =
 * Fixed the dashboard header logo rendering squished/illegible - it was using the full wordmark graphic in a square-cropped image slot instead of the icon mark.

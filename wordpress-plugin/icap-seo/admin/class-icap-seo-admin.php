@@ -41,7 +41,7 @@ class ICap_SEO_Admin
             'manage_options',
             'icap-seo',
             [$this, 'render_dashboard'],
-            ICAP_SEO_PLUGIN_URL . 'assets/images/icap-seo-icon.svg',
+            ICAP_SEO_PLUGIN_URL . 'assets/images/icap-brand-mark.png',
             58
         );
     }
