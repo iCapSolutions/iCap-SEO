@@ -23,6 +23,7 @@ class ICap_SEO_Plugin
         add_action('wp_head', [$this, 'output_canonical_fallback'], 20);
         add_action('wp_head', [$this, 'output_jsonld_schema_fallback'], 20);
         add_action('wp_head', [$this, 'output_social_meta_fallback'], 20);
+        add_action('wp_head', [$this, 'output_local_business_schema_fallback'], 20);
         add_action('template_redirect', [$this, 'maybe_apply_redirect'], 1);
         add_action('template_redirect', [$this, 'serve_indexnow_key_file'], 1);
         add_action('template_redirect', [$this, 'serve_llms_txt'], 1);
@@ -277,6 +278,87 @@ class ICap_SEO_Plugin
         if (is_string($image_url) && $image_url !== '') {
             echo '<meta name="twitter:image" content="' . esc_url($image_url) . "\" />\n";
         }
+    }
+
+    /**
+     * LocalBusiness structured data - a site-wide business profile, unlike
+     * the per-post JSON-LD schema in output_jsonld_schema_fallback() which
+     * describes one page's content. Output on every front-end page (not
+     * gated by is_singular_or_posts_page()) since it describes the site's
+     * owner, not any particular page. Silent no-op until an admin actually
+     * fills in a business name and address on the Local SEO tab - never
+     * emits a schema block with placeholder/empty required fields.
+     */
+    public function output_local_business_schema_fallback(): void
+    {
+        if (is_admin() || $this->is_another_seo_plugin_active()) {
+            return;
+        }
+
+        $business = get_option('icap_seo_local_business', []);
+        if (!is_array($business)) {
+            return;
+        }
+
+        $name = trim((string) ($business['business_name'] ?? ''));
+        $street = trim((string) ($business['street_address'] ?? ''));
+        if ($name === '' || $street === '') {
+            return;
+        }
+
+        $type = (string) ($business['business_type'] ?? 'LocalBusiness');
+        $schema = [
+            '@context' => 'https://schema.org',
+            '@type' => $type,
+            'name' => $name,
+            'url' => home_url('/'),
+            'address' => array_filter([
+                '@type' => 'PostalAddress',
+                'streetAddress' => $street,
+                'addressLocality' => trim((string) ($business['city'] ?? '')),
+                'addressRegion' => trim((string) ($business['region'] ?? '')),
+                'postalCode' => trim((string) ($business['postal_code'] ?? '')),
+                'addressCountry' => trim((string) ($business['country'] ?? '')),
+            ], static fn($value): bool => $value !== ''),
+        ];
+
+        $phone = trim((string) ($business['phone'] ?? ''));
+        if ($phone !== '') {
+            $schema['telephone'] = $phone;
+        }
+        $price_range = trim((string) ($business['price_range'] ?? ''));
+        if ($price_range !== '') {
+            $schema['priceRange'] = $price_range;
+        }
+
+        $hours = is_array($business['hours'] ?? null) ? $business['hours'] : [];
+        $hours_spec = [];
+        foreach ($hours as $day => $day_hours) {
+            if (!is_array($day_hours) || !empty($day_hours['closed'])) {
+                continue;
+            }
+            $opens = (string) ($day_hours['opens'] ?? '');
+            $closes = (string) ($day_hours['closes'] ?? '');
+            if ($opens === '' || $closes === '') {
+                continue;
+            }
+            $hours_spec[] = [
+                '@type' => 'OpeningHoursSpecification',
+                'dayOfWeek' => ucfirst((string) $day),
+                'opens' => $opens,
+                'closes' => $closes,
+            ];
+        }
+        if (!empty($hours_spec)) {
+            $schema['openingHoursSpecification'] = $hours_spec;
+        }
+
+        $json = wp_json_encode($schema);
+        if (!is_string($json)) {
+            return;
+        }
+
+        echo '<script type="application/ld+json">' . str_replace('</', '<\/', $json) . "</script>\n";
     }
 
     /**
