@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.85
+Stable tag: 0.1.86
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,9 @@ The in-plugin dashboard lists every check with its category and current status u
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.86 =
+* Fixed `/llms.txt` output being HTML-escaped instead of served as plain text, which broke its own ">" blockquote marker and could double-encode "&"/quotes in real page titles and descriptions.
 
 = 0.1.85 =
 * Added a 404 log to the Redirects tab, showing pages visitors and search engines hit that don't exist, with a one-click "Create redirect" action for each.

@@ -460,8 +460,13 @@ class ICap_SEO_Plugin
             $lines[] = $line;
         }
 
+        // Plain-text response, not HTML - esc_html() would corrupt the file's own
+        // markdown-style "> " blockquote marker (into "&gt; ") and double-encode any
+        // "&"/quotes already present in real titles/descriptions. No injection risk
+        // to escape against: Content-Type is already sent, and post titles can't
+        // contain newlines to fake extra lines.
         header('Content-Type: text/plain; charset=utf-8');
-        echo esc_html(implode("\n", $lines));
+        echo implode("\n", $lines);
         exit;
     }
 
