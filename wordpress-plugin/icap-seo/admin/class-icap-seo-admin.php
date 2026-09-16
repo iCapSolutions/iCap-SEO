@@ -26,6 +26,12 @@ class ICap_SEO_Admin
     private const READABILITY_DRAFT_META_KEY = '_icap_seo_readability_draft';
     private const READABILITY_ISSUE_CODES = ['readability_score_low'];
     private const READABILITY_MAX_PARAGRAPHS = 6;
+    private const LOCAL_BUSINESS_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    private const LOCAL_BUSINESS_TYPES = [
+        'LocalBusiness', 'Store', 'Restaurant', 'ProfessionalService', 'MedicalBusiness',
+        'Dentist', 'Attorney', 'RealEstateAgent', 'AutomotiveBusiness', 'BeautySalon',
+        'HomeAndConstructionBusiness', 'FinancialService',
+    ];
 
     public function __construct(ICap_SEO_Service_Client $service_client)
     {
@@ -77,6 +83,7 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_add_redirect', [$this, 'handle_add_redirect']);
         add_action('admin_post_icap_seo_delete_redirect', [$this, 'handle_delete_redirect']);
         add_action('admin_post_icap_seo_dismiss_404', [$this, 'handle_dismiss_404']);
+        add_action('admin_post_icap_seo_save_local_business', [$this, 'handle_save_local_business']);
         add_action('add_meta_boxes', [$this, 'register_remediation_meta_boxes']);
         add_filter('allowed_redirect_hosts', [$this, 'add_allowed_redirect_hosts']);
     }
@@ -238,6 +245,9 @@ class ICap_SEO_Admin
         $registration_challenge = [];
         $redirects = $active_tab === 'redirects' ? $this->get_redirects() : [];
         $log_404 = $active_tab === 'redirects' ? $this->get_404_log() : [];
+        $local_business = $active_tab === 'local-seo' ? $this->get_local_business() : [];
+        $local_business_days = self::LOCAL_BUSINESS_DAYS;
+        $local_business_types = self::LOCAL_BUSINESS_TYPES;
 
         try {
             if ($active_tab === 'overview') {
@@ -539,6 +549,72 @@ class ICap_SEO_Admin
         update_option('icap_seo_404_log', $log, false);
 
         $this->redirect_with_notice('404_dismissed', 'redirects');
+    }
+
+    /**
+     * Site-wide business profile (name/address/hours/etc) - deliberately
+     * separate from the per-post JSON-LD schema already stored in
+     * _icap_seo_jsonld_schema_json, since a LocalBusiness listing describes
+     * the site's owner, not any one page's content.
+     */
+    private function get_local_business(): array
+    {
+        $defaults = [
+            'business_name' => '',
+            'business_type' => 'LocalBusiness',
+            'street_address' => '',
+            'city' => '',
+            'region' => '',
+            'postal_code' => '',
+            'country' => '',
+            'phone' => '',
+            'price_range' => '',
+            'hours' => [],
+        ];
+        $stored = get_option('icap_seo_local_business', []);
+
+        return is_array($stored) ? array_merge($defaults, $stored) : $defaults;
+    }
+
+    public function handle_save_local_business(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_save_local_business');
+
+        $business_type = isset($_POST['business_type']) ? sanitize_text_field((string) wp_unslash($_POST['business_type'])) : 'LocalBusiness';
+        if (!in_array($business_type, self::LOCAL_BUSINESS_TYPES, true)) {
+            $business_type = 'LocalBusiness';
+        }
+
+        $hours = [];
+        foreach (self::LOCAL_BUSINESS_DAYS as $day) {
+            $closed = isset($_POST['hours'][$day]['closed']);
+            $opens = isset($_POST['hours'][$day]['opens']) ? sanitize_text_field((string) wp_unslash($_POST['hours'][$day]['opens'])) : '';
+            $closes = isset($_POST['hours'][$day]['closes']) ? sanitize_text_field((string) wp_unslash($_POST['hours'][$day]['closes'])) : '';
+            $hours[$day] = [
+                'closed' => $closed,
+                'opens' => preg_match('/^\d{2}:\d{2}$/', $opens) ? $opens : '',
+                'closes' => preg_match('/^\d{2}:\d{2}$/', $closes) ? $closes : '',
+            ];
+        }
+
+        $local_business = [
+            'business_name' => isset($_POST['business_name']) ? sanitize_text_field((string) wp_unslash($_POST['business_name'])) : '',
+            'business_type' => $business_type,
+            'street_address' => isset($_POST['street_address']) ? sanitize_text_field((string) wp_unslash($_POST['street_address'])) : '',
+            'city' => isset($_POST['city']) ? sanitize_text_field((string) wp_unslash($_POST['city'])) : '',
+            'region' => isset($_POST['region']) ? sanitize_text_field((string) wp_unslash($_POST['region'])) : '',
+            'postal_code' => isset($_POST['postal_code']) ? sanitize_text_field((string) wp_unslash($_POST['postal_code'])) : '',
+            'country' => isset($_POST['country']) ? sanitize_text_field((string) wp_unslash($_POST['country'])) : '',
+            'phone' => isset($_POST['phone']) ? sanitize_text_field((string) wp_unslash($_POST['phone'])) : '',
+            'price_range' => isset($_POST['price_range']) ? sanitize_text_field((string) wp_unslash($_POST['price_range'])) : '',
+            'hours' => $hours,
+        ];
+        update_option('icap_seo_local_business', $local_business, false);
+
+        $this->redirect_with_notice('local_business_saved', 'local-seo');
     }
 
     public function handle_register_site(): void

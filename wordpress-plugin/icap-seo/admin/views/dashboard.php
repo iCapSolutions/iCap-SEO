@@ -77,6 +77,7 @@ $tabs = [
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
     'content-scores' => __('Content Scores', 'icap-seo'),
     'redirects' => __('Redirects', 'icap-seo'),
+    'local-seo' => __('Local SEO', 'icap-seo'),
     'settings' => __('Settings', 'icap-seo'),
 ];
 
@@ -175,6 +176,7 @@ $notice_map = [
     'redirect_invalid' => ['type' => 'error', 'message' => __('Redirect not added: both a source path and a destination URL are required, and the source cannot be the site root.', 'icap-seo')],
     'redirect_duplicate' => ['type' => 'error', 'message' => __('Redirect not added: a redirect for that source path already exists.', 'icap-seo')],
     '404_dismissed' => ['type' => 'updated', 'message' => __('Dismissed from the 404 log.', 'icap-seo')],
+    'local_business_saved' => ['type' => 'updated', 'message' => __('Business info saved.', 'icap-seo')],
 ];
 
 if (!isset($latest_content_scores_meta) || !is_array($latest_content_scores_meta)) {
@@ -1764,6 +1766,91 @@ if ($notice_code === 'remediation_apply_noop') {
                     </tbody>
                 </table>
             <?php endif; ?>
+        <?php elseif ($active_tab === 'local-seo') : ?>
+            <h2><?php esc_html_e('Local SEO', 'icap-seo'); ?></h2>
+            <p class="description"><?php esc_html_e('For businesses with a physical location or local service area. Fill this in to add LocalBusiness structured data to every page, so Google can build a Maps/Knowledge Panel listing from it. Leave it blank if this doesn\'t apply to your site - nothing is output until a business name and address are set.', 'icap-seo'); ?></p>
+
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-local-business-form">
+                <input type="hidden" name="action" value="icap_seo_save_local_business">
+                <?php wp_nonce_field('icap_seo_save_local_business'); ?>
+                <table class="form-table" role="presentation">
+                    <tbody>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-business-name"><?php esc_html_e('Business name', 'icap-seo'); ?></label></th>
+                            <td><input id="icap-seo-business-name" name="business_name" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['business_name'] ?? '')); ?>"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-business-type"><?php esc_html_e('Business type', 'icap-seo'); ?></label></th>
+                            <td>
+                                <select id="icap-seo-business-type" name="business_type">
+                                    <?php foreach ($local_business_types as $type_option) : ?>
+                                        <option value="<?php echo esc_attr($type_option); ?>" <?php selected((string) ($local_business['business_type'] ?? 'LocalBusiness'), $type_option); ?>><?php echo esc_html($type_option); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-street-address"><?php esc_html_e('Street address', 'icap-seo'); ?></label></th>
+                            <td><input id="icap-seo-street-address" name="street_address" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['street_address'] ?? '')); ?>"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-city"><?php esc_html_e('City', 'icap-seo'); ?></label></th>
+                            <td><input id="icap-seo-city" name="city" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['city'] ?? '')); ?>"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-region"><?php esc_html_e('State / Region', 'icap-seo'); ?></label></th>
+                            <td><input id="icap-seo-region" name="region" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['region'] ?? '')); ?>"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-postal-code"><?php esc_html_e('Postal code', 'icap-seo'); ?></label></th>
+                            <td><input id="icap-seo-postal-code" name="postal_code" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['postal_code'] ?? '')); ?>"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-country"><?php esc_html_e('Country', 'icap-seo'); ?></label></th>
+                            <td><input id="icap-seo-country" name="country" type="text" class="regular-text" placeholder="US" value="<?php echo esc_attr((string) ($local_business['country'] ?? '')); ?>">
+                                <p class="description"><?php esc_html_e('Two-letter country code, e.g. US, GB, CA.', 'icap-seo'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-phone"><?php esc_html_e('Phone', 'icap-seo'); ?></label></th>
+                            <td><input id="icap-seo-phone" name="phone" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['phone'] ?? '')); ?>"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-price-range"><?php esc_html_e('Price range', 'icap-seo'); ?></label></th>
+                            <td><input id="icap-seo-price-range" name="price_range" type="text" class="regular-text" placeholder="$$" value="<?php echo esc_attr((string) ($local_business['price_range'] ?? '')); ?>">
+                                <p class="description"><?php esc_html_e('Optional, e.g. $, $$, $$$.', 'icap-seo'); ?></p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3><?php esc_html_e('Hours', 'icap-seo'); ?></h3>
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e('Day', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Closed', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Opens', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Closes', 'icap-seo'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($local_business_days as $day_key) : ?>
+                            <?php $day_hours = $local_business['hours'][$day_key] ?? ['closed' => false, 'opens' => '', 'closes' => '']; ?>
+                            <tr>
+                                <td><?php echo esc_html(ucfirst($day_key)); ?></td>
+                                <td><input type="checkbox" name="hours[<?php echo esc_attr($day_key); ?>][closed]" value="1" <?php checked(!empty($day_hours['closed'])); ?>></td>
+                                <td><input type="time" name="hours[<?php echo esc_attr($day_key); ?>][opens]" value="<?php echo esc_attr((string) ($day_hours['opens'] ?? '')); ?>"></td>
+                                <td><input type="time" name="hours[<?php echo esc_attr($day_key); ?>][closes]" value="<?php echo esc_attr((string) ($day_hours['closes'] ?? '')); ?>"></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <p>
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Save Business Info', 'icap-seo'); ?></button>
+                </p>
+            </form>
         <?php elseif ($active_tab === 'settings') : ?>
             <h2><?php esc_html_e('Settings', 'icap-seo'); ?></h2>
             <h3><?php esc_html_e('Connection', 'icap-seo'); ?></h3>
@@ -2212,7 +2299,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <li><?php esc_html_e('Image optimization — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Internal & external links — discoverability and broken-link detection', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                 </ul>
-                <p><?php esc_html_e('Also included, free, outside the 31-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, automatic search-engine indexing pings, and an llms.txt file for AI assistants.', 'icap-seo'); ?></p>
+                <p><?php esc_html_e('Also included, free, outside the 31-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, automatic search-engine indexing pings, an llms.txt file for AI assistants, and LocalBusiness structured data for businesses with a physical location.', 'icap-seo'); ?></p>
             </div>
 
             <?php if ($overview_is_premium) : ?>
