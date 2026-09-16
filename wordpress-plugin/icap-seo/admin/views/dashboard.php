@@ -413,7 +413,7 @@ if ($notice_code === 'remediation_apply_noop') {
 ?>
 <div class="wrap icap-seo-wrap">
     <h1 class="icap-seo-header">
-        <img src="<?php echo esc_url(ICAP_SEO_PLUGIN_URL . 'assets/images/icap-seo-logo.svg'); ?>" alt="<?php esc_attr_e('iCap SEO', 'icap-seo'); ?>" class="icap-seo-logo">
+        <img src="<?php echo esc_url(ICAP_SEO_PLUGIN_URL . 'assets/images/icap-seo-icon.svg'); ?>" alt="<?php esc_attr_e('iCap SEO', 'icap-seo'); ?>" class="icap-seo-logo">
         <?php esc_html_e('iCap SEO', 'icap-seo'); ?>
     </h1>
     <p><?php esc_html_e('SEO intelligence for WordPress sites by iCapSolutions.', 'icap-seo'); ?></p>
