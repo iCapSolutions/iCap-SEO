@@ -227,6 +227,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
 
     if ($title_changed) {
         $notice_override_message = sprintf(
+            /* translators: %1$s: previous title, %2$s: new title */
             __('Title updated: "%1$s" → "%2$s".', 'icap-seo'),
             $title_before !== '' ? $title_before : __('(empty)', 'icap-seo'),
             $title_after !== '' ? $title_after : __('(empty)', 'icap-seo')
@@ -234,6 +235,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
     }
     if ($excerpt_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %1$s: previous excerpt/meta description, %2$s: new excerpt/meta description */
             __('Page excerpt/meta description updated: "%1$s" → "%2$s".', 'icap-seo'),
             $excerpt_before !== '' ? $excerpt_before : __('(empty)', 'icap-seo'),
             $excerpt_after !== '' ? $excerpt_after : __('(empty)', 'icap-seo')
@@ -246,6 +248,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         : $h1_before !== $h1_after;
     if ($h1_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %1$s: previous H1 text, %2$s: new H1 text */
             __('H1 updated: "%1$s" → "%2$s".', 'icap-seo'),
             $h1_before !== '' ? $h1_before : __('(empty)', 'icap-seo'),
             $h1_after !== '' ? $h1_after : __('(empty)', 'icap-seo')
@@ -257,6 +260,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         && sanitize_key((string) wp_unslash($_GET['images_alt_changed'])) === '1';
     if ($images_alt_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %1$d: number of images updated, %2$d: number of images that were missing alt text */
             __('Image alt text added/updated for %1$d of %2$d image(s) missing alt text.', 'icap-seo'),
             $images_alt_updated_count,
             $images_alt_before
@@ -268,6 +272,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         && sanitize_key((string) wp_unslash($_GET['images_dimensions_changed'])) === '1';
     if ($images_dimensions_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %1$d: number of images updated, %2$d: number of images that were missing dimensions */
             __('Width/height added for %1$d of %2$d image(s) missing dimensions.', 'icap-seo'),
             $images_dimensions_updated_count,
             $images_dimensions_before
@@ -279,6 +284,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         && sanitize_key((string) wp_unslash($_GET['images_lazy_changed'])) === '1';
     if ($images_lazy_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %1$d: number of images updated, %2$d: number of eligible images */
             __('loading="lazy" added to %1$d of %2$d eligible image(s).', 'icap-seo'),
             $images_lazy_updated_count,
             $images_lazy_before
@@ -289,6 +295,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         && sanitize_key((string) wp_unslash($_GET['canonical_changed'])) === '1';
     if ($canonical_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %s: the new canonical URL */
             __('Canonical URL set to "%s".', 'icap-seo'),
             $canonical_after !== '' ? $canonical_after : __('(empty)', 'icap-seo')
         );
@@ -298,6 +305,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         && sanitize_key((string) wp_unslash($_GET['jsonld_schema_changed'])) === '1';
     if ($jsonld_schema_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %s: the JSON-LD schema type added */
             __('JSON-LD schema added (%s).', 'icap-seo'),
             $jsonld_schema_after !== '' ? $jsonld_schema_after : __('unknown type', 'icap-seo')
         );
@@ -307,6 +315,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         && sanitize_key((string) wp_unslash($_GET['heading_structure_changed'])) === '1';
     if ($heading_structure_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %d: number of headings added */
             __('%d heading(s) added to improve page structure.', 'icap-seo'),
             $headings_added_count
         );
@@ -316,6 +325,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         && sanitize_key((string) wp_unslash($_GET['internal_linking_changed'])) === '1';
     if ($internal_linking_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %d: number of internal links added */
             __('%d internal link(s) added.', 'icap-seo'),
             $internal_links_added_count
         );
@@ -325,6 +335,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         && sanitize_key((string) wp_unslash($_GET['paragraph_structure_changed'])) === '1';
     if ($paragraph_structure_changed) {
         $notice_override_message .= ' ' . sprintf(
+            /* translators: %d: number of paragraphs added */
             __('%d paragraph(s) added to improve readability.', 'icap-seo'),
             $paragraphs_added_count
         );
@@ -337,6 +348,7 @@ if ($notice_code === 'content_rescan_complete') {
     $scan_id_notice = isset($_GET['scan_id']) ? sanitize_text_field((string) wp_unslash($_GET['scan_id'])) : '';
     if ($scan_id_notice !== '') {
         $notice_override_message = sprintf(
+            /* translators: %s: the scan ID */
             __('Page rescan completed (scan %s). Recommendations refreshed from the latest scan snapshot.', 'icap-seo'),
             $scan_id_notice
         );
@@ -345,6 +357,7 @@ if ($notice_code === 'content_rescan_complete') {
 if ($notice_code === 'content_depth_published') {
     $content_depth_words_added_notice = isset($_GET['content_depth_words_added']) ? (int) sanitize_text_field((string) wp_unslash($_GET['content_depth_words_added'])) : 0;
     $notice_override_message = sprintf(
+        /* translators: %d: number of words added */
         __('Content depth draft published: %d words added to this page. Re-scan to verify score movement.', 'icap-seo'),
         $content_depth_words_added_notice
     );
@@ -432,6 +445,9 @@ if ($notice_code === 'remediation_apply_noop') {
         <?php if ($active_tab === 'setup-wizard') : ?>
             <?php $is_connected = $connection_settings['site_id'] !== '' && $connection_settings['site_token'] !== ''; ?>
             <h2><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
+            <p class="description">
+                <?php esc_html_e('iCap SEO connects this site to iCapSolutions\' cloud scanning service. Running a scan sends the scanned page\'s public content to that service to generate scores and suggested fixes; nothing is published or changed on your site without your explicit approval.', 'icap-seo'); ?>
+            </p>
             <?php if ($is_connected) : ?>
                 <p><?php esc_html_e('This site is connected to iCap SEO.', 'icap-seo'); ?></p>
                 <p class="description">
@@ -800,10 +816,13 @@ if ($notice_code === 'remediation_apply_noop') {
                         $oldest_history_score = isset($detail_history[count($detail_history) - 1]['overall_score']) ? (int) $detail_history[count($detail_history) - 1]['overall_score'] : 0;
                         $trend_delta = $latest_history_score - $oldest_history_score;
                         if ($trend_delta > 0) {
-                            $trend_summary = sprintf(__('Improving (%+d over %d scans).', 'icap-seo'), $trend_delta, count($detail_history));
+                            /* translators: %1$+d: signed score change, %2$d: number of scans */
+                            $trend_summary = sprintf(__('Improving (%1$+d over %2$d scans).', 'icap-seo'), $trend_delta, count($detail_history));
                         } elseif ($trend_delta < 0) {
-                            $trend_summary = sprintf(__('Declining (%+d over %d scans).', 'icap-seo'), $trend_delta, count($detail_history));
+                            /* translators: %1$+d: signed score change, %2$d: number of scans */
+                            $trend_summary = sprintf(__('Declining (%1$+d over %2$d scans).', 'icap-seo'), $trend_delta, count($detail_history));
                         } else {
+                            /* translators: %d: number of scans */
                             $trend_summary = sprintf(__('Flat trend (0 over %d scans).', 'icap-seo'), count($detail_history));
                         }
                     }
@@ -1073,7 +1092,13 @@ if ($notice_code === 'remediation_apply_noop') {
                                                     <div>
                                                         <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
                                                         <?php if ($issue_effort !== '') : ?>
-                                                            <span>(<?php echo esc_html(sprintf(__('effort: %s', 'icap-seo'), $issue_effort)); ?>)</span>
+                                                            <span>(<?php
+                                                            echo esc_html(sprintf(
+                                                                /* translators: %s: effort level (low/medium/high) */
+                                                                __('effort: %s', 'icap-seo'),
+                                                                $issue_effort
+                                                            ));
+                                                            ?>)</span>
                                                         <?php endif; ?>
                                                     </div>
                                                     <div><?php echo esc_html($issue_description !== '' ? $issue_description : __('No issue description provided.', 'icap-seo')); ?></div>
@@ -1141,7 +1166,13 @@ if ($notice_code === 'remediation_apply_noop') {
                         <h4><?php esc_html_e('Content depth expansion', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates draft paragraphs to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft — unlike the other recommendations above.', 'icap-seo'); ?></p>
                         <?php if (!empty($content_depth_open_issue_codes)) : ?>
-                            <p class="description"><?php echo esc_html(sprintf(__('Open codes: %s', 'icap-seo'), implode(', ', $content_depth_open_issue_codes))); ?></p>
+                            <p class="description"><?php
+                            echo esc_html(sprintf(
+                                /* translators: %s: comma-separated list of open issue codes */
+                                __('Open codes: %s', 'icap-seo'),
+                                implode(', ', $content_depth_open_issue_codes)
+                            ));
+                            ?></p>
                         <?php endif; ?>
                         <?php if ($content_depth_draft_html === '') : ?>
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -1152,7 +1183,13 @@ if ($notice_code === 'remediation_apply_noop') {
                             </form>
                         <?php else : ?>
                             <div class="icap-seo-content-depth-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
-                                <p class="description"><?php echo esc_html(sprintf(__('Draft preview (%d words). Review and edit for accuracy and brand voice before publishing — this is a starting point, not finished copy.', 'icap-seo'), $content_depth_draft_word_count)); ?></p>
+                                <p class="description"><?php
+                                echo esc_html(sprintf(
+                                    /* translators: %d: number of words in the draft */
+                                    __('Draft preview (%d words). Review and edit for accuracy and brand voice before publishing — this is a starting point, not finished copy.', 'icap-seo'),
+                                    $content_depth_draft_word_count
+                                ));
+                                ?></p>
                                 <div><?php echo wp_kses_post($content_depth_draft_html); ?></div>
                             </div>
                             <div class="icap-seo-actions">
@@ -1344,7 +1381,11 @@ if ($notice_code === 'remediation_apply_noop') {
                             <p class="description">
                                 <?php
                                 $queued_estimate = isset($preview_summary['proposed_change_count']) ? (int) $preview_summary['proposed_change_count'] : count($preview_changes);
-                                echo esc_html(sprintf(__('Proposed changes: %d', 'icap-seo'), $queued_estimate));
+                                echo esc_html(sprintf(
+                                    /* translators: %d: number of proposed changes */
+                                    __('Proposed changes: %d', 'icap-seo'),
+                                    $queued_estimate
+                                ));
                                 ?>
                             </p>
                             <ul>
@@ -1362,7 +1403,13 @@ if ($notice_code === 'remediation_apply_noop') {
                                             <code><?php echo esc_html($change_issue_code); ?></code>
                                         <?php endif; ?>
                                         <?php if ($change_effort !== '') : ?>
-                                            <span>(<?php echo esc_html(sprintf(__('effort: %s', 'icap-seo'), $change_effort)); ?>)</span>
+                                            <span>(<?php
+                                            echo esc_html(sprintf(
+                                                /* translators: %s: effort level (low/medium/high) */
+                                                __('effort: %s', 'icap-seo'),
+                                                $change_effort
+                                            ));
+                                            ?>)</span>
                                         <?php endif; ?>
                                         <div><?php echo esc_html($change_summary !== '' ? $change_summary : __('No summary provided.', 'icap-seo')); ?></div>
                                         <?php if ($change_review) : ?>
@@ -1428,40 +1475,118 @@ if ($notice_code === 'remediation_apply_noop') {
                                         <div><code><?php echo esc_html(implode(', ', $audit_issue_codes)); ?></code></div>
                                     <?php endif; ?>
                                     <?php if ($audit_title_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('Title: "%1$s" → "%2$s"', 'icap-seo'), $audit_title_before, $audit_title_after)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %1$s: previous title, %2$s: new title */
+                                            __('Title: "%1$s" → "%2$s"', 'icap-seo'),
+                                            $audit_title_before,
+                                            $audit_title_after
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_excerpt_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('Meta description/excerpt: "%1$s" → "%2$s"', 'icap-seo'), $audit_excerpt_before, $audit_excerpt_after)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %1$s: previous excerpt/meta description, %2$s: new excerpt/meta description */
+                                            __('Meta description/excerpt: "%1$s" → "%2$s"', 'icap-seo'),
+                                            $audit_excerpt_before,
+                                            $audit_excerpt_after
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_h1_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('H1: "%1$s" → "%2$s"', 'icap-seo'), $audit_h1_before, $audit_h1_after)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %1$s: previous H1 text, %2$s: new H1 text */
+                                            __('H1: "%1$s" → "%2$s"', 'icap-seo'),
+                                            $audit_h1_before,
+                                            $audit_h1_after
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_images_alt_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('Image alt text: %1$d of %2$d missing image(s) updated', 'icap-seo'), $audit_images_alt_updated_count, $audit_images_alt_before)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %1$d: number of images updated, %2$d: number of images that were missing alt text */
+                                            __('Image alt text: %1$d of %2$d missing image(s) updated', 'icap-seo'),
+                                            $audit_images_alt_updated_count,
+                                            $audit_images_alt_before
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_images_dimensions_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('Image dimensions: %1$d of %2$d missing image(s) updated', 'icap-seo'), $audit_images_dimensions_updated_count, $audit_images_dimensions_before)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %1$d: number of images updated, %2$d: number of images that were missing dimensions */
+                                            __('Image dimensions: %1$d of %2$d missing image(s) updated', 'icap-seo'),
+                                            $audit_images_dimensions_updated_count,
+                                            $audit_images_dimensions_before
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_images_lazy_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('Lazy loading: %1$d of %2$d eligible image(s) updated', 'icap-seo'), $audit_images_lazy_updated_count, $audit_images_lazy_before)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %1$d: number of images updated, %2$d: number of eligible images */
+                                            __('Lazy loading: %1$d of %2$d eligible image(s) updated', 'icap-seo'),
+                                            $audit_images_lazy_updated_count,
+                                            $audit_images_lazy_before
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_canonical_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('Canonical URL set: "%s"', 'icap-seo'), $audit_canonical_after)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %s: the new canonical URL */
+                                            __('Canonical URL set: "%s"', 'icap-seo'),
+                                            $audit_canonical_after
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_jsonld_schema_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('JSON-LD schema added: %s', 'icap-seo'), $audit_jsonld_schema_after)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %s: the JSON-LD schema type added */
+                                            __('JSON-LD schema added: %s', 'icap-seo'),
+                                            $audit_jsonld_schema_after
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_heading_structure_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('%d heading(s) added', 'icap-seo'), $audit_headings_added_count)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %d: number of headings added */
+                                            __('%d heading(s) added', 'icap-seo'),
+                                            $audit_headings_added_count
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_content_depth_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('Content depth draft published (+%d words)', 'icap-seo'), $audit_content_depth_words_added)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %d: number of words added */
+                                            __('Content depth draft published (+%d words)', 'icap-seo'),
+                                            $audit_content_depth_words_added
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_internal_linking_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('%d internal link(s) added', 'icap-seo'), $audit_internal_links_added_count)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %d: number of internal links added */
+                                            __('%d internal link(s) added', 'icap-seo'),
+                                            $audit_internal_links_added_count
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                     <?php if ($audit_paragraph_structure_changed) : ?>
-                                        <div><?php echo esc_html(sprintf(__('%d paragraph(s) added', 'icap-seo'), $audit_paragraphs_added_count)); ?></div>
+                                        <div><?php
+                                        echo esc_html(sprintf(
+                                            /* translators: %d: number of paragraphs added */
+                                            __('%d paragraph(s) added', 'icap-seo'),
+                                            $audit_paragraphs_added_count
+                                        ));
+                                        ?></div>
                                     <?php endif; ?>
                                 </li>
                             <?php endforeach; ?>
@@ -1502,7 +1627,7 @@ if ($notice_code === 'remediation_apply_noop') {
         <?php elseif ($active_tab === 'settings') : ?>
             <h2><?php esc_html_e('Settings', 'icap-seo'); ?></h2>
             <h3><?php esc_html_e('Connection', 'icap-seo'); ?></h3>
-            <p class="description"><?php esc_html_e('API credentials used to register this site and run scans.', 'icap-seo'); ?></p>
+            <p class="description"><?php esc_html_e('API credentials used to register this site and run scans. Running a scan sends the scanned page\'s public content to iCapSolutions\' cloud service to generate scores and suggested fixes.', 'icap-seo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
                 <input type="hidden" name="action" value="icap_seo_save_settings">
                 <?php wp_nonce_field('icap_seo_save_settings'); ?>
