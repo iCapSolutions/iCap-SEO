@@ -70,6 +70,24 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_publish_readability_rewrite', [$this, 'handle_publish_readability_rewrite']);
         add_action('admin_post_icap_seo_discard_readability_rewrite', [$this, 'handle_discard_readability_rewrite']);
         add_action('add_meta_boxes', [$this, 'register_remediation_meta_boxes']);
+        add_filter('allowed_redirect_hosts', [$this, 'add_allowed_redirect_hosts']);
+    }
+
+    /**
+     * wp_safe_redirect() only allows same-host redirects unless the target
+     * host is explicitly allowlisted here. The four redirects this plugin
+     * issues (Stripe Checkout, Stripe Billing Portal, Google OAuth) all go
+     * to one of these three hosts - never to anything user- or
+     * attacker-controlled, since each URL comes from our own backend API's
+     * response, not directly from request input.
+     */
+    public function add_allowed_redirect_hosts(array $hosts): array
+    {
+        return array_merge($hosts, [
+            'checkout.stripe.com',
+            'billing.stripe.com',
+            'accounts.google.com',
+        ]);
     }
     public function register_list_table_columns(): void
     {
@@ -373,7 +391,9 @@ class ICap_SEO_Admin
             $current_meta_description_value = '';
             $content_depth_draft = ['html' => '', 'word_count' => 0];
             $readability_draft_paragraphs = [];
-            error_log('ICap SEO dashboard fallback: ' . $e->getMessage());
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('ICap SEO dashboard fallback: ' . $e->getMessage());
+            }
         }
 
         include ICAP_SEO_PLUGIN_DIR . 'admin/views/dashboard.php';
@@ -739,7 +759,7 @@ class ICap_SEO_Admin
             return;
         }
 
-        wp_redirect($checkout_url);
+        wp_safe_redirect($checkout_url);
         exit;
     }
 
@@ -787,7 +807,7 @@ class ICap_SEO_Admin
             return;
         }
 
-        wp_redirect($portal_url);
+        wp_safe_redirect($portal_url);
         exit;
     }
 
@@ -827,7 +847,7 @@ class ICap_SEO_Admin
             return;
         }
 
-        wp_redirect($authorization_url);
+        wp_safe_redirect($authorization_url);
         exit;
     }
 
@@ -914,7 +934,7 @@ class ICap_SEO_Admin
             return;
         }
 
-        wp_redirect($checkout_url);
+        wp_safe_redirect($checkout_url);
         exit;
     }
 
@@ -3304,39 +3324,46 @@ class ICap_SEO_Admin
 
         return [
             sprintf(
+                /* translators: %1$s: "article" or "page", %2$s: the page/post title, %3$s: the site name */
                 __('This %1$s covers %2$s in more depth, walking through the details visitors most often look for before deciding what to do next. %3$s puts an emphasis on clear, practical information rather than vague marketing language, so the goal here is to answer real questions plainly.', 'icap-seo'),
                 $kind,
                 $title_phrase,
                 $brand
             ),
             sprintf(
+                /* translators: %1$s: the page/post title, %2$s: "article" or "page" */
                 __('A closer look at %1$s shows why it matters: the specifics, the context, and the reasons someone would care are all worth spelling out rather than assuming they are obvious. Filling in that context here helps both readers and search engines understand what this %2$s is actually about.', 'icap-seo'),
                 $title_phrase,
                 $kind
             ),
             sprintf(
+                /* translators: %1$s: "article" or "page", %2$s: the site name, %3$s: the page/post title */
                 __('Visitors coming to this %1$s from %2$s can expect grounded, relevant detail tailored to %3$s specifically, not generic filler that could apply to any page on the internet. That focus is what makes the difference between a thin page and one that genuinely helps people.', 'icap-seo'),
                 $kind,
                 $brand,
                 $title_phrase
             ),
             sprintf(
+                /* translators: %1$s: the page/post title */
                 __('Common questions about %1$s tend to circle back to the same handful of practical concerns. Answering those directly, in plain language, does more for both readers and search visibility than any amount of generic marketing copy.', 'icap-seo'),
                 $title_phrase
             ),
             sprintf(
+                /* translators: %1$s: the page/post title, %2$s: the site name, %3$s: "article" or "page" */
                 __('The background behind %1$s is worth spelling out too: how it fits into what %2$s offers overall, and why it earned its own %3$s rather than a passing mention elsewhere on the site.', 'icap-seo'),
                 $title_phrase,
                 $brand,
                 $kind
             ),
             sprintf(
+                /* translators: %1$s: the page/post title, %2$s: the site name, %3$s: "article" or "page" */
                 __('Concrete detail beats broad claims here - specifics about %1$s that only someone close to %2$s would actually know are what turn a placeholder %3$s into one people find useful.', 'icap-seo'),
                 $title_phrase,
                 $brand,
                 $kind
             ),
             sprintf(
+                /* translators: %1$s: the page/post title, %2$s: the site name */
                 __('Once %1$s has real detail in place, the natural next step is linking it to related content on %2$s so visitors - and search engines - can trace how it connects to the rest of the site.', 'icap-seo'),
                 $title_phrase,
                 $brand
@@ -3349,6 +3376,7 @@ class ICap_SEO_Admin
         $brand = $site_name !== '' ? $site_name : __('this site', 'icap-seo');
 
         return sprintf(
+            /* translators: %1$s: the page/post title, %2$s: the site name */
             __('This draft paragraph is a starting point, not a finished version — replace it with real detail about %1$s, add specifics only %2$s would know, and remove anything that still reads as generic before publishing.', 'icap-seo'),
             $title_phrase,
             $brand
@@ -4156,6 +4184,7 @@ class ICap_SEO_Admin
         $post_type = sanitize_key((string) $post->post_type);
         if ($post_type === 'page' && strcasecmp($title_phrase, 'About') === 0 && $site_name !== '') {
             return sprintf(
+                /* translators: %1$s: the site name */
                 __('Meet the story behind %1$s. Learn who we are, what we share, and why visitors keep coming back.', 'icap-seo'),
                 $site_name
             );
@@ -4163,6 +4192,7 @@ class ICap_SEO_Admin
 
         if ($site_name !== '') {
             return sprintf(
+                /* translators: %1$s: the page/post title, %2$s: the site name */
                 __('Explore %1$s on %2$s for clear highlights, useful details, and what to do next.', 'icap-seo'),
                 $title_phrase,
                 $site_name
@@ -4170,6 +4200,7 @@ class ICap_SEO_Admin
         }
 
         return sprintf(
+            /* translators: %s: the page/post title */
             __('Explore %s for clear highlights, useful details, and what to do next.', 'icap-seo'),
             $title_phrase
         );
@@ -4348,6 +4379,7 @@ class ICap_SEO_Admin
         }
         if (!empty($latest['images_alt_changed'])) {
             $parts[] = sprintf(
+                /* translators: %d: number of image alt attributes updated */
                 __('%d image alt attribute(s) updated', 'icap-seo'),
                 isset($latest['images_alt_updated_count']) ? (int) $latest['images_alt_updated_count'] : 0
             );
@@ -4357,36 +4389,42 @@ class ICap_SEO_Admin
         }
         if (!empty($latest['jsonld_schema_changed'])) {
             $parts[] = sprintf(
+                /* translators: %s: the JSON-LD schema type added */
                 __('JSON-LD schema added (%s)', 'icap-seo'),
                 isset($latest['jsonld_schema_after']) ? (string) $latest['jsonld_schema_after'] : ''
             );
         }
         if (!empty($latest['heading_structure_changed'])) {
             $parts[] = sprintf(
+                /* translators: %d: number of headings added */
                 __('%d heading(s) added', 'icap-seo'),
                 isset($latest['headings_added_count']) ? (int) $latest['headings_added_count'] : 0
             );
         }
         if (!empty($latest['content_depth_changed'])) {
             $parts[] = sprintf(
+                /* translators: %d: number of words added */
                 __('Content depth draft published (+%d words)', 'icap-seo'),
                 isset($latest['content_depth_words_added']) ? (int) $latest['content_depth_words_added'] : 0
             );
         }
         if (!empty($latest['internal_linking_changed'])) {
             $parts[] = sprintf(
+                /* translators: %d: number of internal links added */
                 __('%d internal link(s) added', 'icap-seo'),
                 isset($latest['internal_links_added_count']) ? (int) $latest['internal_links_added_count'] : 0
             );
         }
         if (!empty($latest['paragraph_structure_changed'])) {
             $parts[] = sprintf(
+                /* translators: %d: number of paragraphs added */
                 __('%d paragraph(s) added', 'icap-seo'),
                 isset($latest['paragraphs_added_count']) ? (int) $latest['paragraphs_added_count'] : 0
             );
         }
         $summary = empty($parts) ? __('No field changes applied.', 'icap-seo') : implode('; ', $parts) . '.';
         if (!empty($latest['issue_codes']) && is_array($latest['issue_codes'])) {
+            /* translators: %s: comma-separated list of issue codes fixed */
             $summary .= ' ' . sprintf(__('Issues: %s', 'icap-seo'), implode(', ', array_map('sanitize_key', $latest['issue_codes'])));
         }
         update_post_meta($post_id, self::REMEDIATION_SUMMARY_META_KEY, $summary);
@@ -4431,6 +4469,7 @@ class ICap_SEO_Admin
             $issues = isset($entry['issue_codes']) && is_array($entry['issue_codes']) ? $entry['issue_codes'] : [];
             echo '<p><strong>' . esc_html($when !== '' ? $when : __('Unknown time', 'icap-seo')) . '</strong><br>';
             if (!empty($issues)) {
+                /* translators: %s: comma-separated list of issue codes fixed */
                 echo esc_html(sprintf(__('Issues: %s', 'icap-seo'), implode(', ', array_map('sanitize_key', $issues)))) . '<br>';
             }
             if (!empty($entry['title_changed'])) {
@@ -4444,6 +4483,7 @@ class ICap_SEO_Admin
             }
             if (!empty($entry['images_alt_changed'])) {
                 echo esc_html(sprintf(
+                    /* translators: %d: number of image alt attributes updated */
                     __('%d image alt attribute(s) updated', 'icap-seo'),
                     isset($entry['images_alt_updated_count']) ? (int) $entry['images_alt_updated_count'] : 0
                 )) . '<br>';
@@ -4453,30 +4493,35 @@ class ICap_SEO_Admin
             }
             if (!empty($entry['jsonld_schema_changed'])) {
                 echo esc_html(sprintf(
+                    /* translators: %s: the JSON-LD schema type added */
                     __('JSON-LD schema added (%s)', 'icap-seo'),
                     isset($entry['jsonld_schema_after']) ? (string) $entry['jsonld_schema_after'] : ''
                 )) . '<br>';
             }
             if (!empty($entry['heading_structure_changed'])) {
                 echo esc_html(sprintf(
+                    /* translators: %d: number of headings added */
                     __('%d heading(s) added', 'icap-seo'),
                     isset($entry['headings_added_count']) ? (int) $entry['headings_added_count'] : 0
                 )) . '<br>';
             }
             if (!empty($entry['content_depth_changed'])) {
                 echo esc_html(sprintf(
+                    /* translators: %d: number of words added */
                     __('Content depth draft published (+%d words)', 'icap-seo'),
                     isset($entry['content_depth_words_added']) ? (int) $entry['content_depth_words_added'] : 0
                 )) . '<br>';
             }
             if (!empty($entry['internal_linking_changed'])) {
                 echo esc_html(sprintf(
+                    /* translators: %d: number of internal links added */
                     __('%d internal link(s) added', 'icap-seo'),
                     isset($entry['internal_links_added_count']) ? (int) $entry['internal_links_added_count'] : 0
                 )) . '<br>';
             }
             if (!empty($entry['paragraph_structure_changed'])) {
                 echo esc_html(sprintf(
+                    /* translators: %d: number of paragraphs added */
                     __('%d paragraph(s) added', 'icap-seo'),
                     isset($entry['paragraphs_added_count']) ? (int) $entry['paragraphs_added_count'] : 0
                 )) . '<br>';

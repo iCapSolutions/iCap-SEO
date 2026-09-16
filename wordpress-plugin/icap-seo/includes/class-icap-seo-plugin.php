@@ -64,20 +64,28 @@ class ICap_SEO_Plugin
         return is_singular() || (is_home() && !is_front_page());
     }
 
+    /**
+     * Whether another plugin already owns SEO meta/canonical/schema output
+     * for this page, so our own fallback output should stay out of the way.
+     */
+    private function is_another_seo_plugin_active(): bool
+    {
+        return defined('RANK_MATH_VERSION')
+            || defined('WPSEO_VERSION')
+            || defined('AIOSEO_VERSION')
+            || defined('SEOPRESS_VERSION')
+            || class_exists('RankMath')
+            || class_exists('WPSEO_Options')
+            || class_exists('AIOSEO\\Plugin\\Common\\Main');
+    }
+
     public function output_meta_description_fallback(): void
     {
         if (is_admin() || !$this->is_singular_or_posts_page()) {
             return;
         }
         // If another SEO plugin is active, let it own the description tag.
-        if (
-            defined('RANK_MATH_VERSION')
-            || defined('WPSEO_VERSION')
-            || defined('AIOSEO_VERSION')
-            || class_exists('RankMath')
-            || class_exists('WPSEO_Options')
-            || class_exists('AIOSEO\\Plugin\\Common\\Main')
-        ) {
+        if ($this->is_another_seo_plugin_active()) {
             return;
         }
 
@@ -129,14 +137,7 @@ class ICap_SEO_Plugin
             return;
         }
         // If another SEO plugin is active, let it own the canonical tag.
-        if (
-            defined('RANK_MATH_VERSION')
-            || defined('WPSEO_VERSION')
-            || defined('AIOSEO_VERSION')
-            || class_exists('RankMath')
-            || class_exists('WPSEO_Options')
-            || class_exists('AIOSEO\\Plugin\\Common\\Main')
-        ) {
+        if ($this->is_another_seo_plugin_active()) {
             return;
         }
         // WordPress core's own rel_canonical() only fires for is_singular() queries
@@ -169,14 +170,7 @@ class ICap_SEO_Plugin
             return;
         }
         // If another SEO plugin is active, let it own schema markup output.
-        if (
-            defined('RANK_MATH_VERSION')
-            || defined('WPSEO_VERSION')
-            || defined('AIOSEO_VERSION')
-            || class_exists('RankMath')
-            || class_exists('WPSEO_Options')
-            || class_exists('AIOSEO\\Plugin\\Common\\Main')
-        ) {
+        if ($this->is_another_seo_plugin_active()) {
             return;
         }
 
@@ -190,6 +184,10 @@ class ICap_SEO_Plugin
             return;
         }
 
-        echo '<script type="application/ld+json">' . $schema_json . "</script>\n";
+        // esc_html() would corrupt valid JSON (it HTML-entity-encodes quotes, which
+        // browsers don't decode inside <script> content). The real risk here is a
+        // stored value containing a literal "</script>" breaking out of the tag, so
+        // neutralize that specifically instead - the standard JSON-in-<script> mitigation.
+        echo '<script type="application/ld+json">' . str_replace('</', '<\/', $schema_json) . "</script>\n";
     }
 }
