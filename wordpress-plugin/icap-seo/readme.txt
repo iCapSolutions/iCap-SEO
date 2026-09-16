@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.79
+Stable tag: 0.1.80
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,11 @@ The in-plugin dashboard lists every check with its category and current status u
 
 == Changelog ==
 
+= 0.1.80 =
+* Fixed a duplicate canonical URL tag when SEOPress is active alongside iCap SEO.
+* Added a plain-language notice to Setup Wizard and Settings explaining that running a scan sends the page's content to the iCap SEO service.
+* Hardened several admin redirects and fixed a JSON-LD output edge case; added cleanup of plugin settings on uninstall.
+
 = 0.1.79 =
 * Raised the Analytics property lookup client timeout to reduce false failures on slower Google API responses.
 
@@ -118,6 +123,9 @@ The in-plugin dashboard lists every check with its category and current status u
 * Initial release: full-site and per-page scoring, one-click fixes, preview-before-publish, Setup Wizard.
 
 == Upgrade Notice ==
+
+= 0.1.80 =
+Fixes a duplicate canonical tag with SEOPress and adds a data-use notice to the dashboard. No action required.
 
 = 0.1.79 =
 Improves reliability of Google Analytics data loading. No action required.
