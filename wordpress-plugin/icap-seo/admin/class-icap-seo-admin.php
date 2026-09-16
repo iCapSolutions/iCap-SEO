@@ -35,13 +35,18 @@ class ICap_SEO_Admin
 
     public function register_menu(): void
     {
+        // add_menu_page() renders this as a bare <img> with no width/height
+        // constraint of its own - it trusts the file to already be exactly
+        // 20x20px. A larger source (e.g. the 158x158 file used in the
+        // dashboard header, which our own CSS constrains) renders at full
+        // natural size and overflows into the menu items below it.
         add_menu_page(
             __('iCap SEO', 'icap-seo'),
             __('iCap SEO', 'icap-seo'),
             'manage_options',
             'icap-seo',
             [$this, 'render_dashboard'],
-            ICAP_SEO_PLUGIN_URL . 'assets/images/icap-brand-mark.png',
+            ICAP_SEO_PLUGIN_URL . 'assets/images/icap-brand-mark-20.png',
             58
         );
     }
