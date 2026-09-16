@@ -74,6 +74,8 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_preview_readability_rewrite', [$this, 'handle_preview_readability_rewrite']);
         add_action('admin_post_icap_seo_publish_readability_rewrite', [$this, 'handle_publish_readability_rewrite']);
         add_action('admin_post_icap_seo_discard_readability_rewrite', [$this, 'handle_discard_readability_rewrite']);
+        add_action('admin_post_icap_seo_add_redirect', [$this, 'handle_add_redirect']);
+        add_action('admin_post_icap_seo_delete_redirect', [$this, 'handle_delete_redirect']);
         add_action('add_meta_boxes', [$this, 'register_remediation_meta_boxes']);
         add_filter('allowed_redirect_hosts', [$this, 'add_allowed_redirect_hosts']);
     }
@@ -233,6 +235,7 @@ class ICap_SEO_Admin
         $seo_recommendation_catalog = $this->get_seo_recommendation_catalog();
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
         $registration_challenge = [];
+        $redirects = $active_tab === 'redirects' ? $this->get_redirects() : [];
 
         try {
             if ($active_tab === 'overview') {
@@ -424,6 +427,88 @@ class ICap_SEO_Admin
         ]);
 
         $this->redirect_with_notice('settings_saved', 'settings');
+    }
+
+    /**
+     * Stored as a single option (array of rows) rather than a custom table -
+     * consistent with this plugin's WordPress-native-fields approach, and
+     * redirect counts on a typical site are small enough that this doesn't
+     * need its own schema.
+     */
+    private function get_redirects(): array
+    {
+        $redirects = get_option('icap_seo_redirects', []);
+
+        return is_array($redirects) ? $redirects : [];
+    }
+
+    private function normalize_redirect_source(string $source): string
+    {
+        // Accept a full pasted URL too, not just a path - strip scheme/host if present.
+        $path = (string) wp_parse_url($source, PHP_URL_PATH);
+        $path = '/' . ltrim($path, '/');
+        if ($path !== '/') {
+            $path = rtrim($path, '/');
+        }
+
+        return $path;
+    }
+
+    public function handle_add_redirect(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_add_redirect');
+
+        $source = isset($_POST['redirect_source']) ? sanitize_text_field((string) wp_unslash($_POST['redirect_source'])) : '';
+        $target = isset($_POST['redirect_target']) ? esc_url_raw((string) wp_unslash($_POST['redirect_target'])) : '';
+        $type = isset($_POST['redirect_type']) ? sanitize_key((string) wp_unslash($_POST['redirect_type'])) : '301';
+        if (!in_array($type, ['301', '302'], true)) {
+            $type = '301';
+        }
+
+        $source = $this->normalize_redirect_source($source);
+        if ($source === '' || $source === '/' || $target === '') {
+            $this->redirect_with_notice('redirect_invalid', 'redirects');
+            return;
+        }
+
+        $redirects = $this->get_redirects();
+        foreach ($redirects as $existing) {
+            if (is_array($existing) && ($existing['source'] ?? '') === $source) {
+                $this->redirect_with_notice('redirect_duplicate', 'redirects');
+                return;
+            }
+        }
+
+        $redirects[] = [
+            'id' => wp_generate_uuid4(),
+            'source' => $source,
+            'target' => $target,
+            'type' => $type,
+            'created_at' => gmdate('c'),
+        ];
+        update_option('icap_seo_redirects', $redirects, false);
+
+        $this->redirect_with_notice('redirect_added', 'redirects');
+    }
+
+    public function handle_delete_redirect(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_delete_redirect');
+
+        $redirect_id = isset($_POST['redirect_id']) ? sanitize_text_field((string) wp_unslash($_POST['redirect_id'])) : '';
+        $redirects = array_values(array_filter(
+            $this->get_redirects(),
+            static fn($row): bool => !is_array($row) || ($row['id'] ?? '') !== $redirect_id
+        ));
+        update_option('icap_seo_redirects', $redirects, false);
+
+        $this->redirect_with_notice('redirect_deleted', 'redirects');
     }
 
     public function handle_register_site(): void
