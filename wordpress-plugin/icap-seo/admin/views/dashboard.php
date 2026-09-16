@@ -76,6 +76,7 @@ $tabs = [
     'overview' => __('Overview', 'icap-seo'),
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
     'content-scores' => __('Content Scores', 'icap-seo'),
+    'redirects' => __('Redirects', 'icap-seo'),
     'settings' => __('Settings', 'icap-seo'),
 ];
 
@@ -169,6 +170,10 @@ $notice_map = [
     'content_depth_publish_failed' => ['type' => 'error', 'message' => __('Could not publish the content depth draft. Verify edit permissions and try again.', 'icap-seo')],
     'content_depth_no_draft' => ['type' => 'error', 'message' => __('No content depth draft is pending for this page. Generate a preview first.', 'icap-seo')],
     'render_fallback' => ['type' => 'error', 'message' => __('Dashboard loaded in fallback mode after an internal error. Please retry and check logs.', 'icap-seo')],
+    'redirect_added' => ['type' => 'updated', 'message' => __('Redirect added.', 'icap-seo')],
+    'redirect_deleted' => ['type' => 'updated', 'message' => __('Redirect deleted.', 'icap-seo')],
+    'redirect_invalid' => ['type' => 'error', 'message' => __('Redirect not added: both a source path and a destination URL are required, and the source cannot be the site root.', 'icap-seo')],
+    'redirect_duplicate' => ['type' => 'error', 'message' => __('Redirect not added: a redirect for that source path already exists.', 'icap-seo')],
 ];
 
 if (!isset($latest_content_scores_meta) || !is_array($latest_content_scores_meta)) {
@@ -1624,6 +1629,85 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; // content_detail_tab === 'history' ?>
                 <?php endif; ?>
             <?php endif; ?>
+        <?php elseif ($active_tab === 'redirects') : ?>
+            <h2><?php esc_html_e('Redirects', 'icap-seo'); ?></h2>
+            <p class="description"><?php esc_html_e('Send visitors and search engines from an old URL on this site to a new one. Useful after moving or renaming a page so you don\'t lose traffic or backlinks to a broken link.', 'icap-seo'); ?></p>
+
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-add-redirect-form">
+                <input type="hidden" name="action" value="icap_seo_add_redirect">
+                <?php wp_nonce_field('icap_seo_add_redirect'); ?>
+                <table class="form-table" role="presentation">
+                    <tbody>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-redirect-source"><?php esc_html_e('Old path', 'icap-seo'); ?></label></th>
+                            <td>
+                                <input id="icap-seo-redirect-source" name="redirect_source" type="text" class="regular-text" placeholder="/old-page/">
+                                <p class="description"><?php esc_html_e('The path on this site to redirect from, e.g. /old-page/.', 'icap-seo'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-redirect-target"><?php esc_html_e('New URL', 'icap-seo'); ?></label></th>
+                            <td>
+                                <input id="icap-seo-redirect-target" name="redirect_target" type="url" class="regular-text" placeholder="https://example.com/new-page/">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="icap-seo-redirect-type"><?php esc_html_e('Redirect type', 'icap-seo'); ?></label></th>
+                            <td>
+                                <select id="icap-seo-redirect-type" name="redirect_type">
+                                    <option value="301"><?php esc_html_e('301 (Permanent)', 'icap-seo'); ?></option>
+                                    <option value="302"><?php esc_html_e('302 (Temporary)', 'icap-seo'); ?></option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Add Redirect', 'icap-seo'); ?></button>
+                </p>
+            </form>
+
+            <h3><?php esc_html_e('Active redirects', 'icap-seo'); ?></h3>
+            <?php if (empty($redirects)) : ?>
+                <p class="description"><?php esc_html_e('No redirects yet.', 'icap-seo'); ?></p>
+            <?php else : ?>
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e('Old path', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('New URL', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Type', 'icap-seo'); ?></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($redirects as $redirect_row) : ?>
+                            <?php
+                            if (!is_array($redirect_row)) {
+                                continue;
+                            }
+                            $redirect_id_value = (string) ($redirect_row['id'] ?? '');
+                            $redirect_source_value = (string) ($redirect_row['source'] ?? '');
+                            $redirect_target_value = (string) ($redirect_row['target'] ?? '');
+                            $redirect_type_value = (string) ($redirect_row['type'] ?? '301');
+                            ?>
+                            <tr>
+                                <td><code><?php echo esc_html($redirect_source_value); ?></code></td>
+                                <td><code><?php echo esc_html($redirect_target_value); ?></code></td>
+                                <td><?php echo esc_html($redirect_type_value); ?></td>
+                                <td>
+                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
+                                        <input type="hidden" name="action" value="icap_seo_delete_redirect">
+                                        <input type="hidden" name="redirect_id" value="<?php echo esc_attr($redirect_id_value); ?>">
+                                        <?php wp_nonce_field('icap_seo_delete_redirect'); ?>
+                                        <button type="submit" class="button button-link-delete"><?php esc_html_e('Delete', 'icap-seo'); ?></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
         <?php elseif ($active_tab === 'settings') : ?>
             <h2><?php esc_html_e('Settings', 'icap-seo'); ?></h2>
             <h3><?php esc_html_e('Connection', 'icap-seo'); ?></h3>
@@ -2072,6 +2156,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <li><?php esc_html_e('Image optimization — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Internal & external links — discoverability and broken-link detection', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                 </ul>
+                <p><?php esc_html_e('Also included, free, outside the 31-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager, and automatic search-engine indexing pings.', 'icap-seo'); ?></p>
             </div>
 
             <?php if ($overview_is_premium) : ?>

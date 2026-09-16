@@ -29,3 +29,5 @@ if ($site_id !== '') {
 }
 
 delete_option('icap_seo_settings');
+delete_option('icap_seo_indexnow_key');
+delete_option('icap_seo_redirects');
