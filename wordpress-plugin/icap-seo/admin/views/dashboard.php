@@ -174,6 +174,7 @@ $notice_map = [
     'redirect_deleted' => ['type' => 'updated', 'message' => __('Redirect deleted.', 'icap-seo')],
     'redirect_invalid' => ['type' => 'error', 'message' => __('Redirect not added: both a source path and a destination URL are required, and the source cannot be the site root.', 'icap-seo')],
     'redirect_duplicate' => ['type' => 'error', 'message' => __('Redirect not added: a redirect for that source path already exists.', 'icap-seo')],
+    '404_dismissed' => ['type' => 'updated', 'message' => __('Dismissed from the 404 log.', 'icap-seo')],
 ];
 
 if (!isset($latest_content_scores_meta) || !is_array($latest_content_scores_meta)) {
@@ -1641,7 +1642,8 @@ if ($notice_code === 'remediation_apply_noop') {
                         <tr>
                             <th scope="row"><label for="icap-seo-redirect-source"><?php esc_html_e('Old path', 'icap-seo'); ?></label></th>
                             <td>
-                                <input id="icap-seo-redirect-source" name="redirect_source" type="text" class="regular-text" placeholder="/old-page/">
+                                <?php $redirect_source_prefill = isset($_GET['prefill_source']) ? sanitize_text_field((string) wp_unslash($_GET['prefill_source'])) : ''; ?>
+                                <input id="icap-seo-redirect-source" name="redirect_source" type="text" class="regular-text" placeholder="/old-page/" value="<?php echo esc_attr($redirect_source_prefill); ?>">
                                 <p class="description"><?php esc_html_e('The path on this site to redirect from, e.g. /old-page/.', 'icap-seo'); ?></p>
                             </td>
                         </tr>
@@ -1701,6 +1703,60 @@ if ($notice_code === 'remediation_apply_noop') {
                                         <input type="hidden" name="redirect_id" value="<?php echo esc_attr($redirect_id_value); ?>">
                                         <?php wp_nonce_field('icap_seo_delete_redirect'); ?>
                                         <button type="submit" class="button button-link-delete"><?php esc_html_e('Delete', 'icap-seo'); ?></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+
+            <h3><?php esc_html_e('Recently seen 404s', 'icap-seo'); ?></h3>
+            <p class="description"><?php esc_html_e('Pages visitors and search engines hit that don\'t exist on your site. Fix the ones worth fixing by turning them into a redirect above.', 'icap-seo'); ?></p>
+            <?php if (empty($log_404)) : ?>
+                <p class="description"><?php esc_html_e('No 404s logged yet.', 'icap-seo'); ?></p>
+            <?php else : ?>
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e('Path', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Hits', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Last seen', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('Referrer', 'icap-seo'); ?></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($log_404 as $log_row) : ?>
+                            <?php
+                            if (!is_array($log_row)) {
+                                continue;
+                            }
+                            $log_path_value = (string) ($log_row['path'] ?? '');
+                            $log_hits_value = (int) ($log_row['hits'] ?? 0);
+                            $log_last_seen_value = (string) ($log_row['last_seen'] ?? '');
+                            $log_referrer_value = (string) ($log_row['referrer'] ?? '');
+                            $create_redirect_url = add_query_arg(
+                                [
+                                    'page' => 'icap-seo',
+                                    'tab' => 'redirects',
+                                    'prefill_source' => $log_path_value,
+                                ],
+                                admin_url('admin.php')
+                            );
+                            ?>
+                            <tr>
+                                <td><code><?php echo esc_html($log_path_value); ?></code></td>
+                                <td><?php echo esc_html((string) $log_hits_value); ?></td>
+                                <td><?php echo esc_html($log_last_seen_value); ?></td>
+                                <td><?php echo $log_referrer_value !== '' ? esc_html($log_referrer_value) : '&mdash;'; ?></td>
+                                <td>
+                                    <a href="<?php echo esc_url($create_redirect_url); ?>#icap-seo-redirect-source" class="button button-small"><?php esc_html_e('Create redirect', 'icap-seo'); ?></a>
+                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
+                                        <input type="hidden" name="action" value="icap_seo_dismiss_404">
+                                        <input type="hidden" name="404_path" value="<?php echo esc_attr($log_path_value); ?>">
+                                        <?php wp_nonce_field('icap_seo_dismiss_404'); ?>
+                                        <button type="submit" class="button button-small button-link-delete"><?php esc_html_e('Dismiss', 'icap-seo'); ?></button>
                                     </form>
                                 </td>
                             </tr>
@@ -2156,7 +2212,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <li><?php esc_html_e('Image optimization — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Internal & external links — discoverability and broken-link detection', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                 </ul>
-                <p><?php esc_html_e('Also included, free, outside the 31-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager, and automatic search-engine indexing pings.', 'icap-seo'); ?></p>
+                <p><?php esc_html_e('Also included, free, outside the 31-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, automatic search-engine indexing pings, and an llms.txt file for AI assistants.', 'icap-seo'); ?></p>
             </div>
 
             <?php if ($overview_is_premium) : ?>
