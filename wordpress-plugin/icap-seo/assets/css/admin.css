@@ -38,11 +38,62 @@
     text-decoration: underline;
 }
 
+.nav-tab-wrapper .nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.icap-seo-tab-icon {
+    display: inline-flex;
+    color: #787c82;
+}
+
+.nav-tab-wrapper .nav-tab-active .icap-seo-tab-icon,
+.nav-tab-wrapper .nav-tab:hover .icap-seo-tab-icon {
+    color: #2271b1;
+}
+
+.icap-seo-tab-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.icap-seo-heading-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #f0f6fc;
+    color: #2271b1;
+}
+
+.icap-seo-heading-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
 .icap-seo-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 12px;
     margin-top: 12px;
+}
+
+@media (max-width: 960px) {
+    .icap-seo-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .icap-seo-cards {
+        grid-template-columns: 1fr;
+    }
 }
 
 .icap-seo-card {
