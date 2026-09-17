@@ -20,6 +20,11 @@ Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
   itself.
 - **A Setup Wizard and dashboard** for connection setup, site health scoring, and a full recommendation
   catalog per page.
+- **Social sharing previews, a redirect manager with a 404 log, automatic search-engine indexing pings, an
+  llms.txt file, and Local SEO** — always free, no registration required: Open Graph and X Card tags for link
+  previews, a simple old-URL-to-new-URL redirect tool that also tracks broken links visitors hit, IndexNow
+  pings to Bing/Yandex on publish/update/delete, a generated `/llms.txt` for AI assistants, and LocalBusiness
+  structured data for businesses with a physical location.
 
 See [`docs/seo-checks-catalog.md`](docs/seo-checks-catalog.md) for the full list of checks and how each one
 gets fixed.
@@ -43,7 +48,8 @@ activation and troubleshooting.
 
 ## Free vs. Premium
 
-- **Free**: baseline on-page audit (title tags, meta descriptions, headings, content depth).
+- **Free**: baseline on-page audit (title tags, meta descriptions, headings, content depth), plus social
+  sharing previews, redirects with a 404 log, IndexNow pings, llms.txt, and Local SEO.
 - **Premium**: the full 31-check catalog — technical crawlability, security headers, content quality and
   readability, structured data, image optimization, and link health.
 

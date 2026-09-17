@@ -20,10 +20,13 @@ active, registered site. For step-by-step technical instructions, see [Getting s
 
 ## What works before you register
 
-Activating the plugin without registering gives you a limited, local-only preview:
+Activating the plugin without registering gives you a limited, local-only preview, plus a set of always-free
+tools that never require registration at all:
 
 - Basic on-page output (meta description, canonical URL, JSON-LD schema) generated from your existing content.
 - Placeholder content scores in **Content Scores**, so you can see the UI before connecting a real account.
+- Social sharing previews, the redirect manager and 404 log, automatic IndexNow pings, `/llms.txt`, and Local
+  SEO — fully functional with no account, no registration, and no cloud connection required.
 
 ## What requires registration
 

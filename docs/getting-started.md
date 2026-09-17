@@ -62,6 +62,11 @@ premium subscriptions run the full 31-check catalog. Scan status updates in plac
 - **Overview** shows your site-wide score, scan summary, and what's included in your plan.
 - **Content Scores** shows a per-page checklist — what's passing, what needs attention, and one-click fixes.
 
+Outside of scanning, a few more tabs work immediately and don't require registration: **Redirects** (set up
+redirects and see a log of 404s visitors hit) and **Local SEO** (enter your business info once to output
+LocalBusiness structured data site-wide). Social sharing previews and `/llms.txt` are on automatically, no
+setup needed.
+
 ## Activating premium
 
 From **iCap SEO → Settings**, click **Start Billing Checkout** to subscribe. Once active, **Check Billing
