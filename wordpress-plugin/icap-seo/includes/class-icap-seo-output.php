@@ -153,7 +153,12 @@ if (!class_exists('ICap_SEO_Output')) {
             echo '<link rel="canonical" href="' . esc_url($canonical_url) . "\" />\n";
         }
 
-        private function get_effective_canonical_url(WP_Post $post): string
+        /**
+         * Public: also consulted by ICap_SEO_Editor_Panel for the in-editor
+         * SERP/social preview, which needs the same resolved URL used in
+         * wp_head output so the two never disagree.
+         */
+        public function get_effective_canonical_url(WP_Post $post): string
         {
             $canonical_url = get_post_meta((int) $post->ID, '_icap_seo_canonical_url', true);
             if (!is_string($canonical_url) || trim($canonical_url) === '') {

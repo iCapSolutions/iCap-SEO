@@ -6,23 +6,27 @@ if (!defined('ABSPATH')) {
 
 require_once ICAP_SEO_PLUGIN_DIR . 'includes/class-icap-seo-service-client.php';
 require_once ICAP_SEO_PLUGIN_DIR . 'includes/class-icap-seo-output.php';
+require_once ICAP_SEO_PLUGIN_DIR . 'includes/class-icap-seo-editor-panel.php';
 require_once ICAP_SEO_PLUGIN_DIR . 'admin/class-icap-seo-admin.php';
 
 class ICap_SEO_Plugin
 {
     private ICap_SEO_Admin $admin;
     private ICap_SEO_Output $output;
+    private ICap_SEO_Editor_Panel $editor_panel;
 
     public function __construct()
     {
         $this->admin = new ICap_SEO_Admin(new ICap_SEO_Service_Client());
         $this->output = new ICap_SEO_Output();
+        $this->editor_panel = new ICap_SEO_Editor_Panel($this->output);
     }
     public function run(): void
     {
         add_action('admin_menu', [$this, 'register_admin']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
         $this->output->register();
+        $this->editor_panel->register();
         add_action('template_redirect', [$this, 'maybe_apply_redirect'], 1);
         add_action('template_redirect', [$this, 'serve_indexnow_key_file'], 1);
         add_action('template_redirect', [$this, 'serve_llms_txt'], 1);
