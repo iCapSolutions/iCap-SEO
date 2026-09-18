@@ -81,6 +81,17 @@ $tabs = [
     'settings' => __('Settings', 'icap-seo'),
 ];
 
+// Small line icons matching the Overview cards' visual style, shown next to
+// each tab label so the tab bar reads at a glance instead of as plain text.
+$tab_icons = [
+    'overview' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>',
+    'setup-wizard' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
+    'content-scores' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1Z"/><path d="M8 5H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/><path d="m9 12 2 2 4-4"/></svg>',
+    'redirects' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a4 4 0 0 1 4 4v1"/><path d="m15 4 4 4-4 4"/><path d="M20 17H9a4 4 0 0 1-4-4v-1"/><path d="m9 20-4-4 4-4"/></svg>',
+    'local-seo' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+    'settings' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+];
+
 $notice_map = [
     'settings_saved' => ['type' => 'updated', 'message' => __('Connection settings saved.', 'icap-seo')],
     'register_success' => ['type' => 'updated', 'message' => __('Site registration request succeeded.', 'icap-seo')],
@@ -444,6 +455,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $active_class = $active_tab === $tab_key ? ' nav-tab-active' : '';
             ?>
             <a href="<?php echo esc_url($tab_url); ?>" class="nav-tab<?php echo esc_attr($active_class); ?>">
+                <span class="icap-seo-tab-icon" aria-hidden="true"><?php echo $tab_icons[$tab_key] ?? ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup above, not user input ?></span>
                 <?php echo esc_html($label); ?>
             </a>
         <?php endforeach; ?>
@@ -452,7 +464,7 @@ if ($notice_code === 'remediation_apply_noop') {
     <section class="icap-seo-content">
         <?php if ($active_tab === 'setup-wizard') : ?>
             <?php $is_connected = $connection_settings['site_id'] !== '' && $connection_settings['site_token'] !== ''; ?>
-            <h2><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['setup-wizard']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
             <p class="description">
                 <?php esc_html_e('iCap SEO connects this site to iCapSolutions\' cloud scanning service. Running a scan sends the scanned page\'s public content to that service to generate scores and suggested fixes; nothing is published or changed on your site without your explicit approval.', 'icap-seo'); ?>
             </p>
@@ -523,7 +535,7 @@ if ($notice_code === 'remediation_apply_noop') {
             </p>
         <?php elseif ($active_tab === 'content-scores') : ?>
             <?php if ($selected_content_key === '') : ?>
-            <h2><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['content-scores']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
             <?php if ($latest_scores_scan_id !== '') : ?>
                 <p class="icap-seo-meta-line">
                     <?php esc_html_e('Latest scan:', 'icap-seo'); ?>
@@ -1633,7 +1645,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'redirects') : ?>
-            <h2><?php esc_html_e('Redirects', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['redirects']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Redirects', 'icap-seo'); ?></h2>
             <p class="description"><?php esc_html_e('Send visitors and search engines from an old URL on this site to a new one. Useful after moving or renaming a page so you don\'t lose traffic or backlinks to a broken link.', 'icap-seo'); ?></p>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-add-redirect-form">
@@ -1767,7 +1779,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 </table>
             <?php endif; ?>
         <?php elseif ($active_tab === 'local-seo') : ?>
-            <h2><?php esc_html_e('Local SEO', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['local-seo']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Local SEO', 'icap-seo'); ?></h2>
             <p class="description"><?php esc_html_e('For businesses with a physical location or local service area. Fill this in to add LocalBusiness structured data to every page, so Google can build a Maps/Knowledge Panel listing from it. Leave it blank if this doesn\'t apply to your site - nothing is output until a business name and address are set.', 'icap-seo'); ?></p>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-local-business-form">
@@ -1852,7 +1864,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 </p>
             </form>
         <?php elseif ($active_tab === 'settings') : ?>
-            <h2><?php esc_html_e('Settings', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['settings']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Settings', 'icap-seo'); ?></h2>
             <h3><?php esc_html_e('Connection', 'icap-seo'); ?></h3>
             <p class="description"><?php esc_html_e('API credentials used to register this site and run scans. Running a scan sends the scanned page\'s public content to iCapSolutions\' cloud service to generate scores and suggested fixes.', 'icap-seo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
@@ -2088,7 +2100,7 @@ if ($notice_code === 'remediation_apply_noop') {
 
             $overview_scored_items_count = max(count($content_scores), $latest_scores_item_count);
             ?>
-            <h2><?php esc_html_e('Overview', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['overview']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Overview', 'icap-seo'); ?></h2>
 
             <?php if (isset($google_connection_status['status']) && $google_connection_status['status'] === 'revoked') : ?>
                 <?php
@@ -2117,50 +2129,6 @@ if ($notice_code === 'remediation_apply_noop') {
                         <h3><?php esc_html_e('Connection Status', 'icap-seo'); ?></h3>
                         <p class="icap-seo-card-value"><?php echo esc_html($overview_is_connected ? __('Connected', 'icap-seo') : __('Not Connected', 'icap-seo')); ?></p>
                     </div>
-                </div>
-                <div class="icap-seo-card icap-seo-card--icon">
-                    <div class="icap-seo-card-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>
-                    </div>
-                    <div class="icap-seo-card-text">
-                        <h3><?php esc_html_e('Last Scan', 'icap-seo'); ?></h3>
-                        <p class="icap-seo-card-value"><?php echo esc_html($score_snapshot['last_scan'] ?? __('Not available', 'icap-seo')); ?></p>
-                        <?php if ($overview_latest_scan_id_display !== '') : ?>
-                            <p class="icap-seo-card-subtext"><?php esc_html_e('ID:', 'icap-seo'); ?> <span class="icap-seo-card-subtext-value"><?php echo esc_html($overview_latest_scan_id_display); ?></span></p>
-                        <?php endif; ?>
-                        <?php if ($overview_scan_tier_value !== '') : ?>
-                            <p class="icap-seo-card-subtext"><?php esc_html_e('Tier:', 'icap-seo'); ?> <span class="icap-seo-card-subtext-value"><?php echo esc_html($overview_scan_tier_value); ?></span></p>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <div class="icap-seo-card icap-seo-card--meter">
-                    <h3><?php esc_html_e('Overall SEO Score', 'icap-seo'); ?></h3>
-                    <div class="icap-seo-meter" style="background: <?php echo esc_attr($overview_score_gradient); ?>;">
-                        <div class="icap-seo-meter-inner">
-                            <span class="icap-seo-meter-value" style="color: <?php echo esc_attr($overview_score_color); ?>;"><?php echo esc_html($overview_score_display); ?></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="icap-seo-card icap-seo-card--icon">
-                    <div class="icap-seo-card-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5 12 3l8 3.5-8 3.5-8-3.5Z"/><path d="M4 12l8 3.5 8-3.5M4 17.5l8 3.5 8-3.5"/></svg>
-                    </div>
-                    <div class="icap-seo-card-text">
-                        <h3><?php esc_html_e('Scored Content Items', 'icap-seo'); ?></h3>
-                        <p class="icap-seo-card-value"><?php echo esc_html((string) $overview_scored_items_count); ?></p>
-                    </div>
-                </div>
-                <div class="icap-seo-card icap-seo-card--meter">
-                    <h3><?php esc_html_e('AI Credits Remaining', 'icap-seo'); ?></h3>
-                    <?php if ($overview_is_premium) : ?>
-                        <div class="icap-seo-meter" style="background: conic-gradient(<?php echo esc_attr($overview_ai_credit_color); ?> 0% <?php echo esc_attr((string) $overview_ai_credit_fill); ?>%, #e5e5e5 <?php echo esc_attr((string) $overview_ai_credit_fill); ?>% 100%);">
-                            <div class="icap-seo-meter-inner">
-                                <span class="icap-seo-meter-value"><?php echo esc_html((string) $overview_ai_credits_remaining); ?></span>
-                            </div>
-                        </div>
-                    <?php else : ?>
-                        <p class="icap-seo-card-value icap-seo-card-value--muted"><?php esc_html_e('Requires Premium', 'icap-seo'); ?></p>
-                    <?php endif; ?>
                 </div>
                 <div class="icap-seo-card icap-seo-card--icon">
                     <div class="icap-seo-card-icon" aria-hidden="true">
@@ -2286,6 +2254,50 @@ if ($notice_code === 'remediation_apply_noop') {
                             </p>
                         <?php endif; ?>
                     </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--icon">
+                    <div class="icap-seo-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>
+                    </div>
+                    <div class="icap-seo-card-text">
+                        <h3><?php esc_html_e('Last Scan', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html($score_snapshot['last_scan'] ?? __('Not available', 'icap-seo')); ?></p>
+                        <?php if ($overview_latest_scan_id_display !== '') : ?>
+                            <p class="icap-seo-card-subtext"><?php esc_html_e('ID:', 'icap-seo'); ?> <span class="icap-seo-card-subtext-value"><?php echo esc_html($overview_latest_scan_id_display); ?></span></p>
+                        <?php endif; ?>
+                        <?php if ($overview_scan_tier_value !== '') : ?>
+                            <p class="icap-seo-card-subtext"><?php esc_html_e('Tier:', 'icap-seo'); ?> <span class="icap-seo-card-subtext-value"><?php echo esc_html($overview_scan_tier_value); ?></span></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--icon">
+                    <div class="icap-seo-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5 12 3l8 3.5-8 3.5-8-3.5Z"/><path d="M4 12l8 3.5 8-3.5M4 17.5l8 3.5 8-3.5"/></svg>
+                    </div>
+                    <div class="icap-seo-card-text">
+                        <h3><?php esc_html_e('Scored Content Items', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html((string) $overview_scored_items_count); ?></p>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--meter">
+                    <h3><?php esc_html_e('Overall SEO Score', 'icap-seo'); ?></h3>
+                    <div class="icap-seo-meter" style="background: <?php echo esc_attr($overview_score_gradient); ?>;">
+                        <div class="icap-seo-meter-inner">
+                            <span class="icap-seo-meter-value" style="color: <?php echo esc_attr($overview_score_color); ?>;"><?php echo esc_html($overview_score_display); ?></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--meter">
+                    <h3><?php esc_html_e('AI Credits Remaining', 'icap-seo'); ?></h3>
+                    <?php if ($overview_is_premium) : ?>
+                        <div class="icap-seo-meter" style="background: conic-gradient(<?php echo esc_attr($overview_ai_credit_color); ?> 0% <?php echo esc_attr((string) $overview_ai_credit_fill); ?>%, #e5e5e5 <?php echo esc_attr((string) $overview_ai_credit_fill); ?>% 100%);">
+                            <div class="icap-seo-meter-inner">
+                                <span class="icap-seo-meter-value"><?php echo esc_html((string) $overview_ai_credits_remaining); ?></span>
+                            </div>
+                        </div>
+                    <?php else : ?>
+                        <p class="icap-seo-card-value icap-seo-card-value--muted"><?php esc_html_e('Requires Premium', 'icap-seo'); ?></p>
+                    <?php endif; ?>
                 </div>
             </div>
 
