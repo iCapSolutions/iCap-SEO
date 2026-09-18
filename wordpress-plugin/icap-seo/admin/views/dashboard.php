@@ -578,6 +578,81 @@ if ($notice_code === 'remediation_apply_noop') {
                 ));
             };
             ?>
+            <?php if (!empty($content_scores_rollup) && ($content_scores_rollup['total_scored'] ?? 0) > 0) :
+                $rollup = $content_scores_rollup;
+                $rollup_total_scored = $rollup['total_scored'];
+                $rollup_band_colors = [
+                    'good' => '#1e7f4f',
+                    'warn' => '#9a5b0a',
+                    'poor' => '#b3261e',
+                ];
+                $rollup_band_labels = [
+                    'good' => __('Good (80-100)', 'icap-seo'),
+                    'warn' => __('Needs attention (50-79)', 'icap-seo'),
+                    'poor' => __('Poor (below 50)', 'icap-seo'),
+                ];
+                $rollup_gradient_segments = [];
+                $rollup_cursor = 0.0;
+                foreach (['good', 'warn', 'poor'] as $rollup_band_key) {
+                    $rollup_band_count = $rollup['bands'][$rollup_band_key] ?? 0;
+                    if ($rollup_band_count <= 0) {
+                        continue;
+                    }
+                    $rollup_band_percent = ($rollup_band_count / $rollup_total_scored) * 100;
+                    $rollup_gradient_segments[] = sprintf(
+                        '%s %s%% %s%%',
+                        $rollup_band_colors[$rollup_band_key],
+                        round($rollup_cursor, 2),
+                        round($rollup_cursor + $rollup_band_percent, 2)
+                    );
+                    $rollup_cursor += $rollup_band_percent;
+                }
+                $rollup_gradient = 'conic-gradient(' . implode(', ', $rollup_gradient_segments) . ')';
+                $rollup_not_scanned = $rollup['total_pages'] - $rollup_total_scored;
+                ?>
+                <div class="icap-seo-rollup">
+                    <div class="icap-seo-card icap-seo-card--meter icap-seo-rollup-donut">
+                        <h3><?php esc_html_e('Score distribution', 'icap-seo'); ?></h3>
+                        <div class="icap-seo-meter" style="background: <?php echo esc_attr($rollup_gradient); ?>;">
+                            <div class="icap-seo-meter-inner">
+                                <span class="icap-seo-meter-value"><?php echo esc_html((string) $rollup['average']); ?></span>
+                            </div>
+                        </div>
+                        <p class="icap-seo-card-subtext">
+                            <?php
+                            printf(
+                                /* translators: 1: average score (0-100), 2: median score (0-100) */
+                                esc_html__('Avg %1$d · Median %2$d', 'icap-seo'),
+                                (int) $rollup['average'],
+                                (int) $rollup['median']
+                            );
+                            ?>
+                        </p>
+                    </div>
+                    <ul class="icap-seo-rollup-legend">
+                        <?php foreach (['good', 'warn', 'poor'] as $rollup_band_key) :
+                            $rollup_band_count = $rollup['bands'][$rollup_band_key] ?? 0;
+                            ?>
+                            <li>
+                                <span class="icap-seo-rollup-swatch" style="background-color: <?php echo esc_attr($rollup_band_colors[$rollup_band_key]); ?>;" aria-hidden="true"></span>
+                                <span class="icap-seo-rollup-legend-label"><?php echo esc_html($rollup_band_labels[$rollup_band_key]); ?></span>
+                                <span class="icap-seo-rollup-legend-count"><?php echo esc_html((string) $rollup_band_count); ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                        <?php if ($rollup_not_scanned > 0) : ?>
+                            <li class="icap-seo-rollup-legend-muted">
+                                <?php
+                                printf(
+                                    /* translators: %d: number of pages not yet scanned */
+                                    esc_html(_n('%d page not yet scanned', '%d pages not yet scanned', $rollup_not_scanned, 'icap-seo')),
+                                    (int) $rollup_not_scanned
+                                );
+                                ?>
+                            </li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
             <div class="icap-seo-table-wrap">
                 <table class="widefat striped">
                     <thead>
