@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.94
+Stable tag: 0.1.95
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,9 @@ The in-plugin dashboard lists every check with its category and current status u
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.95 =
+* Added a "Headline quality" quick check to the iCap SEO editor panel (block editor sidebar and Classic Editor metabox): flags word-count balance, suggests a power word ("free", "best", "guide", etc.) or a specific number when the title is missing both.
 
 = 0.1.94 =
 * Added an iCap SEO widget to the WordPress Dashboard Home screen: overall SEO score, pages scanned, and a callout for any pages scoring below 50, with a link straight to Content Scores.
