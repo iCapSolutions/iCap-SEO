@@ -226,6 +226,7 @@ class ICap_SEO_Admin
             'source' => 'placeholder',
         ];
         $content_scores = [];
+        $content_scores_rollup = [];
         $content_scores_orderby = 'title';
         $content_scores_order = 'asc';
         $scan_status_data = [];
@@ -263,6 +264,10 @@ class ICap_SEO_Admin
                 $latest_content_scores_meta = $this->service_client->get_latest_content_scores_meta();
 
                 if ($active_tab === 'content-scores') {
+                    // Front-end-only aggregation over the same rows the table below
+                    // already renders - no separate API call.
+                    $content_scores_rollup = $this->build_content_scores_rollup($content_scores);
+
                     $content_scores_orderby = isset($_GET['orderby']) ? sanitize_key(wp_unslash($_GET['orderby'])) : 'title';
                     if (!in_array($content_scores_orderby, ['title', 'score', 'clicks', 'position', 'sessions', 'engagement'], true)) {
                         $content_scores_orderby = 'title';
@@ -569,6 +574,52 @@ class ICap_SEO_Admin
      *
      * @return array<int, array{id: string, severity: string, message: string, action_url: string, action_label: string}>
      */
+    // Site-wide score distribution for the Content Scores tab - a pure
+    // aggregation over rows already fetched by get_content_scores_overview(),
+    // no additional API call. Bands mirror the "Good"/"Needs attention"
+    // vocabulary already used on the Overview tab's Site Health card, plus a
+    // "Poor" band for scores below 50.
+    private function build_content_scores_rollup(array $content_scores): array
+    {
+        $scored_values = [];
+        foreach ($content_scores as $row) {
+            if (isset($row['icap_score_numeric']) && is_numeric($row['icap_score_numeric'])) {
+                $scored_values[] = max(0, min(100, (int) $row['icap_score_numeric']));
+            }
+        }
+
+        $total_scored = count($scored_values);
+        $bands = ['good' => 0, 'warn' => 0, 'poor' => 0];
+        foreach ($scored_values as $value) {
+            if ($value >= 80) {
+                $bands['good']++;
+            } elseif ($value >= 50) {
+                $bands['warn']++;
+            } else {
+                $bands['poor']++;
+            }
+        }
+
+        $average = null;
+        $median = null;
+        if ($total_scored > 0) {
+            $average = (int) round(array_sum($scored_values) / $total_scored);
+            sort($scored_values);
+            $mid = (int) floor($total_scored / 2);
+            $median = ($total_scored % 2 === 0)
+                ? (int) round(($scored_values[$mid - 1] + $scored_values[$mid]) / 2)
+                : $scored_values[$mid];
+        }
+
+        return [
+            'total_pages' => count($content_scores),
+            'total_scored' => $total_scored,
+            'average' => $average,
+            'median' => $median,
+            'bands' => $bands,
+        ];
+    }
+
     private function get_notifications(array $connection_settings, array $google_connection_status, array $log_404): array
     {
         $items = [];
