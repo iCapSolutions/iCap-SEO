@@ -2099,6 +2099,13 @@ if ($notice_code === 'remediation_apply_noop') {
             $overview_ai_credit_color = $overview_is_premium ? icap_seo_meter_color($overview_ai_credit_fill, 0, 100) : '#dcdcde';
 
             $overview_scored_items_count = max(count($content_scores), $latest_scores_item_count);
+
+            // Site-wide environment/config checks - local get_option() reads, no backend
+            // scan or page fetch involved. Distinct from the per-page 31-check catalog,
+            // which the backend emits; these are checked entirely client-side.
+            $overview_permalink_structure_ok = (string) get_option('permalink_structure', '') !== '';
+            $overview_rss_shows_full_text = (int) get_option('rss_use_excerpt', 0) === 0;
+            $overview_site_health_ok = $overview_permalink_structure_ok && !$overview_rss_shows_full_text;
             ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['overview']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Overview', 'icap-seo'); ?></h2>
 
@@ -2128,6 +2135,43 @@ if ($notice_code === 'remediation_apply_noop') {
                     <div class="icap-seo-card-text">
                         <h3><?php esc_html_e('Connection Status', 'icap-seo'); ?></h3>
                         <p class="icap-seo-card-value"><?php echo esc_html($overview_is_connected ? __('Connected', 'icap-seo') : __('Not Connected', 'icap-seo')); ?></p>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--icon">
+                    <div class="icap-seo-card-icon icap-seo-status-icon icap-seo-status-icon--<?php echo $overview_site_health_ok ? 'connected' : 'disconnected'; ?>" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5 12 3l8 3.5-8 3.5-8-3.5Z"/><path d="M4 12l8 3.5 8-3.5M4 17.5l8 3.5 8-3.5"/></svg>
+                    </div>
+                    <div class="icap-seo-card-text">
+                        <h3><?php esc_html_e('Site Health', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value<?php echo $overview_site_health_ok ? '' : ' icap-seo-card-value--muted'; ?>"><?php echo esc_html($overview_site_health_ok ? __('Good', 'icap-seo') : __('Needs attention', 'icap-seo')); ?></p>
+                        <?php if (!$overview_permalink_structure_ok) : ?>
+                            <p class="icap-seo-card-subtext">
+                                <?php
+                                echo wp_kses(
+                                    sprintf(
+                                        /* translators: %s: link to WordPress's own Permalinks settings screen */
+                                        __('Plain permalinks (?p=123) hurt SEO — %s', 'icap-seo'),
+                                        '<a href="' . esc_url(admin_url('options-permalink.php')) . '">' . esc_html__('set a pretty permalink structure', 'icap-seo') . '</a>'
+                                    ),
+                                    ['a' => ['href' => []]]
+                                );
+                                ?>
+                            </p>
+                        <?php endif; ?>
+                        <?php if ($overview_rss_shows_full_text) : ?>
+                            <p class="icap-seo-card-subtext">
+                                <?php
+                                echo wp_kses(
+                                    sprintf(
+                                        /* translators: %s: link to WordPress's own Reading settings screen */
+                                        __('Your RSS feed publishes full post content, which content-scraping sites can republish — %s', 'icap-seo'),
+                                        '<a href="' . esc_url(admin_url('options-reading.php')) . '">' . esc_html__('switch feeds to a summary', 'icap-seo') . '</a>'
+                                    ),
+                                    ['a' => ['href' => []]]
+                                );
+                                ?>
+                            </p>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="icap-seo-card icap-seo-card--icon">
