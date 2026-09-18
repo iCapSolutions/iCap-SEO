@@ -76,6 +76,7 @@ $tabs = [
     'overview' => __('Overview', 'icap-seo'),
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
     'content-scores' => __('Content Scores', 'icap-seo'),
+    'notifications' => __('Notifications', 'icap-seo'),
     'redirects' => __('Redirects', 'icap-seo'),
     'local-seo' => __('Local SEO', 'icap-seo'),
     'settings' => __('Settings', 'icap-seo'),
@@ -87,6 +88,7 @@ $tab_icons = [
     'overview' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>',
     'setup-wizard' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
     'content-scores' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1Z"/><path d="M8 5H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/><path d="m9 12 2 2 4-4"/></svg>',
+    'notifications' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
     'redirects' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a4 4 0 0 1 4 4v1"/><path d="m15 4 4 4-4 4"/><path d="M20 17H9a4 4 0 0 1-4-4v-1"/><path d="m9 20-4-4 4-4"/></svg>',
     'local-seo' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
     'settings' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
@@ -187,6 +189,7 @@ $notice_map = [
     'redirect_invalid' => ['type' => 'error', 'message' => __('Redirect not added: both a source path and a destination URL are required, and the source cannot be the site root.', 'icap-seo')],
     'redirect_duplicate' => ['type' => 'error', 'message' => __('Redirect not added: a redirect for that source path already exists.', 'icap-seo')],
     '404_dismissed' => ['type' => 'updated', 'message' => __('Dismissed from the 404 log.', 'icap-seo')],
+    'notification_dismissed' => ['type' => 'updated', 'message' => __('Notification dismissed.', 'icap-seo')],
     'local_business_saved' => ['type' => 'updated', 'message' => __('Business info saved.', 'icap-seo')],
 ];
 
@@ -1643,6 +1646,31 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; ?>
                     <?php endif; // content_detail_tab === 'history' ?>
                 <?php endif; ?>
+            <?php endif; ?>
+        <?php elseif ($active_tab === 'notifications') : ?>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['notifications']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Notifications', 'icap-seo'); ?></h2>
+            <p class="description"><?php esc_html_e('Things worth your attention, pulled from across this plugin into one place - Google connection issues, billing problems, and unresolved broken links.', 'icap-seo'); ?></p>
+
+            <?php if (empty($notifications)) : ?>
+                <p class="description"><?php esc_html_e('Nothing needs your attention right now.', 'icap-seo'); ?></p>
+            <?php else : ?>
+                <ul class="icap-seo-notification-list">
+                    <?php foreach ($notifications as $notification) : ?>
+                        <li class="icap-seo-notification icap-seo-notification-<?php echo esc_attr($notification['severity']); ?>">
+                            <p class="icap-seo-notification-message"><?php echo esc_html($notification['message']); ?></p>
+                            <p class="icap-seo-notification-actions">
+                                <a href="<?php echo esc_url($notification['action_url']); ?>"><?php echo esc_html($notification['action_label']); ?></a>
+                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-notification-dismiss-form">
+                                    <input type="hidden" name="action" value="icap_seo_dismiss_notification">
+                                    <input type="hidden" name="notification_id" value="<?php echo esc_attr($notification['id']); ?>">
+                                    <input type="hidden" name="notification_fingerprint" value="<?php echo esc_attr($notification['fingerprint']); ?>">
+                                    <?php wp_nonce_field('icap_seo_dismiss_notification'); ?>
+                                    <button type="submit" class="button-link"><?php esc_html_e('Dismiss', 'icap-seo'); ?></button>
+                                </form>
+                            </p>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
             <?php endif; ?>
         <?php elseif ($active_tab === 'redirects') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['redirects']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Redirects', 'icap-seo'); ?></h2>

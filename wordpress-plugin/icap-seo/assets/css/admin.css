@@ -372,3 +372,41 @@
     border-bottom-color: #2271b1;
     font-weight: 600;
 }
+
+.icap-seo-notification-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.icap-seo-notification {
+    background: #ffffff;
+    border: 1px solid #dcdcde;
+    border-left-width: 4px;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+}
+
+.icap-seo-notification-warning {
+    border-left-color: #dba617;
+}
+
+.icap-seo-notification-error {
+    border-left-color: #d63638;
+}
+
+.icap-seo-notification-message {
+    margin: 0 0 6px;
+}
+
+.icap-seo-notification-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+}
+
+.icap-seo-notification-dismiss-form {
+    margin: 0;
+}
