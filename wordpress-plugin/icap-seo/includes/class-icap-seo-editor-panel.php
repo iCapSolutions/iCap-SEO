@@ -21,6 +21,17 @@ if (!defined('ABSPATH')) {
 if (!class_exists('ICap_SEO_Editor_Panel')) {
     class ICap_SEO_Editor_Panel
     {
+        /**
+         * Modest, hand-authored list spanning urgency/exclusivity/value - a
+         * heuristic nudge for the headline-quality quick check, not a scored
+         * ranking. Deliberately short; not meant to be exhaustive.
+         */
+        private const POWER_WORDS = [
+            'free', 'new', 'proven', 'essential', 'ultimate', 'guide', 'how to',
+            'best', 'top', 'easy', 'simple', 'secret', 'exclusive', 'limited',
+            'now', 'today', 'instant', 'save', 'boost', 'complete',
+        ];
+
         private ICap_SEO_Output $output;
 
         public function __construct(ICap_SEO_Output $output)
@@ -348,7 +359,66 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
                 );
             }
 
+            $checks[] = $this->compute_headline_quality_check($title);
+
             return $checks;
+        }
+
+        /**
+         * Headline quality, distinct from the plain length check above: word
+         * count balance, a hand-authored power-word list, and whether a number
+         * is present (numbered-list headlines are a well-known engagement
+         * pattern). Deliberately NOT sentiment analysis - that needs an LLM or
+         * a sentiment library, out of scope for a client-computable quick
+         * check. This is a heuristic nudge, not a scored ranking.
+         */
+        private function compute_headline_quality_check(string $title): array
+        {
+            if ($title === '') {
+                return $this->check('headline_quality', __('Headline quality', 'icap-seo'), 'pass', __('No title set yet.', 'icap-seo'));
+            }
+
+            $word_count = str_word_count($title);
+            $has_power_word = (bool) preg_match('/\b(' . implode('|', self::POWER_WORDS) . ')\b/i', $title);
+            $has_number = (bool) preg_match('/\d/', $title);
+
+            $notes = [];
+            if ($word_count < 4) {
+                $notes[] = __('quite short - consider a more descriptive headline', 'icap-seo');
+            } elseif ($word_count > 14) {
+                $notes[] = __('quite long - consider tightening it', 'icap-seo');
+            }
+            if (!$has_power_word) {
+                $notes[] = __('consider a word like "free", "best", "guide", or "essential" to draw interest', 'icap-seo');
+            }
+            if (!$has_number) {
+                $notes[] = __('consider adding a number or specific detail (e.g. "7 Ways to...")', 'icap-seo');
+            }
+
+            if (empty($notes)) {
+                return $this->check(
+                    'headline_quality',
+                    __('Headline quality', 'icap-seo'),
+                    'pass',
+                    sprintf(
+                        /* translators: %d: word count of the post title */
+                        __('%d words, includes a power word and a number.', 'icap-seo'),
+                        $word_count
+                    )
+                );
+            }
+
+            return $this->check(
+                'headline_quality',
+                __('Headline quality', 'icap-seo'),
+                'warn',
+                sprintf(
+                    /* translators: %d: word count, %s: comma-separated suggestions */
+                    __('%1$d words - %2$s.', 'icap-seo'),
+                    $word_count,
+                    implode('; ', $notes)
+                )
+            );
         }
 
         private function check(string $code, string $label, string $status, string $detail): array
