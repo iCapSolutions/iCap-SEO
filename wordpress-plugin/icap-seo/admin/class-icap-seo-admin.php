@@ -57,6 +57,99 @@ class ICap_SEO_Admin
         );
     }
 
+    // Surfaces setup/scan status on WordPress's own Dashboard Home
+    // (wp-admin/index.php), not just the plugin's own admin page - every
+    // competitor plugin with a free tier ships one, and it's real signal
+    // admins already look at daily, not just a logo. Same manage_options
+    // gate as the plugin's own menu, since dashboard widgets are otherwise
+    // visible to any user role that can see wp-admin/index.php.
+    public function register_dashboard_widget(): void
+    {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        wp_add_dashboard_widget(
+            'icap_seo_dashboard_widget',
+            __('iCap SEO', 'icap-seo'),
+            [$this, 'render_dashboard_widget']
+        );
+    }
+
+    public function render_dashboard_widget(): void
+    {
+        $band_colors = [
+            'good' => '#1e7f4f',
+            'warn' => '#9a5b0a',
+            'poor' => '#b3261e',
+        ];
+
+        try {
+            $configured = $this->service_client->is_api_connection_configured_public();
+            $score_snapshot = $this->service_client->get_site_score_snapshot($configured);
+            $content_scores = $configured ? $this->service_client->get_content_scores_overview($configured) : [];
+            $rollup = $this->build_content_scores_rollup($content_scores);
+        } catch (Throwable $e) {
+            $configured = false;
+            $score_snapshot = ['score' => null, 'status' => 'Degraded mode'];
+            $rollup = ['total_pages' => 0, 'total_scored' => 0, 'average' => null, 'bands' => ['good' => 0, 'warn' => 0, 'poor' => 0]];
+        }
+
+        $settings_url = esc_url(add_query_arg(['page' => 'icap-seo'], admin_url('admin.php')));
+        $content_scores_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'content-scores'], admin_url('admin.php')));
+
+        echo '<div class="icap-seo-dashboard-widget">';
+
+        if (!$configured) {
+            echo '<p>' . esc_html__('iCap SEO isn\'t connected yet.', 'icap-seo') . '</p>';
+            echo '<p><a href="' . $settings_url . '" class="button button-primary">'
+                . esc_html__('Finish setup', 'icap-seo') . '</a></p>';
+            echo '</div>';
+            return;
+        }
+
+        $poor_count = (int) ($rollup['bands']['poor'] ?? 0);
+
+        echo '<p style="font-size:13px;">';
+        if ($score_snapshot['score'] !== null) {
+            printf(
+                /* translators: %s: overall SEO score, e.g. "79/100" */
+                esc_html__('Overall SEO score: %s', 'icap-seo') . '</p>',
+                '<strong>' . esc_html((string) $score_snapshot['score']) . '</strong>'
+            );
+        } else {
+            esc_html_e('Connected — awaiting first scan.', 'icap-seo');
+            echo '</p>';
+        }
+
+        if (($rollup['total_scored'] ?? 0) > 0) {
+            printf(
+                '<p style="font-size:13px;">%s</p>',
+                sprintf(
+                    /* translators: %d: number of scanned pages/posts */
+                    esc_html(_n('%d page scanned.', '%d pages scanned.', (int) $rollup['total_scored'], 'icap-seo')),
+                    (int) $rollup['total_scored']
+                )
+            );
+        }
+
+        if ($poor_count > 0) {
+            printf(
+                '<p style="font-size:13px;color:%s;font-weight:600;">%s</p>',
+                esc_attr($band_colors['poor']),
+                esc_html(sprintf(
+                    /* translators: %d: number of pages scoring below 50 */
+                    _n('%d page needs attention (score below 50).', '%d pages need attention (score below 50).', $poor_count, 'icap-seo'),
+                    $poor_count
+                ))
+            );
+        }
+
+        echo '<p style="margin-bottom:0;"><a href="' . $content_scores_url . '">'
+            . esc_html__('View Content Scores', 'icap-seo') . '</a></p>';
+        echo '</div>';
+    }
+
     public function register_admin_actions(): void
     {
         add_action('admin_post_icap_seo_save_settings', [$this, 'handle_save_settings']);

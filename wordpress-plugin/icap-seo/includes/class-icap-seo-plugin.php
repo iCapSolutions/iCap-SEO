@@ -25,6 +25,7 @@ class ICap_SEO_Plugin
     {
         add_action('admin_menu', [$this, 'register_admin']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+        add_action('wp_dashboard_setup', [$this->admin, 'register_dashboard_widget']);
         $this->output->register();
         $this->editor_panel->register();
         add_action('template_redirect', [$this, 'maybe_apply_redirect'], 1);
