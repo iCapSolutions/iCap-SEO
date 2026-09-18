@@ -83,6 +83,7 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_add_redirect', [$this, 'handle_add_redirect']);
         add_action('admin_post_icap_seo_delete_redirect', [$this, 'handle_delete_redirect']);
         add_action('admin_post_icap_seo_dismiss_404', [$this, 'handle_dismiss_404']);
+        add_action('admin_post_icap_seo_dismiss_notification', [$this, 'handle_dismiss_notification']);
         add_action('admin_post_icap_seo_save_local_business', [$this, 'handle_save_local_business']);
         add_action('add_meta_boxes', [$this, 'register_remediation_meta_boxes']);
         add_filter('allowed_redirect_hosts', [$this, 'add_allowed_redirect_hosts']);
@@ -244,10 +245,13 @@ class ICap_SEO_Admin
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
         $registration_challenge = [];
         $redirects = $active_tab === 'redirects' ? $this->get_redirects() : [];
-        $log_404 = $active_tab === 'redirects' ? $this->get_404_log() : [];
+        $log_404 = in_array($active_tab, ['redirects', 'notifications'], true) ? $this->get_404_log() : [];
         $local_business = $active_tab === 'local-seo' ? $this->get_local_business() : [];
         $local_business_days = self::LOCAL_BUSINESS_DAYS;
         $local_business_types = self::LOCAL_BUSINESS_TYPES;
+        $notifications = $active_tab === 'notifications'
+            ? $this->get_notifications($connection_settings, $google_connection_status, $log_404)
+            : [];
 
         try {
             if ($active_tab === 'overview') {
@@ -549,6 +553,97 @@ class ICap_SEO_Admin
         update_option('icap_seo_404_log', $log, false);
 
         $this->redirect_with_notice('404_dismissed', 'redirects');
+    }
+
+    /**
+     * Notification center: a single consolidated, dismissible list built
+     * entirely from data already loaded/cached elsewhere on every dashboard
+     * request ($connection_settings, $google_connection_status) plus the
+     * 404 log - deliberately no new live API calls here, this is a UI
+     * container around existing signals, not a new data source.
+     *
+     * Each notification's dismiss state is keyed by id => fingerprint, not
+     * just id, so a dismissed notification reappears if the underlying
+     * condition changes (e.g. the 404 count grows again after being
+     * dismissed at a lower count) instead of staying silently hidden.
+     *
+     * @return array<int, array{id: string, severity: string, message: string, action_url: string, action_label: string}>
+     */
+    private function get_notifications(array $connection_settings, array $google_connection_status, array $log_404): array
+    {
+        $items = [];
+
+        if (($google_connection_status['status'] ?? '') === 'revoked') {
+            $items[] = [
+                'id' => 'gsc_revoked',
+                'fingerprint' => '1',
+                'severity' => 'warning',
+                'message' => __('Your Google Search Console connection was revoked. Reconnect it to keep real indexing status updating.', 'icap-seo'),
+                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')),
+                'action_label' => __('Reconnect in Settings', 'icap-seo'),
+            ];
+        }
+
+        $billing_state = is_string($connection_settings['last_billing_state'] ?? '') ? $connection_settings['last_billing_state'] : '';
+        if ($billing_state === 'attention') {
+            $items[] = [
+                'id' => 'billing_attention',
+                'fingerprint' => '1',
+                'severity' => 'warning',
+                'message' => __('This site\'s billing needs attention (past due or in a grace period). Resolve it to avoid a scan interruption.', 'icap-seo'),
+                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')),
+                'action_label' => __('Review billing', 'icap-seo'),
+            ];
+        } elseif ($billing_state === 'blocked') {
+            $items[] = [
+                'id' => 'billing_blocked',
+                'fingerprint' => '1',
+                'severity' => 'error',
+                'message' => __('This site\'s subscription is blocked (canceled or suspended). Scans and content-score updates are paused until it\'s resolved.', 'icap-seo'),
+                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')),
+                'action_label' => __('Review billing', 'icap-seo'),
+            ];
+        }
+
+        $unresolved_404_count = count($log_404);
+        if ($unresolved_404_count > 0) {
+            $items[] = [
+                'id' => 'unresolved_404s',
+                'fingerprint' => (string) $unresolved_404_count,
+                'severity' => 'warning',
+                /* translators: %d: number of unresolved 404s */
+                'message' => sprintf(_n('%d unresolved 404 is being logged on this site.', '%d unresolved 404s are being logged on this site.', $unresolved_404_count, 'icap-seo'), $unresolved_404_count),
+                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'redirects'], admin_url('admin.php')),
+                'action_label' => __('View 404 log', 'icap-seo'),
+            ];
+        }
+
+        $dismissed = get_option('icap_seo_dismissed_notifications', []);
+        $dismissed = is_array($dismissed) ? $dismissed : [];
+
+        return array_values(array_filter(
+            $items,
+            static fn(array $item): bool => ($dismissed[$item['id']] ?? null) !== $item['fingerprint']
+        ));
+    }
+
+    public function handle_dismiss_notification(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_dismiss_notification');
+
+        $notification_id = isset($_POST['notification_id']) ? sanitize_key(wp_unslash($_POST['notification_id'])) : '';
+        $fingerprint = isset($_POST['notification_fingerprint']) ? sanitize_text_field((string) wp_unslash($_POST['notification_fingerprint'])) : '1';
+        if ($notification_id !== '') {
+            $dismissed = get_option('icap_seo_dismissed_notifications', []);
+            $dismissed = is_array($dismissed) ? $dismissed : [];
+            $dismissed[$notification_id] = $fingerprint;
+            update_option('icap_seo_dismissed_notifications', $dismissed, false);
+        }
+
+        $this->redirect_with_notice('notification_dismissed', 'notifications');
     }
 
     /**

@@ -33,3 +33,4 @@ delete_option('icap_seo_indexnow_key');
 delete_option('icap_seo_redirects');
 delete_option('icap_seo_404_log');
 delete_option('icap_seo_local_business');
+delete_option('icap_seo_dismissed_notifications');
