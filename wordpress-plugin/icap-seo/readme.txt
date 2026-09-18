@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.92
+Stable tag: 0.1.93
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,9 @@ The in-plugin dashboard lists every check with its category and current status u
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.93 =
+* Added a Classic Editor fallback for the "iCap SEO" panel (v0.1.92): the same search preview, social preview, and quick-check score now also appear as a metabox on posts and pages edited in the classic editor, not just the block editor.
 
 = 0.1.92 =
 * Added a Phase 1 "iCap SEO" panel to the block editor sidebar: a search-result (SERP) preview, a social share card preview, and a read-only quick-check score for the current page — all computed from the page's saved content, no new scan required to see them.

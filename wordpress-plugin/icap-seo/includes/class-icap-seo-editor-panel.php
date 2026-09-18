@@ -31,6 +31,150 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
         public function register(): void
         {
             add_action('enqueue_block_editor_assets', [$this, 'enqueue_assets']);
+            add_action('add_meta_boxes', [$this, 'register_meta_box'], 10, 2);
+        }
+
+        /**
+         * Classic Editor fallback: the block editor sidebar above is invisible on
+         * any post the block editor doesn't render for (Classic Editor plugin
+         * active site-wide or per-post - one of the most-installed plugins on
+         * WordPress.org, confirmed as a real gap via live testing on a site that
+         * runs it). Registers the same score badge / SERP preview / social
+         * preview as a classic meta box, but only for posts that will actually
+         * use the classic screen - `WP_Screen::is_block_editor()` is core's own
+         * resolution of Classic Editor's site/user/post-level overrides, so this
+         * defers to it rather than re-deriving that logic, and avoids ever
+         * showing the same panel twice for one post.
+         */
+        public function register_meta_box(string $post_type, WP_Post $post): void
+        {
+            if (!post_type_supports($post_type, 'title')) {
+                return;
+            }
+            if (!current_user_can('edit_post', $post->ID)) {
+                return;
+            }
+            $screen = get_current_screen();
+            if ($screen && method_exists($screen, 'is_block_editor') && $screen->is_block_editor()) {
+                return;
+            }
+
+            add_meta_box(
+                'icap-seo-quick-panel',
+                __('iCap SEO', 'icap-seo'),
+                [$this, 'render_meta_box'],
+                $post_type,
+                'side',
+                'high'
+            );
+        }
+
+        public function render_meta_box(WP_Post $post): void
+        {
+            if (!current_user_can('edit_post', $post->ID)) {
+                echo '<p>' . esc_html__('No permission to view this.', 'icap-seo') . '</p>';
+                return;
+            }
+
+            wp_enqueue_style(
+                'icap-seo-editor-panel',
+                ICAP_SEO_PLUGIN_URL . 'assets/css/editor-panel.css',
+                [],
+                ICAP_SEO_VERSION
+            );
+
+            $data = $this->build_panel_data($post);
+            $score = (int) $data['score'];
+            if ($score >= 80) {
+                $score_label = __('Good', 'icap-seo');
+                $score_color = '#1a7f37';
+            } elseif ($score >= 50) {
+                $score_label = __('Needs work', 'icap-seo');
+                $score_color = '#9a6700';
+            } else {
+                $score_label = __('Poor', 'icap-seo');
+                $score_color = '#cf222e';
+            }
+
+            echo '<div class="icap-seo-editor-panel icap-seo-editor-panel--metabox">';
+
+            echo '<div class="icap-seo-quick-score">';
+            echo '<div class="icap-seo-quick-score__circle" style="border-color:' . esc_attr($score_color) . ';color:' . esc_attr($score_color) . ';">' . esc_html((string) $score) . '</div>';
+            echo '<div class="icap-seo-quick-score__label"><strong>' . esc_html($score_label) . '</strong>';
+            echo '<div class="icap-seo-quick-score__hint">' . esc_html__('Quick check based on this page\'s saved content only. Run a full scan in iCap SEO for the authoritative score.', 'icap-seo') . '</div>';
+            echo '</div></div>';
+
+            echo '<p class="icap-seo-metabox-heading"><strong>' . esc_html__('Quick checks', 'icap-seo') . '</strong></p>';
+            foreach ($data['checks'] as $check) {
+                if ($check['status'] === 'pass') {
+                    $color = '#1a7f37';
+                    $symbol = '✓';
+                } elseif ($check['status'] === 'warn') {
+                    $color = '#9a6700';
+                    $symbol = '!';
+                } else {
+                    $color = '#cf222e';
+                    $symbol = '✕';
+                }
+                echo '<div class="icap-seo-quick-check icap-seo-quick-check--' . esc_attr($check['status']) . '">';
+                echo '<span class="icap-seo-quick-check__icon" style="color:' . esc_attr($color) . ';">' . esc_html($symbol) . '</span>';
+                echo '<span class="icap-seo-quick-check__body"><strong>' . esc_html($check['label']) . '</strong><div class="icap-seo-quick-check__detail">' . esc_html($check['detail']) . '</div></span>';
+                echo '</div>';
+            }
+
+            echo '<p class="icap-seo-metabox-heading"><strong>' . esc_html__('Search preview', 'icap-seo') . '</strong></p>';
+            echo '<div class="icap-seo-serp-preview">';
+            echo '<div class="icap-seo-serp-preview__url">' . esc_html($data['url']) . '</div>';
+            echo '<div class="icap-seo-serp-preview__title" id="icap-seo-metabox-serp-title">' . esc_html($data['title']) . '</div>';
+            echo '<div class="icap-seo-serp-preview__description">' . esc_html($data['description']) . '</div>';
+            echo '<p class="icap-seo-serp-preview__note" id="icap-seo-metabox-serp-note" hidden>' . esc_html__('Title may be truncated in search results at this pixel width.', 'icap-seo') . '</p>';
+            echo '</div>';
+
+            echo '<p class="icap-seo-metabox-heading"><strong>' . esc_html__('Social preview', 'icap-seo') . '</strong></p>';
+            echo '<div class="icap-seo-social-preview">';
+            if ($data['imageUrl'] !== '') {
+                echo '<img class="icap-seo-social-preview__image" src="' . esc_url($data['imageUrl']) . '" alt="" />';
+            } else {
+                echo '<div class="icap-seo-social-preview__image icap-seo-social-preview__image--empty"></div>';
+            }
+            echo '<div class="icap-seo-social-preview__body">';
+            echo '<div class="icap-seo-social-preview__site">' . esc_html(strtoupper((string) $data['siteName'])) . '</div>';
+            echo '<div class="icap-seo-social-preview__title">' . esc_html($data['title']) . '</div>';
+            if ($data['description'] !== '') {
+                echo '<div class="icap-seo-social-preview__description">' . esc_html($data['description']) . '</div>';
+            }
+            echo '</div></div>';
+
+            echo '</div>';
+
+            // Pixel-width overflow detection, mirroring assets/js/editor-panel.js's
+            // measurePixelWidth() against the rendered text itself, so the same
+            // measurement logic isn't duplicated in PHP against a second set of
+            // font-metric assumptions.
+            ?>
+            <script>
+            ( function () {
+                try {
+                    var titleEl = document.getElementById( 'icap-seo-metabox-serp-title' );
+                    var noteEl = document.getElementById( 'icap-seo-metabox-serp-note' );
+                    if ( ! titleEl || ! noteEl ) {
+                        return;
+                    }
+                    var canvas = document.createElement( 'canvas' );
+                    var ctx = canvas.getContext( '2d' );
+                    if ( ! ctx ) {
+                        return;
+                    }
+                    ctx.font = '400 20px Arial, sans-serif';
+                    var width = ctx.measureText( titleEl.textContent || '' ).width;
+                    if ( width > 600 ) {
+                        titleEl.classList.add( 'is-overflow' );
+                        noteEl.hidden = false;
+                    }
+                } catch ( err ) {}
+            } )();
+            </script>
+            <?php
         }
 
         public function enqueue_assets(): void

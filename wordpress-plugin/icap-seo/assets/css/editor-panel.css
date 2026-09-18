@@ -2,6 +2,19 @@
     padding: 8px 0 0;
 }
 
+.icap-seo-editor-panel--metabox .icap-seo-quick-score {
+    padding: 0 0 12px;
+    margin-bottom: 4px;
+}
+
+.icap-seo-metabox-heading {
+    margin: 14px 0 4px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #50575e;
+}
+
 .icap-seo-quick-score {
     display: flex;
     align-items: center;
