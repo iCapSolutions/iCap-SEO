@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.91
+Stable tag: 0.1.92
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,9 @@ The in-plugin dashboard lists every check with its category and current status u
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.92 =
+* Added a Phase 1 "iCap SEO" panel to the block editor sidebar: a search-result (SERP) preview, a social share card preview, and a read-only quick-check score for the current page — all computed from the page's saved content, no new scan required to see them.
 
 = 0.1.91 =
 * Added a score distribution donut chart to the top of the Content Scores tab, showing the average/median score and a Good/Needs attention/Poor breakdown across all scanned pages at a glance.
