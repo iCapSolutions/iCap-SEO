@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.88
+Stable tag: 0.1.89
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,9 @@ The in-plugin dashboard lists every check with its category and current status u
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.89 =
+* Added a Site Health card to the Overview tab: flags plain (non-SEO-friendly) permalinks and RSS feeds set to publish full post content, both linking directly to the relevant WordPress settings screen to fix.
 
 = 0.1.88 =
 * Reorganized the Overview tab's summary tiles into a clearer two-row layout and added small icons to the tab bar and each tab's heading for a more consistent, easier-to-scan admin UI.
