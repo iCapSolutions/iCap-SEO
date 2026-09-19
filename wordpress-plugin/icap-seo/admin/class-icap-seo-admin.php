@@ -24,7 +24,11 @@ class ICap_SEO_Admin
     private const CONTENT_DEPTH_ISSUE_CODES = ['thin_content', 'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement'];
     private const REMEDIATION_HISTORY_MAX_ENTRIES = 15;
     private const READABILITY_DRAFT_META_KEY = '_icap_seo_readability_draft';
-    private const READABILITY_ISSUE_CODES = ['readability_score_low'];
+    private const READABILITY_ISSUE_CODES = [
+        'readability_score_low',
+        'readability_long_sentences_high',
+        'readability_low_transition_word_usage',
+    ];
     private const READABILITY_MAX_PARAGRAPHS = 6;
     private const LOCAL_BUSINESS_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     private const LOCAL_BUSINESS_TYPES = [
@@ -4285,6 +4289,8 @@ class ICap_SEO_Admin
             ['issue_code' => 'limited_heading_structure', 'label' => __('Page has enough secondary headings (H2/H3)', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'auto'],
             ['issue_code' => 'limited_paragraph_structure', 'label' => __('Page has enough paragraph structure', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'auto'],
             ['issue_code' => 'readability_score_low', 'label' => __('Content is written in plain, easy-to-read language', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
+            ['issue_code' => 'readability_long_sentences_high', 'label' => __('Sentences are not too long to read easily', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
+            ['issue_code' => 'readability_low_transition_word_usage', 'label' => __('Sentences use transition words to connect ideas', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             // Structured data (seo-schema) — premium
             ['issue_code' => 'missing_jsonld_schema', 'label' => __('Page has JSON-LD structured data', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'auto'],
             ['issue_code' => 'schema_type_missing', 'label' => __('Structured data includes a valid @type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'auto', 'preempted_by' => ['missing_jsonld_schema']],
