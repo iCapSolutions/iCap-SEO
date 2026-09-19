@@ -50,7 +50,7 @@ activation and troubleshooting.
 
 - **Free**: baseline on-page audit (title tags, meta descriptions, headings, content depth), plus social
   sharing previews, redirects with a 404 log, IndexNow pings, llms.txt, and Local SEO.
-- **Premium**: the full 31-check catalog — technical crawlability, security headers, content quality and
+- **Premium**: the full 35-check catalog — technical crawlability, security headers, content quality and
   readability, structured data, image optimization, and link health.
 
 ## Support
