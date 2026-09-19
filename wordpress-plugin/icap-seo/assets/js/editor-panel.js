@@ -1,10 +1,16 @@
 /**
- * Phase 1 live in-editor panel: a Gutenberg sidebar showing a static (computed
- * on last save, not live-as-you-type) SERP preview, social card preview, and a
- * read-only "quick check" score. Data comes entirely from icapSeoEditorPanel,
- * localized by ICap_SEO_Editor_Panel::enqueue_assets() - this file does no
- * network calls of its own, only rendering plus a client-side pixel-width
- * measurement (which has to happen in the browser, against real font metrics).
+ * Live in-editor panel. Phase 1 shipped a static SERP preview, social card
+ * preview, and read-only "quick check" score computed once from the post's
+ * last-saved content (data comes entirely from icapSeoEditorPanel, localized
+ * by ICap_SEO_Editor_Panel::enqueue_assets()). Phase 2 adds live-typing: a
+ * debounced subscription to the block editor's own data store re-runs the
+ * exact same scoring rules (via a local REST call to
+ * ICap_SEO_Editor_Panel::handle_quick_check_request(), not a second JS
+ * implementation of the rules) against the CURRENT draft - title/content/
+ * excerpt the user hasn't saved yet. The image/URL/site-name parts of the
+ * SERP and social previews stay as the last-saved snapshot: neither changes
+ * from typing, and refreshing them live would mean also live-tracking
+ * featured-image changes, which is out of Phase 2's scope.
  *
  * No build step / JSX, same convention as assets/js/admin.js - written against
  * the wp.* globals WordPress core already registers for the block editor.
@@ -12,12 +18,14 @@
 ( function ( wp ) {
 	'use strict';
 
-	if ( ! wp || ! wp.plugins || ! wp.editPost || ! wp.element || ! wp.components || ! wp.i18n ) {
+	if ( ! wp || ! wp.plugins || ! wp.editPost || ! wp.element || ! wp.components || ! wp.i18n || ! wp.data || ! wp.apiFetch ) {
 		return;
 	}
 
 	var el = wp.element.createElement;
 	var Fragment = wp.element.Fragment;
+	var useState = wp.element.useState;
+	var useEffect = wp.element.useEffect;
 	var registerPlugin = wp.plugins.registerPlugin;
 	var PluginSidebar = wp.editPost.PluginSidebar;
 	var PluginSidebarMoreMenuItem = wp.editPost.PluginSidebarMoreMenuItem;
@@ -25,12 +33,16 @@
 	var PanelBody = wp.components.PanelBody;
 	var __ = wp.i18n.__;
 
-	var data = window.icapSeoEditorPanel || {};
-	var checks = data.checks || [];
-	// wp_localize_script casts every value to a string, so data.score arrives
-	// as e.g. "88", not 88 - parse it rather than type-checking for 'number'.
-	var parsedScore = parseInt( data.score, 10 );
-	var score = isNaN( parsedScore ) ? null : parsedScore;
+	var initialData = window.icapSeoEditorPanel || {};
+	var postId = parseInt( initialData.postId, 10 ) || 0;
+	var LIVE_DEBOUNCE_MS = 700;
+
+	function parseScore( value ) {
+		// wp_localize_script and the REST response both may carry this as a
+		// string - parse rather than type-check for 'number'.
+		var parsed = parseInt( value, 10 );
+		return isNaN( parsed ) ? null : parsed;
+	}
 
 	var pixelWidthCanvas = null;
 	function measurePixelWidth( text, font ) {
@@ -69,7 +81,8 @@
 		return '✕';
 	}
 
-	function ScoreBadge() {
+	function ScoreBadge( props ) {
+		var score = props.score;
 		if ( score === null ) {
 			return null;
 		}
@@ -87,10 +100,12 @@
 				el(
 					'div',
 					{ className: 'icap-seo-quick-score__hint' },
-					__(
-						'Quick check based on this page’s saved content only. Run a full scan in iCap SEO for the authoritative score.',
-						'icap-seo'
-					)
+					props.isLive
+						? __( 'Quick check, updated as you type. Run a full scan in iCap SEO for the authoritative score.', 'icap-seo' )
+						: __(
+								'Quick check based on this page’s saved content only. Run a full scan in iCap SEO for the authoritative score.',
+								'icap-seo'
+						  )
 				)
 			)
 		);
@@ -110,9 +125,9 @@
 		);
 	}
 
-	function SerpPreview() {
-		var title = data.title || __( '(no title)', 'icap-seo' );
-		var description = data.description || __( '(no description)', 'icap-seo' );
+	function SerpPreview( props ) {
+		var title = props.title || __( '(no title)', 'icap-seo' );
+		var description = props.description || __( '(no description)', 'icap-seo' );
 		var titleWidth = measurePixelWidth( title, '400 20px Arial, sans-serif' );
 		var descriptionWidth = measurePixelWidth( description, '400 14px Arial, sans-serif' );
 		var titleOverflow = titleWidth !== null && titleWidth > 600;
@@ -121,7 +136,7 @@
 		return el(
 			'div',
 			{ className: 'icap-seo-serp-preview' },
-			el( 'div', { className: 'icap-seo-serp-preview__url' }, data.url || '' ),
+			el( 'div', { className: 'icap-seo-serp-preview__url' }, initialData.url || '' ),
 			el(
 				'div',
 				{ className: 'icap-seo-serp-preview__title' + ( titleOverflow ? ' is-overflow' : '' ) },
@@ -138,34 +153,145 @@
 		);
 	}
 
-	function SocialPreview() {
+	function SocialPreview( props ) {
 		return el(
 			'div',
 			{ className: 'icap-seo-social-preview' },
-			data.imageUrl
-				? el( 'img', { className: 'icap-seo-social-preview__image', src: data.imageUrl, alt: '' } )
+			initialData.imageUrl
+				? el( 'img', { className: 'icap-seo-social-preview__image', src: initialData.imageUrl, alt: '' } )
 				: el( 'div', { className: 'icap-seo-social-preview__image icap-seo-social-preview__image--empty' } ),
 			el(
 				'div',
 				{ className: 'icap-seo-social-preview__body' },
-				el( 'div', { className: 'icap-seo-social-preview__site' }, ( data.siteName || '' ).toUpperCase() ),
-				el( 'div', { className: 'icap-seo-social-preview__title' }, data.title || __( '(no title)', 'icap-seo' ) ),
-				data.description ? el( 'div', { className: 'icap-seo-social-preview__description' }, data.description ) : null
+				el( 'div', { className: 'icap-seo-social-preview__site' }, ( initialData.siteName || '' ).toUpperCase() ),
+				el( 'div', { className: 'icap-seo-social-preview__title' }, props.title || __( '(no title)', 'icap-seo' ) ),
+				props.description ? el( 'div', { className: 'icap-seo-social-preview__description' }, props.description ) : null
 			)
 		);
 	}
 
+	/**
+	 * Reads the current in-progress draft (not the last-saved row) from the
+	 * block editor's own data store. Content/excerpt come back serialized the
+	 * same way a saved post's fields would, so the shared PHP checks (regexing
+	 * for <img>/<h1-6> tags, word-counting stripped text) work unmodified.
+	 */
+	function readDraftFields() {
+		var editor = wp.data.select( 'core/editor' );
+		if ( ! editor ) {
+			return null;
+		}
+		return {
+			title: editor.getEditedPostAttribute( 'title' ) || '',
+			content: editor.getEditedPostAttribute( 'content' ) || '',
+			excerpt: editor.getEditedPostAttribute( 'excerpt' ) || '',
+		};
+	}
+
+	function fieldsChanged( a, b ) {
+		return ! a || ! b || a.title !== b.title || a.content !== b.content || a.excerpt !== b.excerpt;
+	}
+
 	function PanelContent() {
+		var initialScore = parseScore( initialData.score );
+		var initialState = {
+			score: initialScore,
+			checks: initialData.checks || [],
+			title: initialData.title || '',
+			description: initialData.description || '',
+			isLive: false,
+		};
+
+		var stateHook = useState( initialState );
+		var state = stateHook[ 0 ];
+		var setState = stateHook[ 1 ];
+
+		useEffect( function () {
+			if ( ! postId ) {
+				return;
+			}
+
+			var debounceTimer = null;
+			var lastRequested = null;
+			var lastSent = readDraftFields();
+			var unsubscribed = false;
+
+			function requestQuickCheck( fields ) {
+				lastRequested = fields;
+				wp.apiFetch( {
+					path: '/icap-seo/v1/editor-panel/quick-check',
+					method: 'POST',
+					data: {
+						post_id: postId,
+						title: fields.title,
+						content: fields.content,
+						excerpt: fields.excerpt,
+					},
+				} )
+					.then( function ( response ) {
+						// A slower request that finishes after a newer one was
+						// already sent would otherwise clobber fresher state.
+						if ( fields !== lastRequested ) {
+							return;
+						}
+						setState( {
+							score: parseScore( response.score ),
+							checks: response.checks || [],
+							title: response.title || '',
+							description: response.description || '',
+							isLive: true,
+						} );
+					} )
+					.catch( function () {
+						// Live refresh is a nice-to-have; keep showing the last
+						// good state (or the Phase 1 static snapshot) on error.
+					} );
+			}
+
+			var unsubscribe = wp.data.subscribe( function () {
+				if ( unsubscribed ) {
+					return;
+				}
+				var current = readDraftFields();
+				if ( ! fieldsChanged( current, lastSent ) ) {
+					return;
+				}
+				lastSent = current;
+				if ( debounceTimer ) {
+					clearTimeout( debounceTimer );
+				}
+				debounceTimer = setTimeout( function () {
+					requestQuickCheck( current );
+				}, LIVE_DEBOUNCE_MS );
+			} );
+
+			return function () {
+				unsubscribed = true;
+				if ( debounceTimer ) {
+					clearTimeout( debounceTimer );
+				}
+				unsubscribe();
+			};
+		}, [] );
+
 		return el(
 			'div',
 			{ className: 'icap-seo-editor-panel' },
-			el( ScoreBadge ),
+			el( ScoreBadge, { score: state.score, isLive: state.isLive } ),
 			el(
 				Panel,
 				null,
-				el( PanelBody, { title: __( 'Quick checks', 'icap-seo' ), initialOpen: true }, checks.map( ChecklistItem ) ),
-				el( PanelBody, { title: __( 'Search preview', 'icap-seo' ), initialOpen: true }, el( SerpPreview ) ),
-				el( PanelBody, { title: __( 'Social preview', 'icap-seo' ), initialOpen: false }, el( SocialPreview ) )
+				el( PanelBody, { title: __( 'Quick checks', 'icap-seo' ), initialOpen: true }, state.checks.map( ChecklistItem ) ),
+				el(
+					PanelBody,
+					{ title: __( 'Search preview', 'icap-seo' ), initialOpen: true },
+					el( SerpPreview, { title: state.title, description: state.description } )
+				),
+				el(
+					PanelBody,
+					{ title: __( 'Social preview', 'icap-seo' ), initialOpen: false },
+					el( SocialPreview, { title: state.title, description: state.description } )
+				)
 			)
 		);
 	}

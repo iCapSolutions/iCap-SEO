@@ -43,6 +43,86 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
         {
             add_action('enqueue_block_editor_assets', [$this, 'enqueue_assets']);
             add_action('add_meta_boxes', [$this, 'register_meta_box'], 10, 2);
+            add_action('rest_api_init', [$this, 'register_rest_route']);
+        }
+
+        /**
+         * Phase 2 (live-typing): a local REST route the block editor sidebar
+         * calls (debounced, not per-keystroke) to recompute the quick checks
+         * against the CURRENT in-editor draft - title/content/excerpt the user
+         * hasn't saved yet - rather than only the last-saved post row. Runs the
+         * exact same compute_quick_checks()/score_checks() logic Phase 1 already
+         * uses for the last-saved version, so the two phases can never drift
+         * into two different sets of scoring rules. Purely local WP computation,
+         * no cloud API call - this is not the authoritative scan.
+         */
+        public function register_rest_route(): void
+        {
+            register_rest_route('icap-seo/v1', '/editor-panel/quick-check', [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [$this, 'handle_quick_check_request'],
+                'permission_callback' => function (WP_REST_Request $request) {
+                    $post_id = (int) $request->get_param('post_id');
+                    return $post_id > 0 && current_user_can('edit_post', $post_id);
+                },
+                'args' => [
+                    'post_id' => ['required' => true, 'type' => 'integer'],
+                    'title' => ['required' => false, 'type' => 'string', 'default' => ''],
+                    'content' => ['required' => false, 'type' => 'string', 'default' => ''],
+                    'excerpt' => ['required' => false, 'type' => 'string', 'default' => ''],
+                ],
+            ]);
+        }
+
+        public function handle_quick_check_request(WP_REST_Request $request): WP_REST_Response
+        {
+            $post_id = (int) $request->get_param('post_id');
+            $title = trim((string) $request->get_param('title'));
+            $content = (string) $request->get_param('content');
+            $excerpt = trim((string) $request->get_param('excerpt'));
+
+            $description = $this->resolve_draft_description($post_id, $excerpt, $content);
+            $checks = $this->compute_quick_checks($title, $description, $content);
+            $score = $this->score_checks($checks);
+
+            return new WP_REST_Response([
+                'title' => $title !== '' ? $title : get_bloginfo('name'),
+                'description' => $description,
+                'checks' => $checks,
+                'score' => $score,
+            ]);
+        }
+
+        /**
+         * Mirrors ICap_SEO_Output::get_effective_meta_description()'s fallback
+         * order but against the live draft: an in-progress excerpt field wins
+         * (the user is actively editing it), then the previously-saved
+         * `_icap_seo_meta_description` postmeta (unrelated to this draft
+         * session, but still the best available signal), then the draft
+         * content itself stripped to plain text.
+         */
+        private function resolve_draft_description(int $post_id, string $excerpt, string $content): string
+        {
+            if ($excerpt !== '') {
+                return $this->truncate($excerpt, 200);
+            }
+
+            $stored = get_post_meta($post_id, '_icap_seo_meta_description', true);
+            if (is_string($stored) && trim($stored) !== '') {
+                return $this->truncate(trim($stored), 200);
+            }
+
+            $stripped = trim(wp_strip_all_tags($content, true));
+            return $this->truncate($stripped, 200);
+        }
+
+        private function truncate(string $value, int $max_length): string
+        {
+            if ($this->strlen($value) <= $max_length) {
+                return $value;
+            }
+            $truncated = function_exists('mb_substr') ? mb_substr($value, 0, $max_length) : substr($value, 0, $max_length);
+            return trim($truncated) . '…';
         }
 
         /**
@@ -204,7 +284,7 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
             wp_enqueue_script(
                 'icap-seo-editor-panel',
                 ICAP_SEO_PLUGIN_URL . 'assets/js/editor-panel.js',
-                ['wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-i18n'],
+                ['wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-i18n', 'wp-data', 'wp-api-fetch'],
                 ICAP_SEO_VERSION,
                 true
             );
@@ -231,10 +311,11 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
             }
             $image_url = get_the_post_thumbnail_url($post, 'large');
 
-            $checks = $this->compute_quick_checks($post, $title, $description);
+            $checks = $this->compute_quick_checks($title, $description, (string) $post->post_content);
             $score = $this->score_checks($checks);
 
             return [
+                'postId' => $post->ID,
                 'title' => $title !== '' ? $title : $site_name,
                 'description' => $description,
                 'url' => $url,
@@ -251,7 +332,7 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
          * deliberately simple/conservative; this is a lightweight preview, not a
          * restatement of the authoritative cloud scan's own scoring logic.
          */
-        private function compute_quick_checks(WP_Post $post, string $title, string $description): array
+        private function compute_quick_checks(string $title, string $description, string $content): array
         {
             $checks = [];
 
@@ -309,7 +390,6 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
                 );
             }
 
-            $content = (string) $post->post_content;
             $has_heading = (bool) preg_match('/<h[1-6][\s>]/i', $content) || (bool) preg_match('/wp:heading/i', $content);
             $word_count = str_word_count(wp_strip_all_tags($content));
             if ($word_count >= 300 && !$has_heading) {

@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.95
+Stable tag: 0.1.96
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,9 @@ The in-plugin dashboard lists every check with its category and current status u
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.96 =
+* The iCap SEO block editor sidebar now updates live as you type (title, content, meta description): the quick-check score, checklist, and search/social previews refresh about a second after you pause typing, instead of only reflecting the last-saved version of the page. The Classic Editor metabox is unaffected — it stays computed on save, matching how the rest of that screen works.
 
 = 0.1.95 =
 * Added a "Headline quality" quick check to the iCap SEO editor panel (block editor sidebar and Classic Editor metabox): flags word-count balance, suggests a power word ("free", "best", "guide", etc.) or a specific number when the title is missing both.
