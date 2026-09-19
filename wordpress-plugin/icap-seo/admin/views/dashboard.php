@@ -2449,7 +2449,7 @@ if ($notice_code === 'remediation_apply_noop') {
             </div>
 
             <div class="icap-seo-feature-summary">
-                <p><?php esc_html_e('iCap SEO runs a cloud-connected scan of your site — 31 checks across 6 categories — and fixes most of what it finds, automatically or with a preview you approve first.', 'icap-seo'); ?></p>
+                <p><?php esc_html_e('iCap SEO runs a cloud-connected scan of your site — 35 checks across 6 categories — and fixes most of what it finds, automatically or with a preview you approve first.', 'icap-seo'); ?></p>
                 <ul>
                     <li><?php esc_html_e('Baseline on-page audit — title tags, meta descriptions, headings, content depth', 'icap-seo'); ?> <em>(<?php esc_html_e('Free', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Crawlability & security — HTTPS, canonical URLs, robots.txt, security headers', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
