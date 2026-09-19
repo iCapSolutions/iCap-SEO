@@ -40,6 +40,9 @@ Technical trust and crawlability signals — whether search engines and AI crawl
 | Server sends recommended security headers | Headers like HSTS and X-Frame-Options protect visitors from common attacks and are a baseline trust signal. | Guidance only |
 | Site has a robots.txt file | robots.txt tells search engines — and AI crawlers — which parts of your site they're allowed to visit. Without one, crawler behavior is left to whatever each crawler assumes by default. | Guidance only |
 | robots.txt does not block this page | A robots.txt rule can accidentally hide an otherwise-fine page from search engines entirely. | Guidance only |
+| Page does not use a page-level nofollow directive | A page-wide `nofollow` meta directive stops link equity from passing through any of this page's outbound links — often set by mistake. | Guidance only |
+| Page images are not excluded from image search (noimageindex) | A stray `noimageindex` directive hides this page's images from image search results. | Guidance only |
+| Page allows a search snippet (nosnippet) | A `nosnippet` directive blocks search engines from showing a text preview for this page, which usually hurts click-through. | Guidance only |
 
 ## Content quality and readability — Premium
 
@@ -86,16 +89,17 @@ Whether a page's links help visitors and search engines navigate your site — a
 | Page cites at least one external source | Linking to credible outside sources is a trust signal that supports the page's claims. | Guidance only |
 | Internal links resolve without errors | A broken link to your own content wastes the click and signals a poorly maintained site to visitors and search engines alike. | Guidance only |
 | External references resolve without errors | A dead external link undermines the credibility of whatever you were citing and creates a poor visitor experience. | Guidance only |
+| Internal links don't use rel="nofollow" | Marking your own internal links `nofollow` is usually accidental and stops link equity from flowing to that page. | Guidance only |
 
 ---
 
 ## Free vs. Premium at a glance
 
 - **Free tier**: the 6 baseline on-page checks above — title, meta description, H1, and basic content-depth.
-- **Premium tier**: everything else — 25 additional checks across technical crawlability, content quality, structured data, images, and links.
+- **Premium tier**: everything else — 29 additional checks across technical crawlability, content quality, structured data, images, and links.
 
 ## Fix-type summary
 
 - **16 checks** get an automatic fix on approval.
 - **5 checks** (the content-depth family, plus readability) use preview & publish — a draft is generated and shown before anything is saved.
-- **10 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, removing a noindex tag without human confirmation).
+- **14 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, removing a noindex tag without human confirmation).
