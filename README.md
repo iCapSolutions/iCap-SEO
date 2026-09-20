@@ -1,6 +1,6 @@
 # iCap SEO
 
-iCap SEO is a WordPress plugin that runs a real, cloud-connected SEO scan of your site — 37 checks across
+iCap SEO is a WordPress plugin that runs a real, cloud-connected SEO scan of your site — 38 checks across
 6 categories — explains what it finds in plain language, and fixes most of it for you, automatically or
 with a preview you approve first.
 
@@ -50,7 +50,7 @@ activation and troubleshooting.
 
 - **Free**: baseline on-page audit (title tags, meta descriptions, headings, content depth), plus social
   sharing previews, redirects with a 404 log, IndexNow pings, llms.txt, and Local SEO.
-- **Premium**: the full 37-check catalog — technical crawlability, security headers, content quality and
+- **Premium**: the full 38-check catalog — technical crawlability, security headers, content quality and
   readability, structured data, image optimization, and link health.
 
 ## Support
