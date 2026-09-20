@@ -1285,6 +1285,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_preview_content_depth">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_preview_content_depth'); ?>
                                 <button type="submit" class="button button-secondary"><?php esc_html_e('Preview expanded content', 'icap-seo'); ?></button>
                             </form>
@@ -1303,18 +1304,21 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_publish_content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_publish_content_depth'); ?>
                                     <button type="submit" class="button button-primary"><?php esc_html_e('Accept & publish', 'icap-seo'); ?></button>
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_discard_content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_discard_content_depth'); ?>
                                     <button type="submit" class="button"><?php esc_html_e('Discard', 'icap-seo'); ?></button>
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_content_depth'); ?>
                                     <button type="submit" class="button"><?php esc_html_e('Regenerate draft', 'icap-seo'); ?></button>
                                 </form>
@@ -1335,6 +1339,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_preview_readability_rewrite">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_preview_readability_rewrite'); ?>
                                 <button type="submit" class="button button-secondary"><?php esc_html_e('Preview simplified paragraphs', 'icap-seo'); ?></button>
                             </form>
@@ -1369,18 +1374,21 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_publish_readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_publish_readability_rewrite'); ?>
                                     <button type="submit" class="button button-primary"><?php esc_html_e('Accept & publish', 'icap-seo'); ?></button>
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_discard_readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_discard_readability_rewrite'); ?>
                                     <button type="submit" class="button"><?php esc_html_e('Discard', 'icap-seo'); ?></button>
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_readability_rewrite'); ?>
                                     <button type="submit" class="button"><?php esc_html_e('Regenerate draft', 'icap-seo'); ?></button>
                                 </form>
@@ -1396,6 +1404,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
                             <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                            <input type="hidden" name="detail_tab" value="ai-drafts">
                             <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
                             <button type="submit" class="button button-secondary"><?php esc_html_e('Check spelling & grammar', 'icap-seo'); ?></button>
                         </form>
@@ -1430,18 +1439,21 @@ if ($notice_code === 'remediation_apply_noop') {
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_publish_spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_publish_spelling_grammar'); ?>
                                 <button type="submit" class="button button-primary"><?php esc_html_e('Accept & publish', 'icap-seo'); ?></button>
                             </form>
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_discard_spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_discard_spelling_grammar'); ?>
                                 <button type="submit" class="button"><?php esc_html_e('Discard', 'icap-seo'); ?></button>
                             </form>
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
                                 <button type="submit" class="button"><?php esc_html_e('Regenerate draft', 'icap-seo'); ?></button>
                             </form>

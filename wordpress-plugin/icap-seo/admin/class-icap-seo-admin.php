@@ -5408,10 +5408,21 @@ class ICap_SEO_Admin
 
         return '';
     }
+
+    /**
+     * Content Detail's sub-tabs (Recommendations/AI Drafts/History) are tracked via
+     * a detail_tab query arg the view reads independently of the notice system - a
+     * form submitted from the AI Drafts tab must carry a detail_tab hidden field so
+     * this can echo it back, otherwise every redirect silently drops back to the
+     * default Recommendations tab regardless of which sub-tab the action actually
+     * happened on. Handled centrally here (not per call site) so any future
+     * content-detail form gets this for free just by including the hidden field.
+     */
     private function redirect_with_notice(string $notice_code, string $tab, array $extra_query_args = []): void
     {
+        $posted_detail_tab = isset($_POST['detail_tab']) ? sanitize_key((string) wp_unslash($_POST['detail_tab'])) : '';
         $extra_query_args = array_filter(
-            $extra_query_args,
+            array_merge(['detail_tab' => $posted_detail_tab], $extra_query_args),
             static fn($value): bool => is_string($value) && $value !== ''
         );
         $url = add_query_arg(
