@@ -17,6 +17,15 @@ if (!defined('ABSPATH')) {
  * naming (missing_title_tag, missing_meta_description, limited_heading_structure,
  * images_missing_alt) so a later phase that wires these into the real remediation-
  * apply flow doesn't have to invent a second taxonomy.
+ *
+ * Phase 3 (schema-only v1, infra-batch-scoping-2026-09.md item 4): adds one more
+ * live-typing check that genuinely needs the backend's required-property rules -
+ * a second local REST route (register_quick_scan_rest_route()) proxies to the
+ * cloud POST /v1/sites/{site_id}/editor-quick-scan endpoint, kept separate from
+ * quick-check above so a slow/failed cloud call never blocks the fast local
+ * checks. Broken-link checking was explicitly deferred from this endpoint (a
+ * draft has no stable permalink to check links against) - see
+ * infra-batch-scoping-2026-09.md for the reasoning.
  */
 if (!class_exists('ICap_SEO_Editor_Panel')) {
     class ICap_SEO_Editor_Panel
@@ -33,10 +42,12 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
         ];
 
         private ICap_SEO_Output $output;
+        private ICap_SEO_Service_Client $service_client;
 
-        public function __construct(ICap_SEO_Output $output)
+        public function __construct(ICap_SEO_Output $output, ICap_SEO_Service_Client $service_client)
         {
             $this->output = $output;
+            $this->service_client = $service_client;
         }
 
         public function register(): void
@@ -72,6 +83,88 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
                     'excerpt' => ['required' => false, 'type' => 'string', 'default' => ''],
                 ],
             ]);
+
+            $this->register_quick_scan_rest_route();
+        }
+
+        /**
+         * Phase 3 (schema-only v1): a second local REST route, distinct from
+         * quick-check above, that proxies to the new cloud
+         * POST /v1/sites/{site_id}/editor-quick-scan endpoint - this is the one
+         * check in the panel that needs the backend's required-property rules,
+         * not something computable purely client-side. Kept as its own route
+         * (not folded into quick-check) so a slow/failed cloud round trip never
+         * blocks the fast, always-local checks quick-check already returns.
+         */
+        private function register_quick_scan_rest_route(): void
+        {
+            register_rest_route('icap-seo/v1', '/editor-panel/quick-scan', [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [$this, 'handle_quick_scan_request'],
+                'permission_callback' => function (WP_REST_Request $request) {
+                    $post_id = (int) $request->get_param('post_id');
+                    return $post_id > 0 && current_user_can('edit_post', $post_id);
+                },
+                'args' => [
+                    'post_id' => ['required' => true, 'type' => 'integer'],
+                    'title' => ['required' => false, 'type' => 'string', 'default' => ''],
+                    'content' => ['required' => false, 'type' => 'string', 'default' => ''],
+                    'excerpt' => ['required' => false, 'type' => 'string', 'default' => ''],
+                ],
+            ]);
+        }
+
+        public function handle_quick_scan_request(WP_REST_Request $request): WP_REST_Response
+        {
+            $post_id = (int) $request->get_param('post_id');
+            $title = trim((string) $request->get_param('title'));
+            $content = (string) $request->get_param('content');
+            $excerpt = trim((string) $request->get_param('excerpt'));
+
+            $description = $this->resolve_draft_description($post_id, $excerpt, $content);
+            $schema_payload = $this->build_quick_scan_schema_payload($post_id, $title, $description);
+
+            $result = $this->service_client->request_editor_quick_scan($schema_payload);
+            if (!$result['success']) {
+                // A failed/unreachable cloud call is a nice-to-have refresh missing this
+                // request cycle, not a hard error the editor should surface to the user -
+                // same posture as quick-check's own network-failure handling in JS.
+                return new WP_REST_Response(['issues' => []]);
+            }
+
+            return new WP_REST_Response(['issues' => $result['data']['issues'] ?? []]);
+        }
+
+        /**
+         * Deliberately simpler than build_jsonld_schema_for_post() (the
+         * apply-time generator in class-icap-seo-admin.php): no FAQ/HowTo
+         * detection here, since HowTo classification calls AI
+         * (classify_howto_steps_via_ai()) - far too slow for a debounced live
+         * check. v1 always resolves to the same Article/WebPage default that
+         * generator falls back to when neither FAQ nor HowTo content is
+         * detected. FAQ/HowTo-aware live schema type detection is a possible
+         * future upgrade, not in scope now.
+         */
+        private function build_quick_scan_schema_payload(int $post_id, string $title, string $description): array
+        {
+            $post = get_post($post_id);
+            $post_type = $post instanceof WP_Post ? $post->post_type : 'post';
+            $schema_type = $post_type === 'post' ? 'Article' : 'WebPage';
+
+            $fields = [];
+            if ($schema_type === 'Article') {
+                $fields['headline'] = $this->truncate($title, 110);
+                $fields['datePublished'] = $post instanceof WP_Post ? get_the_date('c', $post) : '';
+                $author_name = $post instanceof WP_Post
+                    ? trim((string) get_the_author_meta('display_name', (int) $post->post_author))
+                    : '';
+                $fields['author'] = $author_name !== '' ? $author_name : get_bloginfo('name');
+            } else {
+                $fields['name'] = $title;
+                $fields['description'] = $description;
+            }
+
+            return ['schema_type' => $schema_type, 'fields' => $fields];
         }
 
         public function handle_quick_check_request(WP_REST_Request $request): WP_REST_Response

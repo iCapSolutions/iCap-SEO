@@ -19,7 +19,7 @@ class ICap_SEO_Plugin
     {
         $this->admin = new ICap_SEO_Admin(new ICap_SEO_Service_Client());
         $this->output = new ICap_SEO_Output();
-        $this->editor_panel = new ICap_SEO_Editor_Panel($this->output);
+        $this->editor_panel = new ICap_SEO_Editor_Panel($this->output, new ICap_SEO_Service_Client());
     }
     public function run(): void
     {

@@ -611,6 +611,69 @@ class ICap_SEO_Service_Client
         return $result;
     }
 
+    /**
+     * Editor panel Phase 3 (schema-only v1, live-editor-panel-scoping-2026-09.md /
+     * infra-batch-scoping-2026-09.md item 4): validates a schema summary the
+     * plugin already computed for the current draft against the same
+     * required-property rules the full scan's seo-schema sub-skill uses.
+     * Stateless - no content_key, no persistence, distinct from the scan/
+     * remediation/ai-draft endpoints above.
+     */
+    public function request_editor_quick_scan(array $schema_payload): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        $raw_fields = isset($schema_payload['fields']) && is_array($schema_payload['fields']) ? $schema_payload['fields'] : [];
+        $schema_fields = [];
+        foreach ($raw_fields as $key => $value) {
+            $schema_fields[sanitize_key((string) $key)] = sanitize_text_field((string) $value);
+        }
+
+        $payload = [
+            'schema_type' => isset($schema_payload['schema_type']) ? sanitize_text_field((string) $schema_payload['schema_type']) : '',
+            'schema_fields' => $schema_fields,
+        ];
+
+        $result = $this->api_request(
+            'POST',
+            sprintf('/v1/sites/%s/editor-quick-scan', rawurlencode((string) $settings['site_id'])),
+            $payload,
+            [],
+            true,
+            [],
+            8
+        );
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
+        $raw_issues = isset($data['issues']) && is_array($data['issues']) ? $data['issues'] : [];
+        $issues = [];
+        foreach ($raw_issues as $issue) {
+            if (!is_array($issue)) {
+                continue;
+            }
+            $issues[] = [
+                'issue_code' => isset($issue['issue_code']) ? sanitize_key((string) $issue['issue_code']) : '',
+                'severity' => isset($issue['severity']) ? sanitize_key((string) $issue['severity']) : 'medium',
+                'description' => isset($issue['description']) ? sanitize_text_field((string) $issue['description']) : '',
+            ];
+        }
+        $result['data'] = ['issues' => $issues];
+
+        return $result;
+    }
+
     private function normalize_layer_rows($raw_layers): array
     {
         if (!is_array($raw_layers)) {

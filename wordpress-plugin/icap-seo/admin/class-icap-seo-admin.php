@@ -31,6 +31,13 @@ class ICap_SEO_Admin
         'readability_passive_voice_high',
     ];
     private const READABILITY_MAX_PARAGRAPHS = 6;
+    // Spelling/grammar (infra-batch-scoping-2026-09.md item 5): an on-demand,
+    // AI-credit-consuming action, not tied to any scan issue_code (there is no
+    // scan-time detection for this by design - see the scoping doc). Same
+    // preview/publish/discard draft shape as readability rewrite above, reusing
+    // 100% of that plumbing's pattern rather than inventing a second one.
+    private const SPELLING_GRAMMAR_DRAFT_META_KEY = '_icap_seo_spelling_grammar_draft';
+    private const SPELLING_GRAMMAR_MAX_PARAGRAPHS = 6;
     private const LOCAL_BUSINESS_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     private const LOCAL_BUSINESS_TYPES = [
         'LocalBusiness', 'Store', 'Restaurant', 'ProfessionalService', 'MedicalBusiness',
@@ -178,6 +185,9 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_preview_readability_rewrite', [$this, 'handle_preview_readability_rewrite']);
         add_action('admin_post_icap_seo_publish_readability_rewrite', [$this, 'handle_publish_readability_rewrite']);
         add_action('admin_post_icap_seo_discard_readability_rewrite', [$this, 'handle_discard_readability_rewrite']);
+        add_action('admin_post_icap_seo_preview_spelling_grammar', [$this, 'handle_preview_spelling_grammar']);
+        add_action('admin_post_icap_seo_publish_spelling_grammar', [$this, 'handle_publish_spelling_grammar']);
+        add_action('admin_post_icap_seo_discard_spelling_grammar', [$this, 'handle_discard_spelling_grammar']);
         add_action('admin_post_icap_seo_add_redirect', [$this, 'handle_add_redirect']);
         add_action('admin_post_icap_seo_delete_redirect', [$this, 'handle_delete_redirect']);
         add_action('admin_post_icap_seo_dismiss_404', [$this, 'handle_dismiss_404']);
@@ -339,6 +349,7 @@ class ICap_SEO_Admin
         $current_meta_description_value = '';
         $content_depth_draft = ['html' => '', 'word_count' => 0];
         $readability_draft_paragraphs = [];
+        $spelling_grammar_draft_paragraphs = [];
         $content_detail_is_posts_page = false;
         $seo_recommendation_catalog = $this->get_seo_recommendation_catalog();
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
@@ -424,6 +435,7 @@ class ICap_SEO_Admin
                                 }
                                 $content_depth_draft = $this->get_content_depth_draft_for_post($selected_post_id);
                                 $readability_draft_paragraphs = $this->get_readability_draft_for_post($selected_post_id);
+                                $spelling_grammar_draft_paragraphs = $this->get_spelling_grammar_draft_for_post($selected_post_id);
                                 // A page assigned as the site's Posts page (Settings > Reading) never
                                 // renders its own post_content on the front end - WordPress shows the
                                 // blog loop there instead - so content-body recommendations (headings,
@@ -518,6 +530,7 @@ class ICap_SEO_Admin
             $current_meta_description_value = '';
             $content_depth_draft = ['html' => '', 'word_count' => 0];
             $readability_draft_paragraphs = [];
+            $spelling_grammar_draft_paragraphs = [];
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('ICap SEO dashboard fallback: ' . $e->getMessage());
             }
@@ -1828,6 +1841,166 @@ class ICap_SEO_Admin
         }
 
         $this->redirect_with_notice('readability_rewrite_discarded', 'content-scores', ['content_key' => $content_key]);
+    }
+
+    public function handle_preview_spelling_grammar(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_preview_spelling_grammar');
+
+        $content_key = isset($_POST['content_key']) ? sanitize_text_field((string) wp_unslash($_POST['content_key'])) : '';
+        if ($content_key === '') {
+            $this->redirect_with_notice('spelling_grammar_content_key_missing', 'content-scores');
+            return;
+        }
+
+        $post_id = $this->extract_post_id_from_content_key($content_key);
+        if ($post_id <= 0 || !current_user_can('edit_post', $post_id)) {
+            $this->redirect_with_notice('spelling_grammar_preview_failed', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $post = get_post($post_id);
+        if (!$post instanceof WP_Post) {
+            $this->redirect_with_notice('spelling_grammar_preview_failed', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $draft = $this->build_spelling_grammar_draft($post, $content_key);
+        if (empty($draft['paragraphs'])) {
+            $this->redirect_with_notice('spelling_grammar_unavailable', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        // wp_slash() cancels out update_post_meta()'s internal wp_unslash(), same
+        // reasoning as the readability draft above.
+        update_post_meta($post_id, self::SPELLING_GRAMMAR_DRAFT_META_KEY, wp_slash((string) wp_json_encode($draft['paragraphs'])));
+
+        $this->redirect_with_notice('spelling_grammar_preview_ready', 'content-scores', ['content_key' => $content_key]);
+    }
+
+    public function handle_publish_spelling_grammar(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_publish_spelling_grammar');
+
+        $content_key = isset($_POST['content_key']) ? sanitize_text_field((string) wp_unslash($_POST['content_key'])) : '';
+        if ($content_key === '') {
+            $this->redirect_with_notice('spelling_grammar_content_key_missing', 'content-scores');
+            return;
+        }
+
+        $post_id = $this->extract_post_id_from_content_key($content_key);
+        if ($post_id <= 0 || !current_user_can('edit_post', $post_id)) {
+            $this->redirect_with_notice('spelling_grammar_publish_failed', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $draft_paragraphs = $this->get_spelling_grammar_draft_for_post($post_id);
+        if (empty($draft_paragraphs)) {
+            $this->redirect_with_notice('spelling_grammar_no_draft', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $post = get_post($post_id);
+        if (!$post instanceof WP_Post) {
+            $this->redirect_with_notice('spelling_grammar_publish_failed', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $blocks = $this->split_content_into_paragraph_blocks((string) $post->post_content);
+        $paragraphs_updated = 0;
+        foreach ($draft_paragraphs as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $block_index = isset($entry['block_index']) ? (int) $entry['block_index'] : -1;
+            $original_text = isset($entry['original_text']) ? (string) $entry['original_text'] : '';
+            $corrected_text = isset($entry['corrected_text']) ? (string) $entry['corrected_text'] : '';
+            if ($block_index < 0 || $corrected_text === '' || !isset($blocks[$block_index])) {
+                continue;
+            }
+
+            // Only replace if the page content at this block hasn't changed
+            // underneath this draft since it was generated at preview time.
+            $current_text = trim(wp_strip_all_tags($this->paragraph_block_inner_html($blocks[$block_index])));
+            if ($current_text !== $original_text) {
+                continue;
+            }
+
+            $updated_block = preg_replace_callback(
+                '/^(\s*<p\b[^>]*>).*(<\/p>\s*)$/is',
+                static fn(array $matches): string => $matches[1] . esc_html($corrected_text) . $matches[2],
+                $blocks[$block_index],
+                1
+            );
+            if (!is_string($updated_block)) {
+                continue;
+            }
+            $blocks[$block_index] = $updated_block;
+            $paragraphs_updated++;
+        }
+
+        if ($paragraphs_updated === 0) {
+            delete_post_meta($post_id, self::SPELLING_GRAMMAR_DRAFT_META_KEY);
+            $this->redirect_with_notice('spelling_grammar_stale_draft', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        $update_result = wp_update_post(
+            [
+                'ID' => $post_id,
+                'post_content' => implode('', $blocks),
+            ],
+            true
+        );
+
+        if (is_wp_error($update_result)) {
+            $this->redirect_with_notice('spelling_grammar_publish_failed', 'content-scores', ['content_key' => $content_key]);
+            return;
+        }
+
+        delete_post_meta($post_id, self::SPELLING_GRAMMAR_DRAFT_META_KEY);
+
+        $this->store_remediation_history_entry(
+            $post_id,
+            ['spelling_grammar'],
+            [
+                'spelling_grammar_changed' => true,
+                'spelling_grammar_paragraphs_updated' => $paragraphs_updated,
+            ]
+        );
+
+        $this->redirect_with_notice(
+            'spelling_grammar_published',
+            'content-scores',
+            ['content_key' => $content_key, 'spelling_grammar_paragraphs_updated' => (string) $paragraphs_updated]
+        );
+    }
+
+    public function handle_discard_spelling_grammar(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_discard_spelling_grammar');
+
+        $content_key = isset($_POST['content_key']) ? sanitize_text_field((string) wp_unslash($_POST['content_key'])) : '';
+        if ($content_key === '') {
+            $this->redirect_with_notice('spelling_grammar_content_key_missing', 'content-scores');
+            return;
+        }
+
+        $post_id = $this->extract_post_id_from_content_key($content_key);
+        if ($post_id > 0 && current_user_can('edit_post', $post_id)) {
+            delete_post_meta($post_id, self::SPELLING_GRAMMAR_DRAFT_META_KEY);
+        }
+
+        $this->redirect_with_notice('spelling_grammar_discarded', 'content-scores', ['content_key' => $content_key]);
     }
 
     private function apply_supported_local_remediation(
@@ -3548,6 +3721,132 @@ class ICap_SEO_Admin
     private function get_readability_draft_for_post(int $post_id): array
     {
         $raw = get_post_meta($post_id, self::READABILITY_DRAFT_META_KEY, true);
+        if (!is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function build_spelling_grammar_paragraphs_via_ai(string $content_key, array $paragraph_texts): array
+    {
+        if ($content_key === '' || empty($paragraph_texts)) {
+            return [];
+        }
+
+        $result = $this->service_client->request_ai_content_draft(
+            $content_key,
+            'spelling_grammar',
+            [
+                'paragraphs' => $paragraph_texts,
+            ]
+        );
+
+        if (!$result['success'] || empty($result['data']['draft_text'])) {
+            return [];
+        }
+
+        // Same "don't trim first" reasoning as the readability/image-alt drafts -
+        // a leading blank line is a real empty slot, not noise.
+        $lines = preg_split('/\r\n|\r|\n/', (string) $result['data']['draft_text']);
+        if (!is_array($lines)) {
+            return [];
+        }
+
+        $corrections = [];
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+            $line = preg_replace('/^[\s\-\*\d\.\)]+/', '', $line);
+            $corrections[] = trim((string) $line, " \t\n\r\0\x0B\"'");
+        }
+
+        return $corrections;
+    }
+
+    /**
+     * Unlike readability rewrite (longest-first, since long paragraphs weigh
+     * most on the whole-page reading-ease score), spelling/grammar checks
+     * paragraphs in natural document order - a typo is equally worth fixing
+     * anywhere, and reading order is the more predictable/explainable
+     * selection for a customer reviewing the diff. Same is_plain_text_html()
+     * eligibility boundary as readability (never touching headings, images,
+     * lists, or paragraphs with links/emphasis).
+     */
+    private function build_spelling_grammar_draft(WP_Post $post, string $content_key): array
+    {
+        $blocks = $this->split_content_into_paragraph_blocks((string) $post->post_content);
+
+        $eligible = [];
+        foreach ($blocks as $block_index => $block) {
+            if (preg_match('/^\s*<p\b/i', $block) !== 1) {
+                continue;
+            }
+            $inner_html = $this->paragraph_block_inner_html($block);
+            if (!$this->is_plain_text_html($inner_html)) {
+                continue;
+            }
+            $text = trim(wp_strip_all_tags($inner_html));
+            if ($text === '') {
+                continue;
+            }
+            $eligible[$block_index] = $text;
+            if (count($eligible) >= self::SPELLING_GRAMMAR_MAX_PARAGRAPHS) {
+                break;
+            }
+        }
+
+        if (empty($eligible)) {
+            return ['paragraphs' => []];
+        }
+
+        $selected_indexes = array_keys($eligible);
+        $selected_texts = array_values($eligible);
+
+        $corrections = $this->build_spelling_grammar_paragraphs_via_ai($content_key, $selected_texts);
+        if (empty($corrections)) {
+            return ['paragraphs' => []];
+        }
+
+        $draft_paragraphs = [];
+        foreach ($selected_indexes as $position => $block_index) {
+            $original_text = $selected_texts[$position];
+            $corrected_text = $corrections[$position] ?? '';
+
+            if ($corrected_text === '' || $corrected_text !== wp_strip_all_tags($corrected_text)) {
+                continue;
+            }
+            $original_word_count = $this->count_words_in_html($original_text);
+            if ($original_word_count > 0) {
+                // Tighter bounds than readability's 0.4-2.5 - a genuine spelling/
+                // grammar fix rarely changes word count meaningfully; a big swing
+                // means the model rephrased instead of just correcting, which this
+                // generator's prompt explicitly forbids.
+                $ratio = $this->count_words_in_html($corrected_text) / $original_word_count;
+                if ($ratio < 0.8 || $ratio > 1.2) {
+                    continue;
+                }
+            }
+            // Case-SENSITIVE identity check, unlike readability's case-insensitive
+            // one - a capitalization fix is a real grammar correction here, not a
+            // no-op to discard.
+            if ($original_text === $corrected_text) {
+                continue;
+            }
+
+            $draft_paragraphs[] = [
+                'block_index' => $block_index,
+                'original_text' => $original_text,
+                'corrected_text' => $corrected_text,
+            ];
+        }
+
+        return ['paragraphs' => $draft_paragraphs];
+    }
+
+    private function get_spelling_grammar_draft_for_post(int $post_id): array
+    {
+        $raw = get_post_meta($post_id, self::SPELLING_GRAMMAR_DRAFT_META_KEY, true);
         if (!is_string($raw) || trim($raw) === '') {
             return [];
         }

@@ -191,6 +191,15 @@ $notice_map = [
     '404_dismissed' => ['type' => 'updated', 'message' => __('Dismissed from the 404 log.', 'icap-seo')],
     'notification_dismissed' => ['type' => 'updated', 'message' => __('Notification dismissed.', 'icap-seo')],
     'local_business_saved' => ['type' => 'updated', 'message' => __('Business info saved.', 'icap-seo')],
+    'spelling_grammar_content_key_missing' => ['type' => 'error', 'message' => __('Spelling & grammar check failed: content key is required.', 'icap-seo')],
+    'spelling_grammar_preview_failed' => ['type' => 'error', 'message' => __('Could not check spelling & grammar for this page. Verify edit permissions and content key mapping.', 'icap-seo')],
+    'spelling_grammar_unavailable' => ['type' => 'error', 'message' => __('No eligible paragraphs found to check, or the AI request failed. Please retry.', 'icap-seo')],
+    'spelling_grammar_preview_ready' => ['type' => 'updated', 'message' => __('Spelling & grammar draft generated. Review it below before publishing.', 'icap-seo')],
+    'spelling_grammar_publish_failed' => ['type' => 'error', 'message' => __('Could not publish the spelling & grammar draft. Verify edit permissions and try again.', 'icap-seo')],
+    'spelling_grammar_no_draft' => ['type' => 'error', 'message' => __('No spelling & grammar draft is pending for this page. Run the check first.', 'icap-seo')],
+    'spelling_grammar_stale_draft' => ['type' => 'error', 'message' => __('This page changed since the draft was generated, so no corrections could be applied. Discard and re-check.', 'icap-seo')],
+    'spelling_grammar_published' => ['type' => 'updated', 'message' => __('Spelling & grammar corrections published to this page.', 'icap-seo')],
+    'spelling_grammar_discarded' => ['type' => 'updated', 'message' => __('Spelling & grammar draft discarded.', 'icap-seo')],
 ];
 
 if (!isset($latest_content_scores_meta) || !is_array($latest_content_scores_meta)) {
@@ -1377,6 +1386,66 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </form>
                             </div>
                         <?php endif; ?>
+                    <?php endif; ?>
+                    <?php
+                    $spelling_grammar_draft_paragraphs = isset($spelling_grammar_draft_paragraphs) && is_array($spelling_grammar_draft_paragraphs) ? $spelling_grammar_draft_paragraphs : [];
+                    ?>
+                    <h4><?php esc_html_e('Spelling & grammar', 'icap-seo'); ?></h4>
+                    <p class="description"><?php esc_html_e('Not tied to a scan finding - run this any time to check this page\'s prose for spelling and grammar mistakes. Uses an AI credit. Generates a draft to review before anything is saved.', 'icap-seo'); ?></p>
+                    <?php if (empty($spelling_grammar_draft_paragraphs)) : ?>
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                            <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
+                            <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                            <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
+                            <button type="submit" class="button button-secondary"><?php esc_html_e('Check spelling & grammar', 'icap-seo'); ?></button>
+                        </form>
+                    <?php else : ?>
+                        <div class="icap-seo-spelling-grammar-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
+                            <p class="description">
+                                <?php
+                                echo esc_html(sprintf(
+                                    /* translators: %d: number of paragraphs with proposed spelling/grammar corrections */
+                                    _n(
+                                        '%d paragraph with a proposed correction. Review before publishing — this is a starting point, not finished copy.',
+                                        '%d paragraphs with proposed corrections. Review each before publishing — this is a starting point, not finished copy.',
+                                        count($spelling_grammar_draft_paragraphs),
+                                        'icap-seo'
+                                    ),
+                                    count($spelling_grammar_draft_paragraphs)
+                                ));
+                                ?>
+                            </p>
+                            <?php foreach ($spelling_grammar_draft_paragraphs as $paragraph_entry) : ?>
+                                <?php
+                                $original_text = isset($paragraph_entry['original_text']) ? (string) $paragraph_entry['original_text'] : '';
+                                $corrected_text = isset($paragraph_entry['corrected_text']) ? (string) $paragraph_entry['corrected_text'] : '';
+                                ?>
+                                <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #eee;">
+                                    <p><strong><?php esc_html_e('Before:', 'icap-seo'); ?></strong> <?php echo esc_html($original_text); ?></p>
+                                    <p><strong><?php esc_html_e('After:', 'icap-seo'); ?></strong> <?php echo esc_html($corrected_text); ?></p>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="icap-seo-actions">
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                <input type="hidden" name="action" value="icap_seo_publish_spelling_grammar">
+                                <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                <?php wp_nonce_field('icap_seo_publish_spelling_grammar'); ?>
+                                <button type="submit" class="button button-primary"><?php esc_html_e('Accept & publish', 'icap-seo'); ?></button>
+                            </form>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                <input type="hidden" name="action" value="icap_seo_discard_spelling_grammar">
+                                <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                <?php wp_nonce_field('icap_seo_discard_spelling_grammar'); ?>
+                                <button type="submit" class="button"><?php esc_html_e('Discard', 'icap-seo'); ?></button>
+                            </form>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
+                                <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
+                                <button type="submit" class="button"><?php esc_html_e('Regenerate draft', 'icap-seo'); ?></button>
+                            </form>
+                        </div>
                     <?php endif; ?>
                     <?php endif; // content_detail_tab === 'ai-drafts' ?>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
