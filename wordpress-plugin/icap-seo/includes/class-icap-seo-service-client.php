@@ -601,11 +601,26 @@ class ICap_SEO_Service_Client
         }
 
         $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
+
+        // Every successful AI draft debits credits server-side and returns the new
+        // balance in the same response - use it to keep the cached Overview-tile
+        // balance (icap_seo_settings option, otherwise only refreshed by an explicit
+        // "Check Billing Status" click or a completed credit purchase) from silently
+        // going stale every time a generator is actually used.
+        if (isset($data['credits_remaining']) && is_numeric($data['credits_remaining'])) {
+            $this->update_connection_settings([
+                'ai_credits_remaining' => (int) $data['credits_remaining'],
+                'ai_credits_checked_at' => current_time('mysql'),
+            ]);
+        }
+
         $result['data'] = [
             'generator' => isset($data['generator']) ? sanitize_key((string) $data['generator']) : '',
             'draft_text' => isset($data['draft_text']) ? (string) $data['draft_text'] : '',
             'draft_word_count' => isset($data['draft_word_count']) ? (int) $data['draft_word_count'] : 0,
             'model' => isset($data['model']) ? sanitize_text_field((string) $data['model']) : '',
+            'credits_charged' => isset($data['credits_charged']) ? (int) $data['credits_charged'] : 0,
+            'credits_remaining' => isset($data['credits_remaining']) ? (int) $data['credits_remaining'] : 0,
         ];
 
         return $result;
