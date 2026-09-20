@@ -28,6 +28,7 @@ class ICap_SEO_Admin
         'readability_score_low',
         'readability_long_sentences_high',
         'readability_low_transition_word_usage',
+        'readability_passive_voice_high',
     ];
     private const READABILITY_MAX_PARAGRAPHS = 6;
     private const LOCAL_BUSINESS_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -4291,6 +4292,7 @@ class ICap_SEO_Admin
             ['issue_code' => 'readability_score_low', 'label' => __('Content is written in plain, easy-to-read language', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             ['issue_code' => 'readability_long_sentences_high', 'label' => __('Sentences are not too long to read easily', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             ['issue_code' => 'readability_low_transition_word_usage', 'label' => __('Sentences use transition words to connect ideas', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
+            ['issue_code' => 'readability_passive_voice_high', 'label' => __('Sentences favor active voice over passive voice', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             // Structured data (seo-schema) — premium
             ['issue_code' => 'missing_jsonld_schema', 'label' => __('Page has JSON-LD structured data', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'auto'],
             ['issue_code' => 'schema_type_missing', 'label' => __('Structured data includes a valid @type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'auto', 'preempted_by' => ['missing_jsonld_schema']],

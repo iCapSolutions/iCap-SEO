@@ -2121,7 +2121,7 @@ if ($notice_code === 'remediation_apply_noop') {
 
             <hr>
             <h3><?php esc_html_e('Billing', 'icap-seo'); ?></h3>
-            <p class="description"><?php esc_html_e('Manage your iCap SEO subscription. Premium unlocks the full 37-check catalog.', 'icap-seo'); ?></p>
+            <p class="description"><?php esc_html_e('Manage your iCap SEO subscription. Premium unlocks the full 38-check catalog.', 'icap-seo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
                 <input type="hidden" name="action" value="icap_seo_check_billing_status">
                 <?php wp_nonce_field('icap_seo_check_billing_status'); ?>
@@ -2204,7 +2204,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $overview_scored_items_count = max(count($content_scores), $latest_scores_item_count);
 
             // Site-wide environment/config checks - local get_option() reads, no backend
-            // scan or page fetch involved. Distinct from the per-page 37-check catalog,
+            // scan or page fetch involved. Distinct from the per-page 38-check catalog,
             // which the backend emits; these are checked entirely client-side.
             $overview_permalink_structure_ok = (string) get_option('permalink_structure', '') !== '';
             $overview_rss_shows_full_text = (int) get_option('rss_use_excerpt', 0) === 0;
@@ -2449,7 +2449,7 @@ if ($notice_code === 'remediation_apply_noop') {
             </div>
 
             <div class="icap-seo-feature-summary">
-                <p><?php esc_html_e('iCap SEO runs a cloud-connected scan of your site — 37 checks across 6 categories — and fixes most of what it finds, automatically or with a preview you approve first.', 'icap-seo'); ?></p>
+                <p><?php esc_html_e('iCap SEO runs a cloud-connected scan of your site — 38 checks across 6 categories — and fixes most of what it finds, automatically or with a preview you approve first.', 'icap-seo'); ?></p>
                 <ul>
                     <li><?php esc_html_e('Baseline on-page audit — title tags, meta descriptions, headings, content depth', 'icap-seo'); ?> <em>(<?php esc_html_e('Free', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Crawlability & security — HTTPS, canonical URLs, robots.txt, security headers', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
@@ -2458,7 +2458,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <li><?php esc_html_e('Image optimization — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Internal & external links — discoverability and broken-link detection', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                 </ul>
-                <p><?php esc_html_e('Also included, free, outside the 37-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, automatic search-engine indexing pings, an llms.txt file for AI assistants, and LocalBusiness structured data for businesses with a physical location.', 'icap-seo'); ?></p>
+                <p><?php esc_html_e('Also included, free, outside the 38-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, automatic search-engine indexing pings, an llms.txt file for AI assistants, and LocalBusiness structured data for businesses with a physical location.', 'icap-seo'); ?></p>
             </div>
 
             <?php if ($overview_is_premium) : ?>

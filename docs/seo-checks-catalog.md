@@ -58,6 +58,7 @@ Whether a page has enough substance, structure, and clarity to genuinely serve a
 | Content is written in plain, easy-to-read language | Dense, jargon-heavy writing is harder for visitors to act on — readability affects how usable a page feels to real readers. | Preview & publish |
 | Sentences are not too long to read easily | A page full of long, run-on sentences is harder to skim and more likely to lose a reader partway through. | Preview & publish |
 | Sentences use transition words to connect ideas | Words like "however" or "for example" help readers follow how ideas relate to each other; without them, writing can feel choppy. | Preview & publish |
+| Sentences favor active voice over passive voice | Active voice is usually more direct and easier to follow, making it clearer who is doing what. | Preview & publish |
 
 ## Structured data schema — Premium
 
@@ -98,10 +99,10 @@ Whether a page's links help visitors and search engines navigate your site — a
 ## Free vs. Premium at a glance
 
 - **Free tier**: the 6 baseline on-page checks above — title, meta description, H1, and basic content-depth.
-- **Premium tier**: everything else — 31 additional checks across technical crawlability, content quality, structured data, images, and links.
+- **Premium tier**: everything else — 32 additional checks across technical crawlability, content quality, structured data, images, and links.
 
 ## Fix-type summary
 
 - **16 checks** get an automatic fix on approval.
-- **7 checks** (the content-depth family, plus the readability score and its two sub-checks) use preview & publish — a draft is generated and shown before anything is saved.
+- **8 checks** (the content-depth family, plus the readability score and its three sub-checks) use preview & publish — a draft is generated and shown before anything is saved.
 - **14 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, removing a noindex tag without human confirmation).

@@ -55,7 +55,7 @@ credentials automatically — no manual key management needed.
 ## 6. Run your first scan
 
 In **Overview**, click **Trigger Full Scan**. Non-premium accounts run the free baseline audit; active
-premium subscriptions run the full 37-check catalog. Scan status updates in place.
+premium subscriptions run the full 38-check catalog. Scan status updates in place.
 
 ## 7. Review your results
 
