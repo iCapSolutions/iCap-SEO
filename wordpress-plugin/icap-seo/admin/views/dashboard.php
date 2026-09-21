@@ -2549,11 +2549,20 @@ if ($notice_code === 'remediation_apply_noop') {
                     </p>
                 <?php endif; ?>
                 <div class="icap-seo-actions" style="margin-top:8px;">
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block; margin-right:8px;">
                         <input type="hidden" name="action" value="icap_seo_start_ai_credit_checkout">
+                        <input type="hidden" name="credit_pack" value="starter">
                         <?php wp_nonce_field('icap_seo_start_ai_credit_checkout'); ?>
                         <button type="submit" class="button<?php echo $overview_ai_credits_exhausted ? ' button-primary' : ''; ?>">
-                            <?php esc_html_e('Buy more AI credits', 'icap-seo'); ?>
+                            <?php esc_html_e('Add 25 credits — $4.99', 'icap-seo'); ?>
+                        </button>
+                    </form>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;">
+                        <input type="hidden" name="action" value="icap_seo_start_ai_credit_checkout">
+                        <input type="hidden" name="credit_pack" value="standard">
+                        <?php wp_nonce_field('icap_seo_start_ai_credit_checkout'); ?>
+                        <button type="submit" class="button">
+                            <?php esc_html_e('Add 100 credits — $19.95', 'icap-seo'); ?>
                         </button>
                     </form>
                 </div>
