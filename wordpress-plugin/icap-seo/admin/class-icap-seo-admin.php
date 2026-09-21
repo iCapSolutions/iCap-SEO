@@ -1348,7 +1348,12 @@ class ICap_SEO_Admin
             wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
         }
         check_admin_referer('icap_seo_start_ai_credit_checkout');
+        $requested_pack = isset($_POST['credit_pack']) ? sanitize_key((string) wp_unslash($_POST['credit_pack'])) : '';
+        if (!in_array($requested_pack, ['starter', 'standard'], true)) {
+            $requested_pack = 'standard';
+        }
         $result = $this->service_client->create_ai_credit_checkout_session([
+            'credit_pack' => $requested_pack,
             'success_url' => $this->build_ai_credit_checkout_return_url('ai_credit_success'),
             'cancel_url' => $this->build_ai_credit_checkout_return_url('ai_credit_cancel'),
         ]);
