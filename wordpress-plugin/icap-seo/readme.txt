@@ -2,9 +2,9 @@
 Contributors: icapsolutions
 Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.96
+Stable tag: 0.1.104
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,30 @@ The in-plugin dashboard lists every check with its category and current status u
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.104 =
+* Added a lower-cost 25-credit AI pack alongside the original 100-credit pack, so you can try AI-assisted fixes without a large upfront purchase.
+
+= 0.1.103 =
+* Fixed the "AI credits remaining" count on the Overview tab not updating right away after using a credit.
+
+= 0.1.102 =
+* Fixed AI Drafts actions (preview, publish, discard, regenerate) sometimes returning you to the wrong tab in Content Detail.
+
+= 0.1.101 =
+* Added a live structured data (schema) check to the in-editor panel, and a new "Check spelling & grammar" action in AI Drafts.
+
+= 0.1.100 =
+* Added a passive-voice check to the readability toolset, bringing the total to 38 checks.
+
+= 0.1.99 =
+* Added two more readability checks: long sentences and low use of transition words.
+
+= 0.1.98 =
+* Fixed a few places in the dashboard still showing an outdated check count.
+
+= 0.1.97 =
+* Added checks for robots meta tags and internal nofollow links, expanding the total from 31 to 35 checks.
 
 = 0.1.96 =
 * The iCap SEO block editor sidebar now updates live as you type (title, content, meta description): the quick-check score, checklist, and search/social previews refresh about a second after you pause typing, instead of only reflecting the last-saved version of the page. The Classic Editor metabox is unaffected — it stays computed on save, matching how the rest of that screen works.
