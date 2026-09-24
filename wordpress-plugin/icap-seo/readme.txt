@@ -8,11 +8,11 @@ Stable tag: 0.1.104
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Cloud-connected SEO scanning, scoring, and one-click fixes — 31 checks, AI-assisted drafting, preview before publish.
+Cloud-connected SEO scanning, scoring, and one-click fixes — 38 checks, AI-assisted drafting, preview before publish.
 
 == Description ==
 
-iCap SEO runs a real, cloud-connected SEO scan of your site — 31 checks across 6 categories — explains what it finds in plain language, and fixes most of it for you, automatically or with a preview you approve first.
+iCap SEO runs a real, cloud-connected SEO scan of your site — 38 checks across 6 categories — explains what it finds in plain language, and fixes most of it for you, automatically or with a preview you approve first.
 
 **What it does**
 
