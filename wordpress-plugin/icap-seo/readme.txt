@@ -2,7 +2,7 @@
 Contributors: icapsolutions
 Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
-Tested up to: 7.1.2
+Tested up to: 7.1
 Requires PHP: 7.4
 Stable tag: 0.1.104
 License: GPLv2 or later
