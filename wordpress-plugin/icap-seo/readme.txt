@@ -68,6 +68,12 @@ Confirm registration completed successfully and that credentials are saved under
 
 The in-plugin dashboard lists every check with its category and current status under **Content Scores**.
 
+= How do I report a bug, request a feature, or report a security issue? =
+
+General bugs, feature requests, and support questions: email support@icapsolutions.com. Security
+vulnerabilities should go to security@icapsolutions.com instead of a public report — see
+https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy.
+
 == Screenshots ==
 
 1. Setup Wizard — connect and register a site in a few steps.
