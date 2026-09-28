@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.109
+Stable tag: 0.1.110
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.110 =
+* Wrapped the Setup Wizard tab's content in a white card tile, matching the look already used on the Overview and Content Scores tabs.
 
 = 0.1.109 =
 * Setup Wizard tab's Site ID now displays as plain bold text, matching the Latest scan / Tier style used on the Content Scores tab, instead of the grey code-box look.
