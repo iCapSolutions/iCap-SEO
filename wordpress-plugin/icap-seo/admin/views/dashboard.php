@@ -50,6 +50,54 @@ if (!function_exists('icap_seo_meter_gradient')) {
     }
 }
 
+if (!function_exists('icap_seo_score_band_colors')) {
+    // Shared green/yellow/red palette for score-based UI across the Overview
+    // and Content Scores tabs, keyed to the same bands as the Score
+    // distribution legend: Good 80-100, Needs attention 50-79, Poor below 50.
+    function icap_seo_score_band_colors(): array
+    {
+        return [
+            'good' => '#1e7f4f',
+            'warn' => '#b58900',
+            'poor' => '#b3261e',
+        ];
+    }
+}
+
+if (!function_exists('icap_seo_score_band')) {
+    function icap_seo_score_band(int $percent): string
+    {
+        $percent = max(0, min(100, $percent));
+        if ($percent >= 80) {
+            return 'good';
+        }
+        if ($percent >= 50) {
+            return 'warn';
+        }
+        return 'poor';
+    }
+}
+
+if (!function_exists('icap_seo_score_color')) {
+    function icap_seo_score_color(int $percent): string
+    {
+        $colors = icap_seo_score_band_colors();
+        return $colors[icap_seo_score_band($percent)];
+    }
+}
+
+if (!function_exists('icap_seo_score_gradient')) {
+    // Progress-ring version of icap_seo_score_color: a flat band color filled
+    // from 0% to the score and faded past it, same pattern already used for
+    // the AI Credits Remaining ring.
+    function icap_seo_score_gradient(int $percent): string
+    {
+        $percent = max(0, min(100, $percent));
+        $color = icap_seo_score_color($percent);
+        return sprintf('conic-gradient(%s 0%% %d%%, #e5e5e5 %d%% 100%%)', $color, $percent, $percent);
+    }
+}
+
 if (!function_exists('icap_seo_friendly_layer_names')) {
     // Maps raw backend scan-layer names to the same category labels used in
     // the Overview tab's feature summary, so scan-coverage text reads
@@ -587,11 +635,7 @@ if ($notice_code === 'remediation_apply_noop') {
             <?php if (!empty($content_scores_rollup) && ($content_scores_rollup['total_scored'] ?? 0) > 0) :
                 $rollup = $content_scores_rollup;
                 $rollup_total_scored = $rollup['total_scored'];
-                $rollup_band_colors = [
-                    'good' => '#1e7f4f',
-                    'warn' => '#9a5b0a',
-                    'poor' => '#b3261e',
-                ];
+                $rollup_band_colors = icap_seo_score_band_colors();
                 $rollup_band_labels = [
                     'good' => __('Good (80-100)', 'icap-seo'),
                     'warn' => __('Needs attention (50-79)', 'icap-seo'),
@@ -621,7 +665,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <h3><?php esc_html_e('Score distribution', 'icap-seo'); ?></h3>
                         <div class="icap-seo-meter" style="background: <?php echo esc_attr($rollup_gradient); ?>;">
                             <div class="icap-seo-meter-inner">
-                                <span class="icap-seo-meter-value"><?php echo esc_html((string) $rollup['average']); ?></span>
+                                <span class="icap-seo-meter-value" style="color: <?php echo esc_attr(icap_seo_score_color((int) $rollup['average'])); ?>;"><?php echo esc_html((string) $rollup['average']); ?></span>
                             </div>
                         </div>
                         <p class="icap-seo-card-subtext">
@@ -642,7 +686,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <li>
                                 <span class="icap-seo-rollup-swatch" style="background-color: <?php echo esc_attr($rollup_band_colors[$rollup_band_key]); ?>;" aria-hidden="true"></span>
                                 <span class="icap-seo-rollup-legend-label"><?php echo esc_html($rollup_band_labels[$rollup_band_key]); ?></span>
-                                <span class="icap-seo-rollup-legend-count"><?php echo esc_html((string) $rollup_band_count); ?></span>
+                                <span class="icap-seo-rollup-legend-count" style="color: <?php echo esc_attr($rollup_band_colors[$rollup_band_key]); ?>;"><?php echo esc_html((string) $rollup_band_count); ?></span>
                             </li>
                         <?php endforeach; ?>
                         <?php if ($rollup_not_scanned > 0) : ?>
@@ -746,7 +790,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                     <td>
                                         <?php
                                         $row_score_percent = isset($row['icap_score_numeric']) ? max(0, min(100, (int) $row['icap_score_numeric'])) : 0;
-                                        $row_score_color = icap_seo_meter_color($row_score_percent, 10, 90);
+                                        $row_score_color = icap_seo_score_color($row_score_percent);
                                         ?>
                                         <div class="icap-seo-score-bar-wrap">
                                             <div class="icap-seo-score-bar-track">
@@ -2271,9 +2315,9 @@ if ($notice_code === 'remediation_apply_noop') {
             if (!empty($score_snapshot['score']) && preg_match('/(\d+)\s*\/\s*100/', (string) $score_snapshot['score'], $overview_score_match)) {
                 $overview_score_percent = max(0, min(100, (int) $overview_score_match[1]));
             }
-            $overview_score_color = $overview_score_percent !== null ? icap_seo_meter_color($overview_score_percent, 10, 90) : '#8c8f94';
+            $overview_score_color = $overview_score_percent !== null ? icap_seo_score_color($overview_score_percent) : '#8c8f94';
             $overview_score_fill = $overview_score_percent ?? 0;
-            $overview_score_gradient = $overview_score_percent !== null ? icap_seo_meter_gradient($overview_score_fill, 10, 90) : '#e5e5e5';
+            $overview_score_gradient = $overview_score_percent !== null ? icap_seo_score_gradient($overview_score_fill) : '#e5e5e5';
             $overview_score_display = $overview_score_percent !== null ? $overview_score_percent . '%' : __('Pending', 'icap-seo');
 
             $overview_ai_credit_fill = $overview_is_premium ? max(0, min(100, $overview_ai_credits_remaining)) : 0;
