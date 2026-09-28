@@ -1019,14 +1019,8 @@ if ($notice_code === 'remediation_apply_noop') {
                         }
                     }
                     ?>
-                    <h4><?php echo esc_html($detail_title); ?></h4>
-                    <p class="description">
-                        <?php esc_html_e('Type:', 'icap-seo'); ?> <code><?php echo esc_html($detail_type !== '' ? $detail_type : 'n/a'); ?></code>
-                        |
-                        <?php esc_html_e('Status:', 'icap-seo'); ?> <code><?php echo esc_html($detail_status !== '' ? $detail_status : 'n/a'); ?></code>
-                        |
-                        <?php esc_html_e('Overall score:', 'icap-seo'); ?> <code><?php echo esc_html(sprintf('%d/100', $detail_score)); ?></code>
-                    </p>
+                    <div class="icap-seo-panel">
+                    <p class="icap-seo-card-value"><?php echo esc_html($detail_title); ?></p>
                     <?php
                     $detail_google_verification = isset($content_score_detail['google_verification']) && is_array($content_score_detail['google_verification'])
                         ? $content_score_detail['google_verification']
@@ -1047,48 +1041,6 @@ if ($notice_code === 'remediation_apply_noop') {
                             ?>
                         </p>
                     <?php endif; ?>
-                    <?php
-                    $detail_google_performance = isset($content_score_detail['google_performance']) && is_array($content_score_detail['google_performance'])
-                        ? $content_score_detail['google_performance']
-                        : null;
-                    ?>
-                    <?php if ($detail_google_performance !== null) : ?>
-                        <p class="description">
-                            <?php
-                            echo esc_html(
-                                sprintf(
-                                    /* translators: 1: clicks, 2: impressions, 3: CTR percentage, 4: average position, all from Google Search Console, last 28 days */
-                                    __('Search Console (last 28 days): %1$d clicks, %2$d impressions, %3$s CTR, average position %4$s', 'icap-seo'),
-                                    (int) $detail_google_performance['clicks'],
-                                    (int) $detail_google_performance['impressions'],
-                                    number_format((float) $detail_google_performance['ctr'] * 100, 1) . '%',
-                                    number_format((float) $detail_google_performance['position'], 1)
-                                )
-                            );
-                            ?>
-                        </p>
-                    <?php endif; ?>
-                    <?php
-                    $detail_google_analytics = isset($content_score_detail['google_analytics']) && is_array($content_score_detail['google_analytics'])
-                        ? $content_score_detail['google_analytics']
-                        : null;
-                    ?>
-                    <?php if ($detail_google_analytics !== null) : ?>
-                        <p class="description">
-                            <?php
-                            echo esc_html(
-                                sprintf(
-                                    /* translators: 1: sessions, 2: page views, 3: engagement rate percentage, 4: average session duration in seconds, all from Google Analytics, last 28 days */
-                                    __('Google Analytics (last 28 days): %1$d sessions, %2$d page views, %3$s engagement rate, %4$ss average session duration', 'icap-seo'),
-                                    (int) $detail_google_analytics['sessions'],
-                                    (int) $detail_google_analytics['page_views'],
-                                    number_format((float) $detail_google_analytics['engagement_rate'] * 100, 1) . '%',
-                                    number_format((float) $detail_google_analytics['avg_session_duration'], 0)
-                                )
-                            );
-                            ?>
-                        </p>
-                    <?php endif; ?>
                     <?php if ($detail_permalink !== '') : ?>
                         <p><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View published URL', 'icap-seo'); ?></a></p>
                     <?php endif; ?>
@@ -1098,6 +1050,110 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php echo esc_html($current_meta_description_value); ?>
                         </p>
                     <?php endif; ?>
+                    </div>
+                    <?php
+                    // Type/Status/Overall score plus per-page Search Console/Analytics
+                    // stats as icon cards, matching the Overview tab's .icap-seo-cards
+                    // grid pattern rather than the plain meta-line text used elsewhere -
+                    // these are scannable at-a-glance stats, not a single label:value line.
+                    $detail_google_performance = isset($content_score_detail['google_performance']) && is_array($content_score_detail['google_performance'])
+                        ? $content_score_detail['google_performance']
+                        : null;
+                    $detail_google_analytics = isset($content_score_detail['google_analytics']) && is_array($content_score_detail['google_analytics'])
+                        ? $content_score_detail['google_analytics']
+                        : null;
+                    ?>
+                    <div class="icap-seo-cards">
+                        <div class="icap-seo-card icap-seo-card--icon">
+                            <div class="icap-seo-card-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>
+                            </div>
+                            <div class="icap-seo-card-text">
+                                <h3><?php esc_html_e('Type', 'icap-seo'); ?></h3>
+                                <p class="icap-seo-card-value"><?php echo esc_html($detail_type !== '' ? $detail_type : 'n/a'); ?></p>
+                            </div>
+                        </div>
+                        <div class="icap-seo-card icap-seo-card--icon">
+                            <div class="icap-seo-card-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 6-6"/></svg>
+                            </div>
+                            <div class="icap-seo-card-text">
+                                <h3><?php esc_html_e('Status', 'icap-seo'); ?></h3>
+                                <p class="icap-seo-card-value"><?php echo esc_html($detail_status !== '' ? $detail_status : 'n/a'); ?></p>
+                            </div>
+                        </div>
+                        <div class="icap-seo-card icap-seo-card--icon">
+                            <div class="icap-seo-card-icon" aria-hidden="true" style="background: <?php echo esc_attr(ICap_SEO_Admin::score_color($detail_score)); ?>;">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>
+                            </div>
+                            <div class="icap-seo-card-text">
+                                <h3><?php esc_html_e('Overall score', 'icap-seo'); ?></h3>
+                                <p class="icap-seo-card-value" style="color: <?php echo esc_attr(ICap_SEO_Admin::score_text_color($detail_score)); ?>;"><?php echo esc_html(sprintf('%d/100', $detail_score)); ?></p>
+                            </div>
+                        </div>
+                        <?php if ($detail_google_performance !== null) : ?>
+                            <div class="icap-seo-card icap-seo-card--icon">
+                                <div class="icap-seo-card-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                                </div>
+                                <div class="icap-seo-card-text">
+                                    <h3><?php esc_html_e('Search Console (28d)', 'icap-seo'); ?></h3>
+                                    <p class="icap-seo-card-value">
+                                        <?php
+                                        $detail_gsc_clicks = (int) $detail_google_performance['clicks'];
+                                        echo esc_html(sprintf(
+                                            /* translators: %d: clicks in the last 28 days */
+                                            _n('%d click', '%d clicks', $detail_gsc_clicks, 'icap-seo'),
+                                            $detail_gsc_clicks
+                                        ));
+                                        ?>
+                                    </p>
+                                    <p class="icap-seo-card-subtext">
+                                        <?php
+                                        echo esc_html(sprintf(
+                                            /* translators: 1: impressions, 2: CTR percentage, 3: average position, all from Google Search Console, last 28 days */
+                                            __('%1$d impressions · %2$s CTR · avg position %3$s', 'icap-seo'),
+                                            (int) $detail_google_performance['impressions'],
+                                            number_format((float) $detail_google_performance['ctr'] * 100, 1) . '%',
+                                            number_format((float) $detail_google_performance['position'], 1)
+                                        ));
+                                        ?>
+                                    </p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($detail_google_analytics !== null) : ?>
+                            <div class="icap-seo-card icap-seo-card--icon">
+                                <div class="icap-seo-card-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+                                </div>
+                                <div class="icap-seo-card-text">
+                                    <h3><?php esc_html_e('Google Analytics (28d)', 'icap-seo'); ?></h3>
+                                    <p class="icap-seo-card-value">
+                                        <?php
+                                        $detail_ga_sessions = (int) $detail_google_analytics['sessions'];
+                                        echo esc_html(sprintf(
+                                            /* translators: %d: sessions in the last 28 days */
+                                            _n('%d session', '%d sessions', $detail_ga_sessions, 'icap-seo'),
+                                            $detail_ga_sessions
+                                        ));
+                                        ?>
+                                    </p>
+                                    <p class="icap-seo-card-subtext">
+                                        <?php
+                                        echo esc_html(sprintf(
+                                            /* translators: 1: page views, 2: engagement rate percentage, 3: average session duration in seconds, all from Google Analytics, last 28 days */
+                                            __('%1$d page views · %2$s engagement · %3$ss avg duration', 'icap-seo'),
+                                            (int) $detail_google_analytics['page_views'],
+                                            number_format((float) $detail_google_analytics['engagement_rate'] * 100, 1) . '%',
+                                            number_format((float) $detail_google_analytics['avg_session_duration'], 0)
+                                        ));
+                                        ?>
+                                    </p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                     <div class="icap-seo-actions" style="margin:12px 0;">
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form">
                             <input type="hidden" name="action" value="icap_seo_rescan_content">
@@ -1144,6 +1200,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <?php endforeach; ?>
                     </nav>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
+                    <div class="icap-seo-panel">
                     <h4><?php esc_html_e('Category score breakdown', 'icap-seo'); ?></h4>
                     <?php if (empty($detail_category_scores)) : ?>
                         <p><?php esc_html_e('No category scores returned for this scan.', 'icap-seo'); ?></p>
@@ -1157,6 +1214,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php endforeach; ?>
                         </ul>
                     <?php endif; ?>
+                    </div>
                     <h4><?php esc_html_e('Full recommendation catalog', 'icap-seo'); ?></h4>
                     <p class="description"><?php esc_html_e('Every check iCap SEO can run against this page: whether it currently passes, which plan it requires, and how it gets fixed.', 'icap-seo'); ?></p>
                     <?php
@@ -1355,6 +1413,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     $content_depth_draft_word_count = isset($content_depth_draft['word_count']) ? (int) $content_depth_draft['word_count'] : 0;
                     ?>
                     <?php if (!empty($content_depth_open_issue_codes) || $content_depth_draft_html !== '') : ?>
+                        <div class="icap-seo-panel">
                         <h4><?php esc_html_e('Content depth expansion', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates draft paragraphs to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft — unlike the other recommendations above.', 'icap-seo'); ?></p>
                         <?php if (!empty($content_depth_open_issue_codes)) : ?>
@@ -1366,15 +1425,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             ));
                             ?></p>
                         <?php endif; ?>
-                        <?php if ($content_depth_draft_html === '') : ?>
-                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                                <input type="hidden" name="action" value="icap_seo_preview_content_depth">
-                                <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                                <input type="hidden" name="detail_tab" value="ai-drafts">
-                                <?php wp_nonce_field('icap_seo_preview_content_depth'); ?>
-                                <button type="submit" class="button button-secondary"><?php esc_html_e('Preview expanded content', 'icap-seo'); ?></button>
-                            </form>
-                        <?php else : ?>
+                        <?php if ($content_depth_draft_html !== '') : ?>
                             <div class="icap-seo-content-depth-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                                 <p class="description"><?php
                                 echo esc_html(sprintf(
@@ -1385,6 +1436,19 @@ if ($notice_code === 'remediation_apply_noop') {
                                 ?></p>
                                 <div><?php echo wp_kses_post($content_depth_draft_html); ?></div>
                             </div>
+                        <?php endif; ?>
+                        </div>
+                        <?php if ($content_depth_draft_html === '') : ?>
+                            <div class="icap-seo-actions">
+                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                    <input type="hidden" name="action" value="icap_seo_preview_content_depth">
+                                    <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                    <input type="hidden" name="detail_tab" value="ai-drafts">
+                                    <?php wp_nonce_field('icap_seo_preview_content_depth'); ?>
+                                    <button type="submit" class="button button-secondary"><?php esc_html_e('Preview expanded content', 'icap-seo'); ?></button>
+                                </form>
+                            </div>
+                        <?php else : ?>
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_publish_content_depth">
@@ -1418,17 +1482,10 @@ if ($notice_code === 'remediation_apply_noop') {
                     $readability_draft_paragraphs = isset($readability_draft_paragraphs) && is_array($readability_draft_paragraphs) ? $readability_draft_paragraphs : [];
                     ?>
                     <?php if ($readability_open || !empty($readability_draft_paragraphs)) : ?>
+                        <div class="icap-seo-panel">
                         <h4><?php esc_html_e('Readability rewrite', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates simplified paragraph drafts to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft — unlike the other recommendations above.', 'icap-seo'); ?></p>
-                        <?php if (empty($readability_draft_paragraphs)) : ?>
-                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                                <input type="hidden" name="action" value="icap_seo_preview_readability_rewrite">
-                                <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                                <input type="hidden" name="detail_tab" value="ai-drafts">
-                                <?php wp_nonce_field('icap_seo_preview_readability_rewrite'); ?>
-                                <button type="submit" class="button button-secondary"><?php esc_html_e('Preview simplified paragraphs', 'icap-seo'); ?></button>
-                            </form>
-                        <?php else : ?>
+                        <?php if (!empty($readability_draft_paragraphs)) : ?>
                             <div class="icap-seo-readability-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                                 <p class="description">
                                     <?php
@@ -1455,6 +1512,19 @@ if ($notice_code === 'remediation_apply_noop') {
                                     </div>
                                 <?php endforeach; ?>
                             </div>
+                        <?php endif; ?>
+                        </div>
+                        <?php if (empty($readability_draft_paragraphs)) : ?>
+                            <div class="icap-seo-actions">
+                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                    <input type="hidden" name="action" value="icap_seo_preview_readability_rewrite">
+                                    <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                    <input type="hidden" name="detail_tab" value="ai-drafts">
+                                    <?php wp_nonce_field('icap_seo_preview_readability_rewrite'); ?>
+                                    <button type="submit" class="button button-secondary"><?php esc_html_e('Preview simplified paragraphs', 'icap-seo'); ?></button>
+                                </form>
+                            </div>
+                        <?php else : ?>
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_publish_readability_rewrite">
@@ -1483,17 +1553,10 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php
                     $spelling_grammar_draft_paragraphs = isset($spelling_grammar_draft_paragraphs) && is_array($spelling_grammar_draft_paragraphs) ? $spelling_grammar_draft_paragraphs : [];
                     ?>
+                    <div class="icap-seo-panel">
                     <h4><?php esc_html_e('Spelling & grammar', 'icap-seo'); ?></h4>
                     <p class="description"><?php esc_html_e('Not tied to a scan finding - run this any time to check this page\'s prose for spelling and grammar mistakes. Uses an AI credit. Generates a draft to review before anything is saved.', 'icap-seo'); ?></p>
-                    <?php if (empty($spelling_grammar_draft_paragraphs)) : ?>
-                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                            <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
-                            <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                            <input type="hidden" name="detail_tab" value="ai-drafts">
-                            <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
-                            <button type="submit" class="button button-secondary"><?php esc_html_e('Check spelling & grammar', 'icap-seo'); ?></button>
-                        </form>
-                    <?php else : ?>
+                    <?php if (!empty($spelling_grammar_draft_paragraphs)) : ?>
                         <div class="icap-seo-spelling-grammar-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                             <p class="description">
                                 <?php
@@ -1520,6 +1583,19 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </div>
                             <?php endforeach; ?>
                         </div>
+                    <?php endif; ?>
+                    </div>
+                    <?php if (empty($spelling_grammar_draft_paragraphs)) : ?>
+                        <div class="icap-seo-actions">
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
+                                <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                <input type="hidden" name="detail_tab" value="ai-drafts">
+                                <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
+                                <button type="submit" class="button button-secondary"><?php esc_html_e('Check spelling & grammar', 'icap-seo'); ?></button>
+                            </form>
+                        </div>
+                    <?php else : ?>
                         <div class="icap-seo-actions">
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_publish_spelling_grammar">
@@ -1547,6 +1623,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; // content_detail_tab === 'ai-drafts' ?>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
                     <?php if (!empty($applied_detail_issues)) : ?>
+                        <div class="icap-seo-panel">
                         <h4><?php esc_html_e('Applied recommendations (local)', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('These were applied in WordPress already. Use regenerate if you want a new AI draft before the next rescan.', 'icap-seo'); ?></p>
                         <ol>
@@ -1581,9 +1658,73 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </li>
                             <?php endforeach; ?>
                         </ol>
+                        </div>
                     <?php endif; ?>
+                    <div class="icap-seo-panel">
                     <h4><?php esc_html_e('Remediation preview and apply', 'icap-seo'); ?></h4>
                     <p class="description"><?php esc_html_e('Preview/apply actions only include open recommendations. Locally applied items are excluded until a rescan refreshes cloud findings.', 'icap-seo'); ?></p>
+                    <p class="description"><?php esc_html_e('Content depth recommendations are excluded from "Apply all" — use the Content depth expansion preview/publish flow above instead.', 'icap-seo'); ?></p>
+                    </div>
+                    <?php if ($remediation_preview_error !== '') : ?>
+                        <div class="notice notice-error inline">
+                            <p><?php echo esc_html($remediation_preview_error); ?></p>
+                        </div>
+                    <?php else : ?>
+                        <?php
+                        $preview_changes = (isset($remediation_preview['proposed_changes']) && is_array($remediation_preview['proposed_changes']))
+                            ? $remediation_preview['proposed_changes']
+                            : [];
+                        $preview_summary = (isset($remediation_preview['summary']) && is_array($remediation_preview['summary']))
+                            ? $remediation_preview['summary']
+                            : [];
+                        ?>
+                        <?php if (empty($preview_changes)) : ?>
+                            <p><?php esc_html_e('No proposed remediation changes are currently available for this content item.', 'icap-seo'); ?></p>
+                        <?php else : ?>
+                            <div class="icap-seo-panel">
+                            <p class="description">
+                                <?php
+                                $queued_estimate = isset($preview_summary['proposed_change_count']) ? (int) $preview_summary['proposed_change_count'] : count($preview_changes);
+                                echo esc_html(sprintf(
+                                    /* translators: %d: number of proposed changes */
+                                    __('Proposed changes: %d', 'icap-seo'),
+                                    $queued_estimate
+                                ));
+                                ?>
+                            </p>
+                            <ul>
+                                <?php foreach ($preview_changes as $change_row) : ?>
+                                    <?php
+                                    $change_issue_code = isset($change_row['issue_code']) ? sanitize_text_field((string) $change_row['issue_code']) : '';
+                                    $change_summary = isset($change_row['summary']) ? sanitize_text_field((string) $change_row['summary']) : '';
+                                    $change_severity = isset($change_row['severity']) ? sanitize_text_field((string) $change_row['severity']) : 'medium';
+                                    $change_effort = isset($change_row['estimated_effort']) ? sanitize_text_field((string) $change_row['estimated_effort']) : '';
+                                    $change_review = !empty($change_row['requires_editor_review']);
+                                    ?>
+                                    <li>
+                                        <strong><?php echo esc_html(strtoupper($change_severity)); ?></strong>
+                                        <?php if ($change_issue_code !== '') : ?>
+                                            <span class="icap-seo-meta-value"><?php echo esc_html($change_issue_code); ?></span>
+                                        <?php endif; ?>
+                                        <?php if ($change_effort !== '') : ?>
+                                            <span>(<?php
+                                            echo esc_html(sprintf(
+                                                /* translators: %s: effort level (low/medium/high) */
+                                                __('effort: %s', 'icap-seo'),
+                                                $change_effort
+                                            ));
+                                            ?>)</span>
+                                        <?php endif; ?>
+                                        <div><?php echo esc_html($change_summary !== '' ? $change_summary : __('No summary provided.', 'icap-seo')); ?></div>
+                                        <?php if ($change_review) : ?>
+                                            <div><em><?php esc_html_e('Requires editor review before publish.', 'icap-seo'); ?></em></div>
+                                        <?php endif; ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
                     <div class="icap-seo-actions">
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="icap_seo_preview_remediation">
@@ -1625,67 +1766,9 @@ if ($notice_code === 'remediation_apply_noop') {
                             <button type="submit" class="button button-primary" <?php disabled(empty($apply_all_issue_codes)); ?>><?php esc_html_e('Apply all open recommendations', 'icap-seo'); ?></button>
                         </form>
                     </div>
-                    <p class="description"><?php esc_html_e('Content depth recommendations are excluded from "Apply all" — use the Content depth expansion preview/publish flow above instead.', 'icap-seo'); ?></p>
-                    <?php if ($remediation_preview_error !== '') : ?>
-                        <div class="notice notice-error inline">
-                            <p><?php echo esc_html($remediation_preview_error); ?></p>
-                        </div>
-                    <?php else : ?>
-                        <?php
-                        $preview_changes = (isset($remediation_preview['proposed_changes']) && is_array($remediation_preview['proposed_changes']))
-                            ? $remediation_preview['proposed_changes']
-                            : [];
-                        $preview_summary = (isset($remediation_preview['summary']) && is_array($remediation_preview['summary']))
-                            ? $remediation_preview['summary']
-                            : [];
-                        ?>
-                        <?php if (empty($preview_changes)) : ?>
-                            <p><?php esc_html_e('No proposed remediation changes are currently available for this content item.', 'icap-seo'); ?></p>
-                        <?php else : ?>
-                            <p class="description">
-                                <?php
-                                $queued_estimate = isset($preview_summary['proposed_change_count']) ? (int) $preview_summary['proposed_change_count'] : count($preview_changes);
-                                echo esc_html(sprintf(
-                                    /* translators: %d: number of proposed changes */
-                                    __('Proposed changes: %d', 'icap-seo'),
-                                    $queued_estimate
-                                ));
-                                ?>
-                            </p>
-                            <ul>
-                                <?php foreach ($preview_changes as $change_row) : ?>
-                                    <?php
-                                    $change_issue_code = isset($change_row['issue_code']) ? sanitize_text_field((string) $change_row['issue_code']) : '';
-                                    $change_summary = isset($change_row['summary']) ? sanitize_text_field((string) $change_row['summary']) : '';
-                                    $change_severity = isset($change_row['severity']) ? sanitize_text_field((string) $change_row['severity']) : 'medium';
-                                    $change_effort = isset($change_row['estimated_effort']) ? sanitize_text_field((string) $change_row['estimated_effort']) : '';
-                                    $change_review = !empty($change_row['requires_editor_review']);
-                                    ?>
-                                    <li>
-                                        <strong><?php echo esc_html(strtoupper($change_severity)); ?></strong>
-                                        <?php if ($change_issue_code !== '') : ?>
-                                            <code><?php echo esc_html($change_issue_code); ?></code>
-                                        <?php endif; ?>
-                                        <?php if ($change_effort !== '') : ?>
-                                            <span>(<?php
-                                            echo esc_html(sprintf(
-                                                /* translators: %s: effort level (low/medium/high) */
-                                                __('effort: %s', 'icap-seo'),
-                                                $change_effort
-                                            ));
-                                            ?>)</span>
-                                        <?php endif; ?>
-                                        <div><?php echo esc_html($change_summary !== '' ? $change_summary : __('No summary provided.', 'icap-seo')); ?></div>
-                                        <?php if ($change_review) : ?>
-                                            <div><em><?php esc_html_e('Requires editor review before publish.', 'icap-seo'); ?></em></div>
-                                        <?php endif; ?>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        <?php endif; ?>
-                    <?php endif; ?>
                     <?php endif; // content_detail_tab === 'recommendations' ?>
                     <?php if ($content_detail_tab === 'history') : ?>
+                    <div class="icap-seo-panel">
                     <h4><?php esc_html_e('Latest remediation changes', 'icap-seo'); ?></h4>
                     <?php
                     $remediation_audit_entries = isset($remediation_audit_entries) && is_array($remediation_audit_entries)
@@ -1736,7 +1819,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <li>
                                     <strong><?php echo esc_html($audit_timestamp !== '' ? $audit_timestamp : __('Unknown time', 'icap-seo')); ?></strong>
                                     <?php if (!empty($audit_issue_codes)) : ?>
-                                        <div><code><?php echo esc_html(implode(', ', $audit_issue_codes)); ?></code></div>
+                                        <div><span class="icap-seo-meta-value"><?php echo esc_html(implode(', ', $audit_issue_codes)); ?></span></div>
                                     <?php endif; ?>
                                     <?php if ($audit_title_changed) : ?>
                                         <div><?php
@@ -1856,11 +1939,15 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php endforeach; ?>
                         </ul>
                     <?php endif; ?>
+                    </div>
+                    <div class="icap-seo-panel">
                     <h4><?php esc_html_e('Score trend history', 'icap-seo'); ?></h4>
                     <p class="description"><?php echo esc_html($trend_summary); ?></p>
                     <?php if (empty($detail_history)) : ?>
                         <p><?php esc_html_e('No historical scan points available yet.', 'icap-seo'); ?></p>
-                    <?php else : ?>
+                    <?php endif; ?>
+                    </div>
+                    <?php if (!empty($detail_history)) : ?>
                         <table class="widefat striped">
                             <thead>
                                 <tr>
@@ -1879,7 +1966,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                     <tr>
                                         <td><?php echo esc_html($history_scored_at !== '' ? $history_scored_at : 'n/a'); ?></td>
                                         <td><?php echo esc_html(sprintf('%d/100', $history_score)); ?></td>
-                                        <td><code><?php echo esc_html($history_scan_id !== '' ? $history_scan_id : 'n/a'); ?></code></td>
+                                        <td><?php echo esc_html($history_scan_id !== '' ? $history_scan_id : 'n/a'); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
