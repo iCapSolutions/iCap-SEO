@@ -32,7 +32,7 @@ class ICap_SEO_Service_Client
             $default_api_base_url = esc_url_raw((string) ICAP_SEO_DEFAULT_API_BASE_URL);
         }
         if ($default_api_base_url === '') {
-            $default_api_base_url = 'https://de1mbls2mfy7q.cloudfront.net';
+            $default_api_base_url = 'https://api.icapsolutions.com';
         }
 
         return array_merge(
