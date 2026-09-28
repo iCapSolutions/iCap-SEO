@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.104
+Stable tag: 0.1.105
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.105 =
+* Switched the default API Base URL to api.icapsolutions.com (previously a raw CloudFront domain). Existing connected sites are unaffected — the old endpoint keeps working — this only changes the default new installs see.
 
 = 0.1.104 =
 * Added a lower-cost 25-credit AI pack alongside the original 100-credit pack, so you can try AI-assisted fixes without a large upfront purchase.

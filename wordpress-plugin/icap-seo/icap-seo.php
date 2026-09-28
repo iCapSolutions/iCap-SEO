@@ -3,7 +3,7 @@
  * Plugin Name: iCap SEO
  * Plugin URI: https://www.icapsolutions.com
  * Description: Cloud-connected SEO scanning, scoring, and automatic fixes for WordPress. 38 checks across 6 categories, with AI-assisted content drafting and preview-before-publish safety.
- * Version: 0.1.104
+ * Version: 0.1.105
  * Author: iCapSolutions
  * Author URI: https://www.icapsolutions.com
  * License: GPL v2 or later
@@ -15,9 +15,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('ICAP_SEO_VERSION', '0.1.104');
+define('ICAP_SEO_VERSION', '0.1.105');
 if (!defined('ICAP_SEO_DEFAULT_API_BASE_URL')) {
-    define('ICAP_SEO_DEFAULT_API_BASE_URL', 'https://de1mbls2mfy7q.cloudfront.net');
+    define('ICAP_SEO_DEFAULT_API_BASE_URL', 'https://api.icapsolutions.com');
 }
 define('ICAP_SEO_PLUGIN_FILE', __FILE__);
 define('ICAP_SEO_PLUGIN_DIR', plugin_dir_path(__FILE__));

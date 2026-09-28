@@ -483,9 +483,6 @@ if ($notice_code === 'remediation_apply_noop') {
             <?php if ($is_connected) : ?>
                 <p><?php esc_html_e('This site is connected to iCap SEO.', 'icap-seo'); ?></p>
                 <p class="description">
-                    <?php esc_html_e('API Base URL:', 'icap-seo'); ?>
-                    <code><?php echo esc_html($connection_settings['api_base_url'] !== '' ? $connection_settings['api_base_url'] : 'n/a'); ?></code>
-                    |
                     <?php esc_html_e('Site ID:', 'icap-seo'); ?>
                     <code><?php echo esc_html($connection_settings['site_id']); ?></code>
                 </p>
