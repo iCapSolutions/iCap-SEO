@@ -86,16 +86,19 @@
 		if ( score === null ) {
 			return null;
 		}
-		// Keep in sync with ICap_SEO_Admin::score_band_colors() (PHP) - this
-		// runs client-side in the block editor, so the palette can't be shared
-		// directly and is duplicated here.
+		// Keep in sync with ICap_SEO_Admin::score_band_colors()/score_band_text_colors()
+		// (PHP) - this runs client-side in the block editor, so the palette
+		// can't be shared directly and is duplicated here. borderColor uses the
+		// light fill variant; color uses the darker, readable-on-white variant
+		// (a light yellow in particular is illegible as text).
 		var label = score >= 80 ? __( 'Good', 'icap-seo' ) : score >= 50 ? __( 'Needs work', 'icap-seo' ) : __( 'Poor', 'icap-seo' );
-		var color = score >= 80 ? '#34a65f' : score >= 50 ? '#c69214' : '#e05252';
+		var borderColor = score >= 80 ? '#7bc47f' : score >= 50 ? '#f5c518' : '#f28b82';
+		var textColor = score >= 80 ? '#2e8f52' : score >= 50 ? '#b7950b' : '#d1443b';
 
 		return el(
 			'div',
 			{ className: 'icap-seo-quick-score' },
-			el( 'div', { className: 'icap-seo-quick-score__circle', style: { borderColor: color, color: color } }, String( score ) ),
+			el( 'div', { className: 'icap-seo-quick-score__circle', style: { borderColor: borderColor, color: textColor } }, String( score ) ),
 			el(
 				'div',
 				{ className: 'icap-seo-quick-score__label' },
