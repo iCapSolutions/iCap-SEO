@@ -551,7 +551,11 @@ class ICap_SEO_Admin
                 }
             }
 
-            if ($active_tab === 'setup-wizard' && $connection_settings['site_id'] === '' && $connection_settings['site_token'] === '') {
+            // The "request a registration token" form now shows on this tab
+            // even for an already-connected site (re-registering needs a fresh
+            // token too, since tokens are single-use), so the challenge is no
+            // longer conditional on being unregistered.
+            if ($active_tab === 'setup-wizard') {
                 $challenge_result = $this->service_client->get_registration_challenge();
                 if (!empty($challenge_result['success'])) {
                     $registration_challenge = $challenge_result['data'];
@@ -929,6 +933,9 @@ class ICap_SEO_Admin
         }
         check_admin_referer('icap_seo_register_site');
 
+        $pre_register_settings = $this->service_client->get_connection_settings();
+        $was_already_connected = $pre_register_settings['site_id'] !== '' && $pre_register_settings['site_token'] !== '';
+
         $result = $this->service_client->register_site([
             'site_url' => home_url('/'),
             'wp_version' => get_bloginfo('version'),
@@ -950,6 +957,16 @@ class ICap_SEO_Admin
         }
         if ($error_code === 'api_base_url_missing') {
             $this->redirect_with_notice('api_base_url_missing', 'settings');
+            return;
+        }
+
+        // A site that already has Site ID/Token saved almost always means
+        // "Re-register" was clicked with the same registration token used the
+        // first time - those tokens are single-use, so the backend rejects the
+        // replay. Steer toward the actual fix (a new token) instead of the
+        // generic message, which reads as if the saved values are just wrong.
+        if ($was_already_connected) {
+            $this->redirect_with_notice('register_failed_already_connected', 'setup-wizard');
             return;
         }
 
