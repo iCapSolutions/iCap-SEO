@@ -522,6 +522,7 @@ if ($notice_code === 'remediation_apply_noop') {
         <?php if ($active_tab === 'setup-wizard') : ?>
             <?php $is_connected = $connection_settings['site_id'] !== '' && $connection_settings['site_token'] !== ''; ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['setup-wizard']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
+            <div class="icap-seo-panel">
             <p class="description">
                 <?php esc_html_e('iCap SEO connects this site to iCapSolutions\' cloud scanning service. Running a scan sends the scanned page\'s public content to that service to generate scores and suggested fixes; nothing is published or changed on your site without your explicit approval.', 'icap-seo'); ?>
             </p>
@@ -587,6 +588,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php esc_html_e('Site credentials', 'icap-seo'); ?>
                 <code><?php echo esc_html($is_connected ? 'present' : 'missing'); ?></code>
             </p>
+            </div>
         <?php elseif ($active_tab === 'content-scores') : ?>
             <?php if ($selected_content_key === '') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['content-scores']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
