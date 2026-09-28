@@ -88,13 +88,41 @@ class ICap_SEO_Admin
         );
     }
 
+    // Canonical light green/yellow/red palette for score bands (Good 80-100,
+    // Needs attention 50-79, Poor below 50), shared by every surface that
+    // colors a page score: the Overview and Content Scores tabs (dashboard.php),
+    // this Dashboard Home widget, and the block/classic editor quick-score
+    // panels. Lives here (always loaded) rather than in dashboard.php, which
+    // is only included when rendering the plugin's own admin page.
+    public static function score_band_colors(): array
+    {
+        return [
+            'good' => '#34a65f',
+            'warn' => '#c69214',
+            'poor' => '#e05252',
+        ];
+    }
+
+    public static function score_band(int $percent): string
+    {
+        $percent = max(0, min(100, $percent));
+        if ($percent >= 80) {
+            return 'good';
+        }
+        if ($percent >= 50) {
+            return 'warn';
+        }
+        return 'poor';
+    }
+
+    public static function score_color(int $percent): string
+    {
+        return self::score_band_colors()[self::score_band($percent)];
+    }
+
     public function render_dashboard_widget(): void
     {
-        $band_colors = [
-            'good' => '#1e7f4f',
-            'warn' => '#9a5b0a',
-            'poor' => '#b3261e',
-        ];
+        $band_colors = self::score_band_colors();
 
         try {
             $configured = $this->service_client->is_api_connection_configured_public();

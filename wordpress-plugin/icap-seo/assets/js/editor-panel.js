@@ -86,8 +86,11 @@
 		if ( score === null ) {
 			return null;
 		}
+		// Keep in sync with ICap_SEO_Admin::score_band_colors() (PHP) - this
+		// runs client-side in the block editor, so the palette can't be shared
+		// directly and is duplicated here.
 		var label = score >= 80 ? __( 'Good', 'icap-seo' ) : score >= 50 ? __( 'Needs work', 'icap-seo' ) : __( 'Poor', 'icap-seo' );
-		var color = score >= 80 ? '#1a7f37' : score >= 50 ? '#9a6700' : '#cf222e';
+		var color = score >= 80 ? '#34a65f' : score >= 50 ? '#c69214' : '#e05252';
 
 		return el(
 			'div',

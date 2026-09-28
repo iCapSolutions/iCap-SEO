@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.106
+Stable tag: 0.1.107
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.107 =
+* Lightened the green/yellow/red score-band palette introduced in 0.1.106 and unified it across every place a page or site score is colored: the Overview and Content Scores tabs, the WordPress Dashboard Home widget, and the block/classic editor quick-check score panels (previously the editor panels used a separate, unrelated color set).
 
 = 0.1.106 =
 * Unified score colors across the Overview and Content Scores tabs into a single green/yellow/red scheme matching the Good (80-100) / Needs attention (50-79) / Poor (below 50) bands, replacing the previous continuous red-to-green gradient.
