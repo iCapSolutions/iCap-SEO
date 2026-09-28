@@ -269,15 +269,13 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
 
             $data = $this->build_panel_data($post);
             $score = (int) $data['score'];
+            $score_color = ICap_SEO_Admin::score_color($score);
             if ($score >= 80) {
                 $score_label = __('Good', 'icap-seo');
-                $score_color = '#1a7f37';
             } elseif ($score >= 50) {
                 $score_label = __('Needs work', 'icap-seo');
-                $score_color = '#9a6700';
             } else {
                 $score_label = __('Poor', 'icap-seo');
-                $score_color = '#cf222e';
             }
 
             echo '<div class="icap-seo-editor-panel icap-seo-editor-panel--metabox">';

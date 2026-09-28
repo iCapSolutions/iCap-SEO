@@ -51,38 +51,26 @@ if (!function_exists('icap_seo_meter_gradient')) {
 }
 
 if (!function_exists('icap_seo_score_band_colors')) {
-    // Shared green/yellow/red palette for score-based UI across the Overview
-    // and Content Scores tabs, keyed to the same bands as the Score
-    // distribution legend: Good 80-100, Needs attention 50-79, Poor below 50.
+    // Thin wrappers around ICap_SEO_Admin's canonical score-band palette
+    // (always loaded, unlike this file) so every score display on this page
+    // stays in sync with the Dashboard Home widget and editor panels.
     function icap_seo_score_band_colors(): array
     {
-        return [
-            'good' => '#1e7f4f',
-            'warn' => '#b58900',
-            'poor' => '#b3261e',
-        ];
+        return ICap_SEO_Admin::score_band_colors();
     }
 }
 
 if (!function_exists('icap_seo_score_band')) {
     function icap_seo_score_band(int $percent): string
     {
-        $percent = max(0, min(100, $percent));
-        if ($percent >= 80) {
-            return 'good';
-        }
-        if ($percent >= 50) {
-            return 'warn';
-        }
-        return 'poor';
+        return ICap_SEO_Admin::score_band($percent);
     }
 }
 
 if (!function_exists('icap_seo_score_color')) {
     function icap_seo_score_color(int $percent): string
     {
-        $colors = icap_seo_score_band_colors();
-        return $colors[icap_seo_score_band($percent)];
+        return ICap_SEO_Admin::score_color($percent);
     }
 }
 
