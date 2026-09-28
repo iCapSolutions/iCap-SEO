@@ -269,7 +269,8 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
 
             $data = $this->build_panel_data($post);
             $score = (int) $data['score'];
-            $score_color = ICap_SEO_Admin::score_color($score);
+            $score_border_color = ICap_SEO_Admin::score_color($score);
+            $score_text_color = ICap_SEO_Admin::score_text_color($score);
             if ($score >= 80) {
                 $score_label = __('Good', 'icap-seo');
             } elseif ($score >= 50) {
@@ -281,7 +282,7 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
             echo '<div class="icap-seo-editor-panel icap-seo-editor-panel--metabox">';
 
             echo '<div class="icap-seo-quick-score">';
-            echo '<div class="icap-seo-quick-score__circle" style="border-color:' . esc_attr($score_color) . ';color:' . esc_attr($score_color) . ';">' . esc_html((string) $score) . '</div>';
+            echo '<div class="icap-seo-quick-score__circle" style="border-color:' . esc_attr($score_border_color) . ';color:' . esc_attr($score_text_color) . ';">' . esc_html((string) $score) . '</div>';
             echo '<div class="icap-seo-quick-score__label"><strong>' . esc_html($score_label) . '</strong>';
             echo '<div class="icap-seo-quick-score__hint">' . esc_html__('Quick check based on this page\'s saved content only. Run a full scan in iCap SEO for the authoritative score.', 'icap-seo') . '</div>';
             echo '</div></div>';

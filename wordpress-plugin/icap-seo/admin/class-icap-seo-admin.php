@@ -94,12 +94,27 @@ class ICap_SEO_Admin
     // this Dashboard Home widget, and the block/classic editor quick-score
     // panels. Lives here (always loaded) rather than in dashboard.php, which
     // is only included when rendering the plugin's own admin page.
+    //
+    // Split into two variants because a light color legible as a fill
+    // (a ring, bar, or swatch) is too low-contrast to read as text on a white
+    // background - light yellow in particular becomes illegible, and darkening
+    // it enough to read starts looking brown/orange instead of yellow. Fills
+    // use the true light color; text uses a readable, same-hue-family variant.
     public static function score_band_colors(): array
     {
         return [
-            'good' => '#34a65f',
-            'warn' => '#c69214',
-            'poor' => '#e05252',
+            'good' => '#7bc47f',
+            'warn' => '#f5c518',
+            'poor' => '#f28b82',
+        ];
+    }
+
+    public static function score_band_text_colors(): array
+    {
+        return [
+            'good' => '#2e8f52',
+            'warn' => '#b7950b',
+            'poor' => '#d1443b',
         ];
     }
 
@@ -120,9 +135,14 @@ class ICap_SEO_Admin
         return self::score_band_colors()[self::score_band($percent)];
     }
 
+    public static function score_text_color(int $percent): string
+    {
+        return self::score_band_text_colors()[self::score_band($percent)];
+    }
+
     public function render_dashboard_widget(): void
     {
-        $band_colors = self::score_band_colors();
+        $band_text_colors = self::score_band_text_colors();
 
         try {
             $configured = $this->service_client->is_api_connection_configured_public();
@@ -176,7 +196,7 @@ class ICap_SEO_Admin
         if ($poor_count > 0) {
             printf(
                 '<p style="font-size:13px;color:%s;font-weight:600;">%s</p>',
-                esc_attr($band_colors['poor']),
+                esc_attr($band_text_colors['poor']),
                 esc_html(sprintf(
                     /* translators: %d: number of pages scoring below 50 */
                     _n('%d page needs attention (score below 50).', '%d pages need attention (score below 50).', $poor_count, 'icap-seo'),

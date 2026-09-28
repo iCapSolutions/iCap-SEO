@@ -68,9 +68,18 @@ if (!function_exists('icap_seo_score_band')) {
 }
 
 if (!function_exists('icap_seo_score_color')) {
+    // Fill color (ring/bar/swatch) - light, not meant for text on white.
     function icap_seo_score_color(int $percent): string
     {
         return ICap_SEO_Admin::score_color($percent);
+    }
+}
+
+if (!function_exists('icap_seo_score_text_color')) {
+    // Readable variant for a score number/label sitting directly on white.
+    function icap_seo_score_text_color(int $percent): string
+    {
+        return ICap_SEO_Admin::score_text_color($percent);
     }
 }
 
@@ -624,6 +633,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 $rollup = $content_scores_rollup;
                 $rollup_total_scored = $rollup['total_scored'];
                 $rollup_band_colors = icap_seo_score_band_colors();
+                $rollup_band_text_colors = ICap_SEO_Admin::score_band_text_colors();
                 $rollup_band_labels = [
                     'good' => __('Good (80-100)', 'icap-seo'),
                     'warn' => __('Needs attention (50-79)', 'icap-seo'),
@@ -653,7 +663,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <h3><?php esc_html_e('Score distribution', 'icap-seo'); ?></h3>
                         <div class="icap-seo-meter" style="background: <?php echo esc_attr($rollup_gradient); ?>;">
                             <div class="icap-seo-meter-inner">
-                                <span class="icap-seo-meter-value" style="color: <?php echo esc_attr(icap_seo_score_color((int) $rollup['average'])); ?>;"><?php echo esc_html((string) $rollup['average']); ?></span>
+                                <span class="icap-seo-meter-value" style="color: <?php echo esc_attr(icap_seo_score_text_color((int) $rollup['average'])); ?>;"><?php echo esc_html((string) $rollup['average']); ?></span>
                             </div>
                         </div>
                         <p class="icap-seo-card-subtext">
@@ -674,7 +684,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <li>
                                 <span class="icap-seo-rollup-swatch" style="background-color: <?php echo esc_attr($rollup_band_colors[$rollup_band_key]); ?>;" aria-hidden="true"></span>
                                 <span class="icap-seo-rollup-legend-label"><?php echo esc_html($rollup_band_labels[$rollup_band_key]); ?></span>
-                                <span class="icap-seo-rollup-legend-count" style="color: <?php echo esc_attr($rollup_band_colors[$rollup_band_key]); ?>;"><?php echo esc_html((string) $rollup_band_count); ?></span>
+                                <span class="icap-seo-rollup-legend-count" style="color: <?php echo esc_attr($rollup_band_text_colors[$rollup_band_key]); ?>;"><?php echo esc_html((string) $rollup_band_count); ?></span>
                             </li>
                         <?php endforeach; ?>
                         <?php if ($rollup_not_scanned > 0) : ?>
@@ -2303,7 +2313,7 @@ if ($notice_code === 'remediation_apply_noop') {
             if (!empty($score_snapshot['score']) && preg_match('/(\d+)\s*\/\s*100/', (string) $score_snapshot['score'], $overview_score_match)) {
                 $overview_score_percent = max(0, min(100, (int) $overview_score_match[1]));
             }
-            $overview_score_color = $overview_score_percent !== null ? icap_seo_score_color($overview_score_percent) : '#8c8f94';
+            $overview_score_color = $overview_score_percent !== null ? icap_seo_score_text_color($overview_score_percent) : '#8c8f94';
             $overview_score_fill = $overview_score_percent ?? 0;
             $overview_score_gradient = $overview_score_percent !== null ? icap_seo_score_gradient($overview_score_fill) : '#e5e5e5';
             $overview_score_display = $overview_score_percent !== null ? $overview_score_percent . '%' : __('Pending', 'icap-seo');
