@@ -527,9 +527,9 @@ if ($notice_code === 'remediation_apply_noop') {
             </p>
             <?php if ($is_connected) : ?>
                 <p><?php esc_html_e('This site is connected to iCap SEO.', 'icap-seo'); ?></p>
-                <p class="description">
+                <p class="icap-seo-meta-line">
                     <?php esc_html_e('Site ID:', 'icap-seo'); ?>
-                    <code><?php echo esc_html($connection_settings['site_id']); ?></code>
+                    <span class="icap-seo-meta-value"><?php echo esc_html($connection_settings['site_id']); ?></span>
                 </p>
                 <p><?php esc_html_e('Run scans and review results from the Overview and Content Scores tabs.', 'icap-seo'); ?></p>
             <?php else : ?>
