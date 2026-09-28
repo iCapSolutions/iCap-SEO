@@ -532,6 +532,46 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php esc_html_e('Site ID:', 'icap-seo'); ?>
                     <span class="icap-seo-meta-value"><?php echo esc_html($connection_settings['site_id']); ?></span>
                 </p>
+                <?php
+                // Same four-state Search Console status and Analytics readiness
+                // check as the Overview tab's cards (scope granted + property set,
+                // not just "revoked" - see class-icap-seo-admin.php); repeated here
+                // rather than shared because both spots already inline this kind of
+                // one-off status labeling (see the 'revoked' notice above).
+                $wizard_google_status = isset($google_connection_status['status']) ? (string) $google_connection_status['status'] : 'not_connected';
+                if ($wizard_google_status === 'connected') {
+                    $wizard_gsc_label = __('Connected', 'icap-seo');
+                } elseif ($wizard_google_status === 'revoked') {
+                    $wizard_gsc_label = __('Revoked — reconnect', 'icap-seo');
+                } elseif ($wizard_google_status === 'error') {
+                    $wizard_gsc_label = __('Needs attention', 'icap-seo');
+                } else {
+                    $wizard_gsc_label = __('Not connected', 'icap-seo');
+                }
+                $wizard_analytics_scope_granted = in_array(
+                    'https://www.googleapis.com/auth/analytics.readonly',
+                    $google_connection_status['granted_scopes'] ?? [],
+                    true
+                );
+                $wizard_analytics_connected = $wizard_google_status === 'connected'
+                    && $wizard_analytics_scope_granted
+                    && !empty($google_connection_status['analytics_property_id']);
+                $wizard_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+                ?>
+                <p class="icap-seo-meta-line">
+                    <?php esc_html_e('Google Search Console:', 'icap-seo'); ?>
+                    <span class="icap-seo-meta-value"><?php echo esc_html($wizard_gsc_label); ?></span>
+                    <?php if ($wizard_google_status !== 'connected') : ?>
+                        &middot; <a href="<?php echo $wizard_settings_url; ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
+                    <?php endif; ?>
+                </p>
+                <p class="icap-seo-meta-line">
+                    <?php esc_html_e('Google Analytics:', 'icap-seo'); ?>
+                    <span class="icap-seo-meta-value"><?php echo esc_html($wizard_analytics_connected ? __('Connected', 'icap-seo') : __('Not connected', 'icap-seo')); ?></span>
+                    <?php if (!$wizard_analytics_connected) : ?>
+                        &middot; <a href="<?php echo $wizard_settings_url; ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
+                    <?php endif; ?>
+                </p>
                 <p><?php esc_html_e('Run scans and review results from the Overview and Content Scores tabs.', 'icap-seo'); ?></p>
             <?php else : ?>
                 <ol>
