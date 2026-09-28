@@ -541,7 +541,8 @@ if ($notice_code === 'remediation_apply_noop') {
                     <li><?php esc_html_e('Head to the Overview tab to run your first scan.', 'icap-seo'); ?></li>
                 </ol>
             <?php endif; ?>
-            <div class="icap-seo-actions">
+            </div>
+            <div class="icap-seo-actions" style="margin-top:16px;">
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="icap_seo_register_site">
                     <?php wp_nonce_field('icap_seo_register_site'); ?>
@@ -588,7 +589,6 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php esc_html_e('Site credentials', 'icap-seo'); ?>
                 <code><?php echo esc_html($is_connected ? 'present' : 'missing'); ?></code>
             </p>
-            </div>
         <?php elseif ($active_tab === 'content-scores') : ?>
             <?php if ($selected_content_key === '') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['content-scores']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
