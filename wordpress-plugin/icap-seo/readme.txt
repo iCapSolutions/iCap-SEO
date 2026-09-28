@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.113
+Stable tag: 0.1.114
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.114 =
+* Cleaned up the Content Detail page (opened from Content Scores): removed the grey code-box styling from Type/Status/Score and other fields, restyled the page name to match the Overview tab's status typography, added per-page Search Console/Analytics/score icon cards matching the Overview tab's style (score card colored with the same green/yellow/red palette used site-wide), and reorganized the page's Recommendations/AI Drafts/History sections into white card tiles matching Overview/Content Scores/Setup Wizard.
 
 = 0.1.113 =
 * Fixed "Re-register Site" showing a generic, misleading error on an already-connected site. Registration tokens are single-use, so re-registering with the same saved token (the common case) now gets a specific explanation and points at requesting a new one; the "request a registration token" form is also now available even after a site is connected, not just before.
