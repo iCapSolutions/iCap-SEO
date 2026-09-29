@@ -224,6 +224,7 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_google_connect_start', [$this, 'handle_google_connect_start']);
         add_action('admin_post_icap_seo_google_disconnect', [$this, 'handle_google_disconnect']);
         add_action('admin_post_icap_seo_save_analytics_property', [$this, 'handle_save_analytics_property']);
+        add_action('admin_post_icap_seo_save_search_console_property', [$this, 'handle_save_search_console_property']);
         add_action('admin_post_icap_seo_start_ai_credit_checkout', [$this, 'handle_start_ai_credit_checkout']);
         add_action('admin_post_icap_seo_preview_remediation', [$this, 'handle_preview_remediation']);
         add_action('admin_post_icap_seo_apply_remediation', [$this, 'handle_apply_remediation']);
@@ -370,6 +371,24 @@ class ICap_SEO_Admin
                 $analytics_property_candidates = $candidates_result['data']['candidates'];
             } else {
                 $analytics_discovery_failed = true;
+            }
+        }
+        // Search Console has no scope gate (webmasters.readonly is always granted on
+        // connect, unlike analytics.readonly) - discovery only needs "connected" and "no
+        // property picked yet." Same failed-discovery-vs-genuinely-zero distinction as
+        // the Analytics block above.
+        $search_console_property_candidates = [];
+        $search_console_discovery_failed = false;
+        if (
+            $active_tab === 'settings'
+            && ($google_connection_status['status'] ?? '') === 'connected'
+            && empty($google_connection_status['search_console_property_url'])
+        ) {
+            $sc_candidates_result = $this->service_client->get_search_console_property_candidates();
+            if ($sc_candidates_result['success'] && isset($sc_candidates_result['data']['candidates'])) {
+                $search_console_property_candidates = $sc_candidates_result['data']['candidates'];
+            } else {
+                $search_console_discovery_failed = true;
             }
         }
         $score_snapshot = [
@@ -1411,6 +1430,30 @@ class ICap_SEO_Admin
             return;
         }
         $this->redirect_with_notice('analytics_property_saved', 'settings');
+    }
+
+    public function handle_save_search_console_property(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_save_search_console_property');
+        $property_url = isset($_POST['search_console_property_url']) ? sanitize_text_field((string) wp_unslash($_POST['search_console_property_url'])) : '';
+        if ($property_url === '') {
+            $this->redirect_with_notice('search_console_property_invalid', 'settings');
+            return;
+        }
+        $result = $this->service_client->save_search_console_property_url($property_url);
+        if (!$result['success']) {
+            $error_code = $this->extract_error_code($result);
+            if ($error_code === 'validation_error') {
+                $this->redirect_with_notice('search_console_property_invalid', 'settings');
+                return;
+            }
+            $this->redirect_with_notice('search_console_property_save_failed', 'settings');
+            return;
+        }
+        $this->redirect_with_notice('search_console_property_saved', 'settings');
     }
 
     public function handle_start_ai_credit_checkout(): void
