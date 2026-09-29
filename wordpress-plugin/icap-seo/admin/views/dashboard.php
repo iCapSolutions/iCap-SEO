@@ -95,6 +95,53 @@ if (!function_exists('icap_seo_score_gradient')) {
     }
 }
 
+if (!function_exists('icap_seo_sparkline_points')) {
+    // Plots one series (min->max, not zero-based - a sparkline's job is to show shape/
+    // trend over the window, not compare to an absolute zero the way a bar chart does)
+    // into SVG coordinates for the SEO Performance tab's small-multiples row. One series
+    // per chart by design - see icap-seo/dataviz guidance on never combining
+    // differently-scaled metrics (clicks vs. CTR vs. position) onto one shared axis.
+    function icap_seo_sparkline_points(array $daily, string $value_key, int $width, int $height, int $pad_x, int $pad_top, int $pad_bottom): array
+    {
+        $values = [];
+        foreach ($daily as $row) {
+            $values[] = isset($row[$value_key]) ? (float) $row[$value_key] : 0.0;
+        }
+        $count = count($values);
+        if ($count === 0) {
+            return [];
+        }
+        $min = min($values);
+        $max = max($values);
+        $range = $max - $min;
+        $plot_width = max(1, $width - ($pad_x * 2));
+        $plot_height = max(1, $height - $pad_top - $pad_bottom);
+
+        $points = [];
+        foreach ($values as $index => $value) {
+            $x = $count > 1
+                ? $pad_x + ($plot_width * ($index / ($count - 1)))
+                : $pad_x + ($plot_width / 2);
+            $y = $range > 0
+                ? $pad_top + $plot_height - ((($value - $min) / $range) * $plot_height)
+                : $pad_top + ($plot_height / 2);
+            $points[] = ['x' => round($x, 1), 'y' => round($y, 1), 'value' => $value];
+        }
+        return $points;
+    }
+}
+
+if (!function_exists('icap_seo_sparkline_path')) {
+    function icap_seo_sparkline_path(array $points): string
+    {
+        $segments = [];
+        foreach ($points as $index => $point) {
+            $segments[] = ($index === 0 ? 'M' : 'L') . $point['x'] . ',' . $point['y'];
+        }
+        return implode(' ', $segments);
+    }
+}
+
 if (!function_exists('icap_seo_friendly_layer_names')) {
     // Maps raw backend scan-layer names to the same category labels used in
     // the Overview tab's feature summary, so scan-coverage text reads
@@ -121,6 +168,7 @@ $tabs = [
     'overview' => __('Overview', 'icap-seo'),
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
     'content-scores' => __('Content Scores', 'icap-seo'),
+    'seo-performance' => __('SEO Performance', 'icap-seo'),
     'notifications' => __('Notifications', 'icap-seo'),
     'redirects' => __('Redirects', 'icap-seo'),
     'local-seo' => __('Local SEO', 'icap-seo'),
@@ -133,6 +181,7 @@ $tab_icons = [
     'overview' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>',
     'setup-wizard' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
     'content-scores' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1Z"/><path d="M8 5H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/><path d="m9 12 2 2 4-4"/></svg>',
+    'seo-performance' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>',
     'notifications' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
     'redirects' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a4 4 0 0 1 4 4v1"/><path d="m15 4 4 4-4 4"/><path d="M20 17H9a4 4 0 0 1-4-4v-1"/><path d="m9 20-4-4 4-4"/></svg>',
     'local-seo' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -1974,6 +2023,146 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; ?>
                     <?php endif; // content_detail_tab === 'history' ?>
                 <?php endif; ?>
+            <?php endif; ?>
+        <?php elseif ($active_tab === 'seo-performance') : ?>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['seo-performance']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('SEO Performance', 'icap-seo'); ?></h2>
+            <p class="description"><?php esc_html_e('Site-wide traffic and search visibility from Google Search Console and Google Analytics, over the last 28 days.', 'icap-seo'); ?></p>
+            <?php
+            $performance_gsc = isset($seo_performance['gsc']) && is_array($seo_performance['gsc']) ? $seo_performance['gsc'] : [];
+            $performance_gsc_connected = !empty($performance_gsc['connected']);
+            $performance_gsc_totals = isset($performance_gsc['totals']) && is_array($performance_gsc['totals']) ? $performance_gsc['totals'] : [];
+            $performance_gsc_daily = isset($performance_gsc['daily']) && is_array($performance_gsc['daily']) ? $performance_gsc['daily'] : [];
+
+            $performance_ga4 = isset($seo_performance['ga4']) && is_array($seo_performance['ga4']) ? $seo_performance['ga4'] : [];
+            $performance_ga4_connected = !empty($performance_ga4['connected']);
+            $performance_ga4_totals = isset($performance_ga4['totals']) && is_array($performance_ga4['totals']) ? $performance_ga4['totals'] : [];
+
+            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+            ?>
+
+            <h3 style="margin-top:20px;"><?php esc_html_e('Search Console', 'icap-seo'); ?></h3>
+            <?php if (!$performance_gsc_connected) : ?>
+                <p class="description">
+                    <?php
+                    echo wp_kses(
+                        sprintf(
+                            /* translators: %s: link to the Settings tab */
+                            __('Connect Google Search Console in %s to see clicks, impressions, CTR and position here.', 'icap-seo'),
+                            '<a href="' . $performance_settings_url . '">' . esc_html__('Settings', 'icap-seo') . '</a>'
+                        ),
+                        ['a' => ['href' => []]]
+                    );
+                    ?>
+                </p>
+            <?php else : ?>
+                <div class="icap-seo-cards">
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Total Clicks', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_gsc_totals['clicks'] ?? 0))); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Total Impressions', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_gsc_totals['impressions'] ?? 0))); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Avg CTR', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_gsc_totals['ctr'] ?? 0) * 100, 1) . '%'); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Avg Position', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_gsc_totals['position'] ?? 0), 1)); ?></p>
+                    </div>
+                </div>
+
+                <?php if (count($performance_gsc_daily) > 1) :
+                    $spark_metrics = [
+                        'clicks' => ['label' => __('Clicks', 'icap-seo'), 'format' => 'int'],
+                        'impressions' => ['label' => __('Impressions', 'icap-seo'), 'format' => 'int'],
+                        'ctr' => ['label' => __('CTR', 'icap-seo'), 'format' => 'percent'],
+                        'position' => ['label' => __('Position', 'icap-seo'), 'format' => 'decimal1'],
+                    ];
+                    $spark_width = 260;
+                    $spark_height = 90;
+                    $spark_pad_x = 6;
+                    $spark_pad_top = 10;
+                    $spark_pad_bottom = 6;
+                    $spark_baseline_y = $spark_height - $spark_pad_bottom;
+                    ?>
+                    <div class="icap-seo-performance-charts">
+                        <?php foreach ($spark_metrics as $spark_key => $spark_meta) :
+                            $spark_points = icap_seo_sparkline_points($performance_gsc_daily, $spark_key, $spark_width, $spark_height, $spark_pad_x, $spark_pad_top, $spark_pad_bottom);
+                            if (empty($spark_points)) {
+                                continue;
+                            }
+                            $spark_path = icap_seo_sparkline_path($spark_points);
+                            $spark_last = $spark_points[count($spark_points) - 1];
+                            $spark_area_path = $spark_path . ' L' . $spark_last['x'] . ',' . $spark_baseline_y . ' L' . $spark_points[0]['x'] . ',' . $spark_baseline_y . ' Z';
+                            $spark_format = static function (float $value) use ($spark_meta): string {
+                                if ($spark_meta['format'] === 'percent') {
+                                    return number_format($value * 100, 1) . '%';
+                                }
+                                if ($spark_meta['format'] === 'decimal1') {
+                                    return number_format($value, 1);
+                                }
+                                return number_format_i18n((int) round($value));
+                            };
+                            ?>
+                            <div class="icap-seo-performance-chart">
+                                <h3><?php echo esc_html($spark_meta['label']); ?></h3>
+                                <svg class="icap-seo-performance-chart-svg" viewBox="0 0 <?php echo esc_attr((string) $spark_width); ?> <?php echo esc_attr((string) $spark_height); ?>" preserveAspectRatio="none" role="img" aria-label="<?php echo esc_attr(sprintf(/* translators: %s: metric label, e.g. "Clicks" */ __('%s trend over the last 28 days', 'icap-seo'), $spark_meta['label'])); ?>">
+                                    <line class="icap-seo-performance-chart-gridline" x1="<?php echo esc_attr((string) $spark_pad_x); ?>" y1="<?php echo esc_attr((string) $spark_baseline_y); ?>" x2="<?php echo esc_attr((string) ($spark_width - $spark_pad_x)); ?>" y2="<?php echo esc_attr((string) $spark_baseline_y); ?>" />
+                                    <path class="icap-seo-performance-chart-area" d="<?php echo esc_attr($spark_area_path); ?>" />
+                                    <path class="icap-seo-performance-chart-line" d="<?php echo esc_attr($spark_path); ?>" />
+                                    <?php foreach ($spark_points as $spark_index => $spark_point) :
+                                        $spark_row = $performance_gsc_daily[$spark_index] ?? [];
+                                        $spark_date = isset($spark_row['date']) ? (string) $spark_row['date'] : '';
+                                        $spark_date_label = $spark_date !== '' ? date_i18n('M j', strtotime($spark_date)) : '';
+                                        ?>
+                                        <circle class="icap-seo-performance-chart-point" cx="<?php echo esc_attr((string) $spark_point['x']); ?>" cy="<?php echo esc_attr((string) $spark_point['y']); ?>" r="12">
+                                            <title><?php echo esc_html(trim($spark_date_label . ': ' . $spark_format($spark_point['value']))); ?></title>
+                                        </circle>
+                                    <?php endforeach; ?>
+                                    <circle class="icap-seo-performance-chart-dot" cx="<?php echo esc_attr((string) $spark_last['x']); ?>" cy="<?php echo esc_attr((string) $spark_last['y']); ?>" r="4" />
+                                </svg>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
+            <h3 style="margin-top:24px;"><?php esc_html_e('Google Analytics', 'icap-seo'); ?></h3>
+            <?php if (!$performance_ga4_connected) : ?>
+                <p class="description">
+                    <?php
+                    echo wp_kses(
+                        sprintf(
+                            /* translators: %s: link to the Settings tab */
+                            __('Connect Google Analytics in %s to see sessions, page views, engagement and session duration here.', 'icap-seo'),
+                            '<a href="' . $performance_settings_url . '">' . esc_html__('Settings', 'icap-seo') . '</a>'
+                        ),
+                        ['a' => ['href' => []]]
+                    );
+                    ?>
+                </p>
+            <?php else : ?>
+                <div class="icap-seo-cards">
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Sessions', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_ga4_totals['sessions'] ?? 0))); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Page Views', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_ga4_totals['page_views'] ?? 0))); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Engagement Rate', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_ga4_totals['engagement_rate'] ?? 0) * 100, 1) . '%'); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Avg Session Duration', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_ga4_totals['avg_session_duration'] ?? 0), 0) . 's'); ?></p>
+                    </div>
+                </div>
             <?php endif; ?>
         <?php elseif ($active_tab === 'notifications') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['notifications']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Notifications', 'icap-seo'); ?></h2>

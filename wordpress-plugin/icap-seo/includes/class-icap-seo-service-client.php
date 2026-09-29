@@ -8,6 +8,10 @@ class ICap_SEO_Service_Client
 {
     private const SETTINGS_OPTION_KEY = 'icap_seo_settings';
     private const CONTENT_SCORES_CACHE_TTL_SECONDS = 120;
+    // Daily GSC/GA4 data changes slowly and both sources already carry their own 1-3 day
+    // reporting lag - a longer TTL than content scores avoids hitting the API on every
+    // dashboard page load without making the tab noticeably stale.
+    private const SEO_PERFORMANCE_CACHE_TTL_SECONDS = 1800;
 
     private ?array $content_scores_index_cache = null;
     private array $latest_content_scores_meta = [
@@ -1238,6 +1242,132 @@ class ICap_SEO_Service_Client
             sprintf('/v1/sites/%s/google-connection/analytics-property', rawurlencode((string) $settings['site_id'])),
             ['analytics_property_id' => $property_id]
         );
+    }
+
+    public function get_seo_performance(bool $allow_live_fetch = true): array
+    {
+        $settings = $this->get_connection_settings();
+        $site_id = $settings['site_id'];
+        $cache_key = $site_id !== '' ? sprintf('icap_seo_performance_%s', md5($site_id)) : '';
+        $cached = $cache_key !== '' ? get_transient($cache_key) : false;
+
+        if (!$allow_live_fetch) {
+            return is_array($cached) ? $cached : $this->empty_seo_performance_payload();
+        }
+
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return $this->empty_seo_performance_payload();
+        }
+
+        $result = $this->api_request(
+            'GET',
+            sprintf('/v1/sites/%s/seo-performance', rawurlencode((string) $settings['site_id'])),
+            [],
+            [],
+            true,
+            [],
+            10
+        );
+
+        if (!$result['success']) {
+            return is_array($cached) ? $cached : $this->empty_seo_performance_payload();
+        }
+
+        $payload = $this->normalize_seo_performance_payload(
+            isset($result['data']) && is_array($result['data']) ? $result['data'] : []
+        );
+
+        if ($cache_key !== '') {
+            set_transient($cache_key, $payload, self::SEO_PERFORMANCE_CACHE_TTL_SECONDS);
+        }
+
+        return $payload;
+    }
+
+    private function empty_seo_performance_payload(): array
+    {
+        return [
+            'gsc' => [
+                'connected' => false,
+                'start_date' => '',
+                'end_date' => '',
+                'totals' => ['clicks' => 0, 'impressions' => 0, 'ctr' => 0.0, 'position' => 0.0],
+                'daily' => [],
+            ],
+            'ga4' => [
+                'connected' => false,
+                'start_date' => '',
+                'end_date' => '',
+                'totals' => ['sessions' => 0, 'page_views' => 0, 'engagement_rate' => 0.0, 'avg_session_duration' => 0.0],
+                'daily' => [],
+            ],
+        ];
+    }
+
+    private function normalize_seo_performance_payload(array $data): array
+    {
+        $gsc_raw = isset($data['gsc']) && is_array($data['gsc']) ? $data['gsc'] : [];
+        $gsc_totals_raw = isset($gsc_raw['totals']) && is_array($gsc_raw['totals']) ? $gsc_raw['totals'] : [];
+        $gsc_daily = [];
+        if (isset($gsc_raw['daily']) && is_array($gsc_raw['daily'])) {
+            foreach ($gsc_raw['daily'] as $row) {
+                if (!is_array($row) || !isset($row['date'])) {
+                    continue;
+                }
+                $gsc_daily[] = [
+                    'date' => sanitize_text_field((string) $row['date']),
+                    'clicks' => isset($row['clicks']) ? (int) $row['clicks'] : 0,
+                    'impressions' => isset($row['impressions']) ? (int) $row['impressions'] : 0,
+                    'ctr' => isset($row['ctr']) ? (float) $row['ctr'] : 0.0,
+                    'position' => isset($row['position']) ? (float) $row['position'] : 0.0,
+                ];
+            }
+        }
+
+        $ga4_raw = isset($data['ga4']) && is_array($data['ga4']) ? $data['ga4'] : [];
+        $ga4_totals_raw = isset($ga4_raw['totals']) && is_array($ga4_raw['totals']) ? $ga4_raw['totals'] : [];
+        $ga4_daily = [];
+        if (isset($ga4_raw['daily']) && is_array($ga4_raw['daily'])) {
+            foreach ($ga4_raw['daily'] as $row) {
+                if (!is_array($row) || !isset($row['date'])) {
+                    continue;
+                }
+                $ga4_daily[] = [
+                    'date' => sanitize_text_field((string) $row['date']),
+                    'sessions' => isset($row['sessions']) ? (int) $row['sessions'] : 0,
+                    'page_views' => isset($row['page_views']) ? (int) $row['page_views'] : 0,
+                    'engagement_rate' => isset($row['engagement_rate']) ? (float) $row['engagement_rate'] : 0.0,
+                    'avg_session_duration' => isset($row['avg_session_duration']) ? (float) $row['avg_session_duration'] : 0.0,
+                ];
+            }
+        }
+
+        return [
+            'gsc' => [
+                'connected' => !empty($gsc_raw['connected']),
+                'start_date' => isset($gsc_raw['start_date']) ? sanitize_text_field((string) $gsc_raw['start_date']) : '',
+                'end_date' => isset($gsc_raw['end_date']) ? sanitize_text_field((string) $gsc_raw['end_date']) : '',
+                'totals' => [
+                    'clicks' => isset($gsc_totals_raw['clicks']) ? (int) $gsc_totals_raw['clicks'] : 0,
+                    'impressions' => isset($gsc_totals_raw['impressions']) ? (int) $gsc_totals_raw['impressions'] : 0,
+                    'ctr' => isset($gsc_totals_raw['ctr']) ? (float) $gsc_totals_raw['ctr'] : 0.0,
+                    'position' => isset($gsc_totals_raw['position']) ? (float) $gsc_totals_raw['position'] : 0.0,
+                ],
+                'daily' => $gsc_daily,
+            ],
+            'ga4' => [
+                'connected' => !empty($ga4_raw['connected']),
+                'start_date' => isset($ga4_raw['start_date']) ? sanitize_text_field((string) $ga4_raw['start_date']) : '',
+                'end_date' => isset($ga4_raw['end_date']) ? sanitize_text_field((string) $ga4_raw['end_date']) : '',
+                'totals' => [
+                    'sessions' => isset($ga4_totals_raw['sessions']) ? (int) $ga4_totals_raw['sessions'] : 0,
+                    'page_views' => isset($ga4_totals_raw['page_views']) ? (int) $ga4_totals_raw['page_views'] : 0,
+                    'engagement_rate' => isset($ga4_totals_raw['engagement_rate']) ? (float) $ga4_totals_raw['engagement_rate'] : 0.0,
+                    'avg_session_duration' => isset($ga4_totals_raw['avg_session_duration']) ? (float) $ga4_totals_raw['avg_session_duration'] : 0.0,
+                ],
+                'daily' => $ga4_daily,
+            ],
+        ];
     }
 
     public function test_connection(): array
