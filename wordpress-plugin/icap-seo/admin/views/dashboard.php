@@ -250,6 +250,9 @@ $notice_map = [
     'analytics_property_saved' => ['type' => 'updated', 'message' => __('Google Analytics property saved. Real traffic data will appear alongside content scores after the next scan.', 'icap-seo')],
     'analytics_property_invalid' => ['type' => 'error', 'message' => __('Please choose a valid Google Analytics property.', 'icap-seo')],
     'analytics_property_save_failed' => ['type' => 'error', 'message' => __('Saving the Google Analytics property failed. Please try again.', 'icap-seo')],
+    'search_console_property_saved' => ['type' => 'updated', 'message' => __('Search Console property saved. Real indexing status and stats will use this property going forward.', 'icap-seo')],
+    'search_console_property_invalid' => ['type' => 'error', 'message' => __('Please choose a valid Search Console property.', 'icap-seo')],
+    'search_console_property_save_failed' => ['type' => 'error', 'message' => __('Saving the Search Console property failed. Please try again.', 'icap-seo')],
     'billing_status_free_tier' => ['type' => 'updated', 'message' => __('Billing status check: this site is on the free tier (basic scans only).', 'icap-seo')],
     'ai_credit_checkout_not_configured' => ['type' => 'error', 'message' => __('AI credit checkout requires site registration credentials. Register this site first.', 'icap-seo')],
     'ai_credit_checkout_premium_required' => ['type' => 'error', 'message' => __('AI credits can only be purchased on an active premium subscription. Upgrade to premium first.', 'icap-seo')],
@@ -2487,6 +2490,45 @@ if ($notice_code === 'remediation_apply_noop') {
                         <button type="submit" class="button"><?php esc_html_e('Disconnect', 'icap-seo'); ?></button>
                     </p>
                 </form>
+
+                <?php
+                $search_console_property_url_value = isset($google_connection_status['search_console_property_url'])
+                    ? (string) $google_connection_status['search_console_property_url']
+                    : '';
+                ?>
+                <?php if ($search_console_property_url_value !== '') : ?>
+                    <p class="description">
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %s: the selected Search Console property */
+                                __('Search Console property: %s', 'icap-seo'),
+                                $search_console_property_url_value
+                            )
+                        );
+                        ?>
+                    </p>
+                <?php elseif (!empty($search_console_property_candidates)) : ?>
+                    <p class="description"><?php esc_html_e('We couldn\'t confirm which Search Console property matches this site (it may be registered under a different URL, or as a domain property). Select the right one:', 'icap-seo'); ?></p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                        <input type="hidden" name="action" value="icap_seo_save_search_console_property">
+                        <?php wp_nonce_field('icap_seo_save_search_console_property'); ?>
+                        <p>
+                            <select name="search_console_property_url">
+                                <?php foreach ($search_console_property_candidates as $sc_candidate) : ?>
+                                    <option value="<?php echo esc_attr($sc_candidate['property_url']); ?>" <?php selected(!empty($sc_candidate['matches_site_url']), true); ?>>
+                                        <?php echo esc_html($sc_candidate['property_url']); ?><?php echo !empty($sc_candidate['is_domain_property']) ? ' (' . esc_html__('domain property', 'icap-seo') . ')' : ''; ?><?php echo !empty($sc_candidate['matches_site_url']) ? ' — ' . esc_html__('likely match', 'icap-seo') : ''; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Save', 'icap-seo'); ?></button>
+                        </p>
+                    </form>
+                <?php elseif (!empty($search_console_discovery_failed)) : ?>
+                    <p class="description"><?php esc_html_e('Looking up your Search Console properties failed. Please retry shortly.', 'icap-seo'); ?></p>
+                <?php else : ?>
+                    <p class="description"><?php esc_html_e('No Search Console properties were found for this Google account. iCap SEO will use a property derived from this site\'s URL, which may not match what\'s registered in Search Console - verify access in Search Console if Search Console stats elsewhere in this plugin look wrong (e.g. showing zero).', 'icap-seo'); ?></p>
+                <?php endif; ?>
 
                 <?php
                 $analytics_property_id_value = isset($google_connection_status['analytics_property_id'])

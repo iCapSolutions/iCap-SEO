@@ -1149,6 +1149,7 @@ class ICap_SEO_Service_Client
             'last_verified_at' => isset($data['last_verified_at']) ? sanitize_text_field((string) $data['last_verified_at']) : '',
             'last_error' => isset($data['last_error']) ? sanitize_text_field((string) $data['last_error']) : '',
             'analytics_property_id' => isset($data['analytics_property_id']) ? sanitize_text_field((string) $data['analytics_property_id']) : '',
+            'search_console_property_url' => isset($data['search_console_property_url']) ? sanitize_text_field((string) $data['search_console_property_url']) : '',
         ];
 
         return $result;
@@ -1241,6 +1242,70 @@ class ICap_SEO_Service_Client
             'POST',
             sprintf('/v1/sites/%s/google-connection/analytics-property', rawurlencode((string) $settings['site_id'])),
             ['analytics_property_id' => $property_id]
+        );
+    }
+
+    public function get_search_console_property_candidates(): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        $result = $this->api_request(
+            'GET',
+            sprintf('/v1/sites/%s/google-connection/search-console-properties', rawurlencode((string) $settings['site_id'])),
+            [],
+            [],
+            true,
+            [],
+            20
+        );
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
+        $candidates = [];
+        foreach (($data['candidates'] ?? []) as $candidate) {
+            if (!is_array($candidate) || !isset($candidate['property_url'])) {
+                continue;
+            }
+            $candidates[] = [
+                'property_url' => sanitize_text_field((string) $candidate['property_url']),
+                'is_domain_property' => !empty($candidate['is_domain_property']),
+                'permission_level' => isset($candidate['permission_level']) ? sanitize_text_field((string) $candidate['permission_level']) : '',
+                'matches_site_url' => !empty($candidate['matches_site_url']),
+            ];
+        }
+        $result['data'] = ['candidates' => $candidates];
+
+        return $result;
+    }
+
+    public function save_search_console_property_url(string $property_url): array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return [
+                'success' => false,
+                'error' => [
+                    'code' => 'site_not_configured',
+                    'message' => 'Site registration credentials are not configured.',
+                ],
+            ];
+        }
+
+        return $this->api_request(
+            'POST',
+            sprintf('/v1/sites/%s/google-connection/search-console-property', rawurlencode((string) $settings['site_id'])),
+            ['search_console_property_url' => $property_url]
         );
     }
 
