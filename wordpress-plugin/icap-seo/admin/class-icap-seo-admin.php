@@ -387,6 +387,7 @@ class ICap_SEO_Admin
         $content_scores_order = 'asc';
         $scan_status_data = [];
         $latest_content_scores_meta = [];
+        $seo_performance = [];
         $selected_content_key = '';
         $content_score_detail = [];
         $content_score_detail_error = '';
@@ -414,6 +415,10 @@ class ICap_SEO_Admin
         try {
             if ($active_tab === 'overview') {
                 $score_snapshot = $this->service_client->get_site_score_snapshot($allow_live_fetch);
+            }
+
+            if ($active_tab === 'seo-performance') {
+                $seo_performance = $this->service_client->get_seo_performance($allow_live_fetch);
             }
 
             if ($active_tab === 'content-scores' || $active_tab === 'overview') {
@@ -575,6 +580,7 @@ class ICap_SEO_Admin
             $content_scores = [];
             $scan_status_data = [];
             $latest_content_scores_meta = [];
+            $seo_performance = [];
             $remediation_preview = [];
             $remediation_preview_error = '';
             $remediation_audit_entries = [];

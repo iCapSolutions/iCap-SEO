@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.114
+Stable tag: 0.1.115
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.115 =
+* Added a new "SEO Performance" tab (after Content Scores): site-wide Search Console totals (clicks, impressions, CTR, average position) with a 28-day trend chart per metric, plus Google Analytics totals (sessions, page views, engagement rate, average session duration).
 
 = 0.1.114 =
 * Cleaned up the Content Detail page (opened from Content Scores): removed the grey code-box styling from Type/Status/Score and other fields, restyled the page name to match the Overview tab's status typography, added per-page Search Console/Analytics/score icon cards matching the Overview tab's style (score card colored with the same green/yellow/red palette used site-wide), and reorganized the page's Recommendations/AI Drafts/History sections into white card tiles matching Overview/Content Scores/Setup Wizard.

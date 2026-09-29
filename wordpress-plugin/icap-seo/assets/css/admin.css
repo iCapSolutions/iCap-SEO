@@ -270,6 +270,88 @@
     font-weight: 600;
 }
 
+.icap-seo-performance-charts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+    width: 100%;
+}
+
+@media (max-width: 900px) {
+    .icap-seo-performance-charts {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .icap-seo-performance-charts {
+        grid-template-columns: 1fr;
+    }
+}
+
+.icap-seo-performance-chart {
+    background: #ffffff;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.icap-seo-performance-chart h3 {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #50575e;
+}
+
+.icap-seo-performance-chart-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.icap-seo-performance-chart-line {
+    fill: none;
+    stroke: #2271b1;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.icap-seo-performance-chart-area {
+    fill: #2271b1;
+    fill-opacity: 0.1;
+    stroke: none;
+}
+
+.icap-seo-performance-chart-gridline {
+    stroke: #f0f0f1;
+    stroke-width: 1;
+}
+
+.icap-seo-performance-chart-dot {
+    fill: #2271b1;
+    stroke: #ffffff;
+    stroke-width: 2;
+}
+
+.icap-seo-performance-chart-point {
+    fill: transparent;
+}
+
+.icap-seo-performance-chart-endlabel {
+    font-size: 10px;
+    font-weight: 600;
+    fill: #1d2327;
+}
+
+.icap-seo-performance-chart-axislabel {
+    font-size: 9px;
+    fill: #787c82;
+}
+
 .icap-seo-sortable-col a {
     display: inline-flex;
     align-items: center;
