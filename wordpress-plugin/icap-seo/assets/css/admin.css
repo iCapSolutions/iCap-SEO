@@ -270,40 +270,65 @@
     font-weight: 600;
 }
 
-.icap-seo-performance-charts {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-top: 16px;
-    width: 100%;
-}
-
-@media (max-width: 900px) {
-    .icap-seo-performance-charts {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 480px) {
-    .icap-seo-performance-charts {
-        grid-template-columns: 1fr;
-    }
-}
-
 .icap-seo-performance-chart {
     background: #ffffff;
     border: 1px solid #dcdcde;
     border-radius: 6px;
-    padding: 12px;
+    padding: 16px;
+    margin-top: 16px;
+    width: 100%;
 }
 
-.icap-seo-performance-chart h3 {
-    margin: 0 0 8px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: #50575e;
+.icap-seo-performance-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.icap-seo-performance-chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #3c434a;
+}
+
+.icap-seo-performance-chart-legend-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 2px;
+    border-radius: 1px;
+    flex: 0 0 auto;
+}
+
+/* Categorical slots 1-4 (blue/orange/aqua/yellow) from the validated palette -
+   adjacent-pair CVD/contrast checked for a 4-series line chart with a text legend
+   (the relief this palette's aqua/yellow slots need on a light surface). */
+.icap-seo-performance-chart-legend-swatch--clicks,
+.icap-seo-performance-chart-series--clicks {
+    color: #2a78d6;
+}
+
+.icap-seo-performance-chart-legend-swatch--impressions,
+.icap-seo-performance-chart-series--impressions {
+    color: #eb6834;
+}
+
+.icap-seo-performance-chart-legend-swatch--ctr,
+.icap-seo-performance-chart-series--ctr {
+    color: #1baf7a;
+}
+
+.icap-seo-performance-chart-legend-swatch--position,
+.icap-seo-performance-chart-series--position {
+    color: #eda100;
+}
+
+.icap-seo-performance-chart-legend-swatch {
+    background: currentColor;
 }
 
 .icap-seo-performance-chart-svg {
@@ -314,16 +339,10 @@
 
 .icap-seo-performance-chart-line {
     fill: none;
-    stroke: #2271b1;
+    stroke: currentColor;
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
-}
-
-.icap-seo-performance-chart-area {
-    fill: #2271b1;
-    fill-opacity: 0.1;
-    stroke: none;
 }
 
 .icap-seo-performance-chart-gridline {
@@ -332,7 +351,7 @@
 }
 
 .icap-seo-performance-chart-dot {
-    fill: #2271b1;
+    fill: currentColor;
     stroke: #ffffff;
     stroke-width: 2;
 }
@@ -341,15 +360,8 @@
     fill: transparent;
 }
 
-.icap-seo-performance-chart-endlabel {
-    font-size: 10px;
-    font-weight: 600;
-    fill: #1d2327;
-}
-
-.icap-seo-performance-chart-axislabel {
-    font-size: 9px;
-    fill: #787c82;
+.icap-seo-performance-chart-caption {
+    margin: 10px 0 0;
 }
 
 .icap-seo-sortable-col a {

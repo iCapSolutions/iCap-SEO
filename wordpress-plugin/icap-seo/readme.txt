@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.116
+Stable tag: 0.1.117
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.117 =
+* SEO Performance tab: combined the 4 separate trend charts into a single chart with all 4 metrics overlaid (each shown relative to its own 28-day high/low, since clicks/impressions/CTR/position don't share a value scale).
 
 = 0.1.116 =
 * Fixed Search Console showing zero clicks/impressions (Content Scores and the new SEO Performance tab) when the site's real property in Search Console doesn't exactly match its registered URL (a domain property, or a www/non-www or http/https mismatch) - Settings now discovers and lets you pick the right property when this happens.
