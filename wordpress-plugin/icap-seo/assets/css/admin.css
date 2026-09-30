@@ -271,6 +271,7 @@
 }
 
 .icap-seo-performance-chart {
+    box-sizing: border-box;
     background: #ffffff;
     border: 1px solid #dcdcde;
     border-radius: 6px;
