@@ -2092,11 +2092,62 @@ if ($notice_code === 'remediation_apply_noop') {
                         'position' => ['label' => __('Position', 'icap-seo'), 'format' => 'decimal1'],
                     ];
                     $spark_width = 900;
-                    $spark_height = 220;
+                    $spark_height = 165;
                     $spark_pad_x = 12;
                     $spark_pad_top = 16;
                     $spark_pad_bottom = 16;
                     $spark_baseline_y = $spark_height - $spark_pad_bottom;
+
+                    $spark_format_value = static function (float $value, string $format): string {
+                        if ($format === 'percent') {
+                            return number_format($value * 100, 1) . '%';
+                        }
+                        if ($format === 'decimal1') {
+                            return number_format($value, 1);
+                        }
+                        return number_format_i18n((int) round($value));
+                    };
+
+                    // Precompute each series' plotted points/path/min/max/current once - reused
+                    // below for the SVG lines, the right-hand stats list, and the JSON payload
+                    // the hover crosshair (assets/js/admin.js) reads to build its tooltip.
+                    $spark_series = [];
+                    foreach ($spark_metrics as $spark_key => $spark_meta) {
+                        $spark_points = icap_seo_sparkline_points($performance_gsc_daily, $spark_key, $spark_width, $spark_height, $spark_pad_x, $spark_pad_top, $spark_pad_bottom);
+                        if (empty($spark_points)) {
+                            continue;
+                        }
+                        $spark_values = array_column($spark_points, 'value');
+                        $spark_series[$spark_key] = [
+                            'label' => $spark_meta['label'],
+                            'format' => $spark_meta['format'],
+                            'points' => $spark_points,
+                            'path' => icap_seo_sparkline_path($spark_points),
+                            'min' => min($spark_values),
+                            'max' => max($spark_values),
+                            'current' => $spark_values[count($spark_values) - 1],
+                        ];
+                    }
+
+                    $spark_chart_data = [
+                        'width' => $spark_width,
+                        'height' => $spark_height,
+                        'padX' => $spark_pad_x,
+                        'padTop' => $spark_pad_top,
+                        'padBottom' => $spark_pad_bottom,
+                        'dates' => array_map(static function (array $row): string {
+                            return (string) ($row['date'] ?? '');
+                        }, $performance_gsc_daily),
+                        'series' => array_map(static function (array $series): array {
+                            return [
+                                'label' => $series['label'],
+                                'format' => $series['format'],
+                                'points' => array_map(static function (array $point): array {
+                                    return ['x' => $point['x'], 'y' => $point['y'], 'value' => $point['value']];
+                                }, $series['points']),
+                            ];
+                        }, $spark_series),
+                    ];
                     ?>
                     <div class="icap-seo-performance-chart">
                         <ul class="icap-seo-performance-chart-legend">
@@ -2107,42 +2158,53 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </li>
                             <?php endforeach; ?>
                         </ul>
-                        <svg class="icap-seo-performance-chart-svg" viewBox="0 0 <?php echo esc_attr((string) $spark_width); ?> <?php echo esc_attr((string) $spark_height); ?>" preserveAspectRatio="none" role="img" aria-label="<?php esc_attr_e('Clicks, impressions, CTR and position over the last 28 days, each shown relative to its own high/low for the window', 'icap-seo'); ?>">
-                            <line class="icap-seo-performance-chart-gridline" x1="<?php echo esc_attr((string) $spark_pad_x); ?>" y1="<?php echo esc_attr((string) $spark_pad_top); ?>" x2="<?php echo esc_attr((string) ($spark_width - $spark_pad_x)); ?>" y2="<?php echo esc_attr((string) $spark_pad_top); ?>" />
-                            <line class="icap-seo-performance-chart-gridline" x1="<?php echo esc_attr((string) $spark_pad_x); ?>" y1="<?php echo esc_attr((string) $spark_baseline_y); ?>" x2="<?php echo esc_attr((string) ($spark_width - $spark_pad_x)); ?>" y2="<?php echo esc_attr((string) $spark_baseline_y); ?>" />
-                            <?php foreach ($spark_metrics as $spark_key => $spark_meta) :
-                                $spark_points = icap_seo_sparkline_points($performance_gsc_daily, $spark_key, $spark_width, $spark_height, $spark_pad_x, $spark_pad_top, $spark_pad_bottom);
-                                if (empty($spark_points)) {
-                                    continue;
-                                }
-                                $spark_path = icap_seo_sparkline_path($spark_points);
-                                $spark_last = $spark_points[count($spark_points) - 1];
-                                $spark_format = static function (float $value) use ($spark_meta): string {
-                                    if ($spark_meta['format'] === 'percent') {
-                                        return number_format($value * 100, 1) . '%';
-                                    }
-                                    if ($spark_meta['format'] === 'decimal1') {
-                                        return number_format($value, 1);
-                                    }
-                                    return number_format_i18n((int) round($value));
-                                };
-                                ?>
-                                <g class="icap-seo-performance-chart-series icap-seo-performance-chart-series--<?php echo esc_attr($spark_key); ?>">
-                                    <path class="icap-seo-performance-chart-line" d="<?php echo esc_attr($spark_path); ?>" />
-                                    <?php foreach ($spark_points as $spark_index => $spark_point) :
-                                        $spark_row = $performance_gsc_daily[$spark_index] ?? [];
-                                        $spark_date = isset($spark_row['date']) ? (string) $spark_row['date'] : '';
-                                        $spark_date_label = $spark_date !== '' ? date_i18n('M j', strtotime($spark_date)) : '';
+                        <div class="icap-seo-performance-chart-body">
+                            <div class="icap-seo-performance-chart-plot" data-chart="<?php echo esc_attr(wp_json_encode($spark_chart_data)); ?>">
+                                <svg class="icap-seo-performance-chart-svg" viewBox="0 0 <?php echo esc_attr((string) $spark_width); ?> <?php echo esc_attr((string) $spark_height); ?>" preserveAspectRatio="none" role="img" aria-label="<?php esc_attr_e('Clicks, impressions, CTR and position over the last 28 days, each shown relative to its own high/low for the window', 'icap-seo'); ?>">
+                                    <line class="icap-seo-performance-chart-gridline" x1="<?php echo esc_attr((string) $spark_pad_x); ?>" y1="<?php echo esc_attr((string) $spark_pad_top); ?>" x2="<?php echo esc_attr((string) ($spark_width - $spark_pad_x)); ?>" y2="<?php echo esc_attr((string) $spark_pad_top); ?>" />
+                                    <line class="icap-seo-performance-chart-gridline" x1="<?php echo esc_attr((string) $spark_pad_x); ?>" y1="<?php echo esc_attr((string) $spark_baseline_y); ?>" x2="<?php echo esc_attr((string) ($spark_width - $spark_pad_x)); ?>" y2="<?php echo esc_attr((string) $spark_baseline_y); ?>" />
+                                    <?php foreach ($spark_series as $spark_key => $spark_data) :
+                                        $spark_last = $spark_data['points'][count($spark_data['points']) - 1];
                                         ?>
-                                        <circle class="icap-seo-performance-chart-point" cx="<?php echo esc_attr((string) $spark_point['x']); ?>" cy="<?php echo esc_attr((string) $spark_point['y']); ?>" r="10">
-                                            <title><?php echo esc_html(trim($spark_meta['label'] . ' — ' . $spark_date_label . ': ' . $spark_format($spark_point['value']))); ?></title>
-                                        </circle>
+                                        <g class="icap-seo-performance-chart-series icap-seo-performance-chart-series--<?php echo esc_attr($spark_key); ?>">
+                                            <path class="icap-seo-performance-chart-line" d="<?php echo esc_attr($spark_data['path']); ?>" />
+                                            <?php foreach ($spark_data['points'] as $spark_index => $spark_point) :
+                                                $spark_row = $performance_gsc_daily[$spark_index] ?? [];
+                                                $spark_date = isset($spark_row['date']) ? (string) $spark_row['date'] : '';
+                                                $spark_date_label = $spark_date !== '' ? date_i18n('M j', strtotime($spark_date)) : '';
+                                                ?>
+                                                <circle class="icap-seo-performance-chart-point" cx="<?php echo esc_attr((string) $spark_point['x']); ?>" cy="<?php echo esc_attr((string) $spark_point['y']); ?>" r="10">
+                                                    <title><?php echo esc_html(trim($spark_data['label'] . ' — ' . $spark_date_label . ': ' . $spark_format_value($spark_point['value'], $spark_data['format']))); ?></title>
+                                                </circle>
+                                            <?php endforeach; ?>
+                                            <circle class="icap-seo-performance-chart-dot" cx="<?php echo esc_attr((string) $spark_last['x']); ?>" cy="<?php echo esc_attr((string) $spark_last['y']); ?>" r="4" />
+                                        </g>
                                     <?php endforeach; ?>
-                                    <circle class="icap-seo-performance-chart-dot" cx="<?php echo esc_attr((string) $spark_last['x']); ?>" cy="<?php echo esc_attr((string) $spark_last['y']); ?>" r="4" />
-                                </g>
-                            <?php endforeach; ?>
-                        </svg>
-                        <p class="description icap-seo-performance-chart-caption"><?php esc_html_e('Each line is shown relative to its own high/low for the window, not a shared value scale - hover a point for the exact number.', 'icap-seo'); ?></p>
+                                </svg>
+                            </div>
+                            <ul class="icap-seo-performance-chart-stats">
+                                <?php foreach ($spark_series as $spark_key => $spark_data) : ?>
+                                    <li class="icap-seo-performance-chart-stats-item">
+                                        <span class="icap-seo-performance-chart-stats-label">
+                                            <span class="icap-seo-performance-chart-legend-swatch icap-seo-performance-chart-legend-swatch--<?php echo esc_attr($spark_key); ?>" aria-hidden="true"></span>
+                                            <?php echo esc_html($spark_data['label']); ?>
+                                        </span>
+                                        <span class="icap-seo-performance-chart-stats-current"><?php echo esc_html($spark_format_value($spark_data['current'], $spark_data['format'])); ?></span>
+                                        <span class="icap-seo-performance-chart-stats-range">
+                                            <?php
+                                            echo esc_html(sprintf(
+                                                /* translators: 1: lowest value in the 28-day window, 2: highest value in the 28-day window */
+                                                __('%1$s – %2$s', 'icap-seo'),
+                                                $spark_format_value($spark_data['min'], $spark_data['format']),
+                                                $spark_format_value($spark_data['max'], $spark_data['format'])
+                                            ));
+                                            ?>
+                                        </span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                        <p class="description icap-seo-performance-chart-caption"><?php esc_html_e('Each line is shown relative to its own high/low for the window, not a shared value scale. Hover the chart for exact values on any day.', 'icap-seo'); ?></p>
                     </div>
                 <?php endif; ?>
             <?php endif; ?>
