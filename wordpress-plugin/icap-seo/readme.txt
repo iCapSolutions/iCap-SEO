@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.118
+Stable tag: 0.1.119
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.119 =
+* Fixed the SEO Performance trend chart's card bleeding past the right edge of the page - it was missing `box-sizing: border-box`, so its 16px padding and border were added on top of an already-100%-width box instead of being included in it.
 
 = 0.1.118 =
 * SEO Performance tab: trimmed the trend chart's height, added a min/max/current stats panel next to it for each metric, and added a hover crosshair that shows all 4 metrics' values for any day at once.
