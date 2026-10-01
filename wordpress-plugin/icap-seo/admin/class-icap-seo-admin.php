@@ -58,7 +58,7 @@ class ICap_SEO_Admin
         // 20x20px. A larger source (e.g. the 158x158 file used in the
         // dashboard header, which our own CSS constrains) renders at full
         // natural size and overflows into the menu items below it.
-        add_menu_page(
+        $hook_suffix = add_menu_page(
             __('iCap SEO', 'icap-seo'),
             __('iCap SEO', 'icap-seo'),
             'manage_options',
@@ -67,6 +67,22 @@ class ICap_SEO_Admin
             ICAP_SEO_PLUGIN_URL . 'assets/images/icap-brand-mark-20.png',
             58
         );
+
+        // Scoped to this plugin's own admin page only (load-{$hook_suffix}), not a
+        // site-wide override - every other wp-admin screen keeps WordPress's default
+        // "Thank you for creating with WordPress." footer.
+        add_action('load-' . $hook_suffix, static function (): void {
+            add_filter('admin_footer_text', static function (): string {
+                return wp_kses(
+                    sprintf(
+                        /* translators: %s: "iCap SEO" link to icapsolutions.com */
+                        __('Thank you for using %s.', 'icap-seo'),
+                        '<a href="https://www.icapsolutions.com">' . esc_html__('iCap SEO', 'icap-seo') . '</a>'
+                    ),
+                    ['a' => ['href' => []]]
+                );
+            });
+        });
     }
 
     // Surfaces setup/scan status on WordPress's own Dashboard Home
