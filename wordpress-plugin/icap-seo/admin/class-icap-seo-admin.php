@@ -365,7 +365,16 @@ class ICap_SEO_Admin
             $google_connection_status['granted_scopes'] ?? [],
             true
         );
-        if ($active_tab === 'settings' && $analytics_scope_granted && empty($google_connection_status['analytics_property_id'])) {
+        // A GET-only re-run flag, not a state change itself (no nonce needed) - lets the
+        // "Change property" link on the Settings tab re-trigger discovery even when a
+        // property_id is already saved, which the empty() check below otherwise blocks
+        // forever once ANY property (including a wrong auto-discovered one) is saved.
+        $refresh_analytics_property = isset($_GET['refresh_analytics_property']) && sanitize_key(wp_unslash($_GET['refresh_analytics_property'])) === '1';
+        if (
+            $active_tab === 'settings'
+            && $analytics_scope_granted
+            && (empty($google_connection_status['analytics_property_id']) || $refresh_analytics_property)
+        ) {
             $candidates_result = $this->service_client->get_analytics_property_candidates();
             if ($candidates_result['success'] && isset($candidates_result['data']['candidates'])) {
                 $analytics_property_candidates = $candidates_result['data']['candidates'];
@@ -379,10 +388,11 @@ class ICap_SEO_Admin
         // the Analytics block above.
         $search_console_property_candidates = [];
         $search_console_discovery_failed = false;
+        $refresh_search_console_property = isset($_GET['refresh_search_console_property']) && sanitize_key(wp_unslash($_GET['refresh_search_console_property'])) === '1';
         if (
             $active_tab === 'settings'
             && ($google_connection_status['status'] ?? '') === 'connected'
-            && empty($google_connection_status['search_console_property_url'])
+            && (empty($google_connection_status['search_console_property_url']) || $refresh_search_console_property)
         ) {
             $sc_candidates_result = $this->service_client->get_search_console_property_candidates();
             if ($sc_candidates_result['success'] && isset($sc_candidates_result['data']['candidates'])) {

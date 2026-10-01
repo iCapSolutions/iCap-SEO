@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.121
+Stable tag: 0.1.122
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.122 =
+* Settings: added a "Change property" link next to the connected Search Console / Google Analytics property, so a wrong auto-detected property can be corrected without disconnecting - previously, once any property was saved, the picker never showed again even if it was the wrong one.
 
 = 0.1.121 =
 * Site Analytics tab: added a Users tile, a traffic-by-channel breakdown (Organic Search, Direct, Referral, etc.), and a Top Pages table of your highest-traffic pages from Google Analytics.
