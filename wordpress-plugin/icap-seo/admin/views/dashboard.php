@@ -2690,20 +2690,8 @@ if ($notice_code === 'remediation_apply_noop') {
                     ? (string) $google_connection_status['search_console_property_url']
                     : '';
                 ?>
-                <?php if ($search_console_property_url_value !== '') : ?>
-                    <p class="description">
-                        <?php
-                        echo esc_html(
-                            sprintf(
-                                /* translators: %s: the selected Search Console property */
-                                __('Search Console property: %s', 'icap-seo'),
-                                $search_console_property_url_value
-                            )
-                        );
-                        ?>
-                    </p>
-                <?php elseif (!empty($search_console_property_candidates)) : ?>
-                    <p class="description"><?php esc_html_e('We couldn\'t confirm which Search Console property matches this site (it may be registered under a different URL, or as a domain property). Select the right one:', 'icap-seo'); ?></p>
+                <?php if (!empty($search_console_property_candidates)) : ?>
+                    <p class="description"><?php echo $search_console_property_url_value !== '' ? esc_html__('Choose the Search Console property this site should use:', 'icap-seo') : esc_html__('We couldn\'t confirm which Search Console property matches this site (it may be registered under a different URL, or as a domain property). Select the right one:', 'icap-seo'); ?></p>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
                         <input type="hidden" name="action" value="icap_seo_save_search_console_property">
                         <?php wp_nonce_field('icap_seo_save_search_console_property'); ?>
@@ -2720,6 +2708,20 @@ if ($notice_code === 'remediation_apply_noop') {
                     </form>
                 <?php elseif (!empty($search_console_discovery_failed)) : ?>
                     <p class="description"><?php esc_html_e('Looking up your Search Console properties failed. Please retry shortly.', 'icap-seo'); ?></p>
+                <?php elseif ($search_console_property_url_value !== '') : ?>
+                    <p class="description">
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %s: the selected Search Console property */
+                                __('Search Console property: %s', 'icap-seo'),
+                                $search_console_property_url_value
+                            )
+                        );
+                        ?>
+                        &mdash;
+                        <a href="<?php echo esc_url(add_query_arg('refresh_search_console_property', '1')); ?>"><?php esc_html_e('Change property', 'icap-seo'); ?></a>
+                    </p>
                 <?php else : ?>
                     <p class="description"><?php esc_html_e('No Search Console properties were found for this Google account. iCap SEO will use a property derived from this site\'s URL, which may not match what\'s registered in Search Console - verify access in Search Console if Search Console stats elsewhere in this plugin look wrong (e.g. showing zero).', 'icap-seo'); ?></p>
                 <?php endif; ?>
@@ -2740,6 +2742,25 @@ if ($notice_code === 'remediation_apply_noop') {
                             <button type="submit" class="button button-primary"><?php esc_html_e('Reconnect Google (add Analytics)', 'icap-seo'); ?></button>
                         </p>
                     </form>
+                <?php elseif (!empty($analytics_property_candidates)) : ?>
+                    <p class="description"><?php echo $analytics_property_id_value !== '' ? esc_html__('Choose the Google Analytics property this site should use:', 'icap-seo') : esc_html__('We couldn\'t auto-detect your Google Analytics property. Select one:', 'icap-seo'); ?></p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                        <input type="hidden" name="action" value="icap_seo_save_analytics_property">
+                        <?php wp_nonce_field('icap_seo_save_analytics_property'); ?>
+                        <p>
+                            <select name="analytics_property_id">
+                                <?php foreach ($analytics_property_candidates as $candidate) : ?>
+                                    <option value="<?php echo esc_attr($candidate['property_id']); ?>" <?php selected($candidate['property_id'] === $analytics_property_id_value, true); ?>>
+                                        <?php echo esc_html($candidate['display_name'] !== '' ? $candidate['display_name'] : $candidate['property_id']); ?>
+                                        (<?php echo esc_html($candidate['property_id']); ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Save', 'icap-seo'); ?></button>
+                        </p>
+                    </form>
+                <?php elseif (!empty($analytics_discovery_failed)) : ?>
+                    <p class="description"><?php esc_html_e('Looking up your Google Analytics properties failed. Please retry shortly.', 'icap-seo'); ?></p>
                 <?php elseif ($analytics_property_id_value !== '') : ?>
                     <p class="description">
                         <?php
@@ -2751,26 +2772,9 @@ if ($notice_code === 'remediation_apply_noop') {
                             )
                         );
                         ?>
+                        &mdash;
+                        <a href="<?php echo esc_url(add_query_arg('refresh_analytics_property', '1')); ?>"><?php esc_html_e('Change property', 'icap-seo'); ?></a>
                     </p>
-                <?php elseif (!empty($analytics_property_candidates)) : ?>
-                    <p class="description"><?php esc_html_e('We couldn\'t auto-detect your Google Analytics property. Select one:', 'icap-seo'); ?></p>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                        <input type="hidden" name="action" value="icap_seo_save_analytics_property">
-                        <?php wp_nonce_field('icap_seo_save_analytics_property'); ?>
-                        <p>
-                            <select name="analytics_property_id">
-                                <?php foreach ($analytics_property_candidates as $candidate) : ?>
-                                    <option value="<?php echo esc_attr($candidate['property_id']); ?>">
-                                        <?php echo esc_html($candidate['display_name'] !== '' ? $candidate['display_name'] : $candidate['property_id']); ?>
-                                        (<?php echo esc_html($candidate['property_id']); ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="submit" class="button button-primary"><?php esc_html_e('Save', 'icap-seo'); ?></button>
-                        </p>
-                    </form>
-                <?php elseif (!empty($analytics_discovery_failed)) : ?>
-                    <p class="description"><?php esc_html_e('Looking up your Google Analytics properties failed. Please retry shortly.', 'icap-seo'); ?></p>
                 <?php else : ?>
                     <p class="description"><?php esc_html_e('No Google Analytics properties found for this Google account.', 'icap-seo'); ?></p>
                 <?php endif; ?>
