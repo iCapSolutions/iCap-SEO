@@ -1358,13 +1358,16 @@ class ICap_SEO_Service_Client
                 'end_date' => '',
                 'totals' => ['clicks' => 0, 'impressions' => 0, 'ctr' => 0.0, 'position' => 0.0],
                 'daily' => [],
+                'pages' => [],
             ],
             'ga4' => [
                 'connected' => false,
                 'start_date' => '',
                 'end_date' => '',
-                'totals' => ['sessions' => 0, 'page_views' => 0, 'engagement_rate' => 0.0, 'avg_session_duration' => 0.0],
+                'totals' => ['sessions' => 0, 'page_views' => 0, 'engagement_rate' => 0.0, 'avg_session_duration' => 0.0, 'users' => 0],
                 'daily' => [],
+                'pages' => [],
+                'channels' => [],
             ],
         ];
     }
@@ -1389,6 +1392,22 @@ class ICap_SEO_Service_Client
             }
         }
 
+        $gsc_pages = [];
+        if (isset($gsc_raw['pages']) && is_array($gsc_raw['pages'])) {
+            foreach ($gsc_raw['pages'] as $row) {
+                if (!is_array($row) || !isset($row['url'])) {
+                    continue;
+                }
+                $gsc_pages[] = [
+                    'url' => esc_url_raw((string) $row['url']),
+                    'clicks' => isset($row['clicks']) ? (int) $row['clicks'] : 0,
+                    'impressions' => isset($row['impressions']) ? (int) $row['impressions'] : 0,
+                    'ctr' => isset($row['ctr']) ? (float) $row['ctr'] : 0.0,
+                    'position' => isset($row['position']) ? (float) $row['position'] : 0.0,
+                ];
+            }
+        }
+
         $ga4_raw = isset($data['ga4']) && is_array($data['ga4']) ? $data['ga4'] : [];
         $ga4_totals_raw = isset($ga4_raw['totals']) && is_array($ga4_raw['totals']) ? $ga4_raw['totals'] : [];
         $ga4_daily = [];
@@ -1403,6 +1422,38 @@ class ICap_SEO_Service_Client
                     'page_views' => isset($row['page_views']) ? (int) $row['page_views'] : 0,
                     'engagement_rate' => isset($row['engagement_rate']) ? (float) $row['engagement_rate'] : 0.0,
                     'avg_session_duration' => isset($row['avg_session_duration']) ? (float) $row['avg_session_duration'] : 0.0,
+                    'users' => isset($row['users']) ? (int) $row['users'] : 0,
+                ];
+            }
+        }
+
+        $ga4_pages = [];
+        if (isset($ga4_raw['pages']) && is_array($ga4_raw['pages'])) {
+            foreach ($ga4_raw['pages'] as $row) {
+                if (!is_array($row) || !isset($row['path'])) {
+                    continue;
+                }
+                $ga4_pages[] = [
+                    'path' => sanitize_text_field((string) $row['path']),
+                    'sessions' => isset($row['sessions']) ? (int) $row['sessions'] : 0,
+                    'page_views' => isset($row['page_views']) ? (int) $row['page_views'] : 0,
+                    'engagement_rate' => isset($row['engagement_rate']) ? (float) $row['engagement_rate'] : 0.0,
+                    'avg_session_duration' => isset($row['avg_session_duration']) ? (float) $row['avg_session_duration'] : 0.0,
+                    'users' => isset($row['users']) ? (int) $row['users'] : 0,
+                ];
+            }
+        }
+
+        $ga4_channels = [];
+        if (isset($ga4_raw['channels']) && is_array($ga4_raw['channels'])) {
+            foreach ($ga4_raw['channels'] as $row) {
+                if (!is_array($row) || !isset($row['channel'])) {
+                    continue;
+                }
+                $ga4_channels[] = [
+                    'channel' => sanitize_text_field((string) $row['channel']),
+                    'sessions' => isset($row['sessions']) ? (int) $row['sessions'] : 0,
+                    'users' => isset($row['users']) ? (int) $row['users'] : 0,
                 ];
             }
         }
@@ -1419,6 +1470,7 @@ class ICap_SEO_Service_Client
                     'position' => isset($gsc_totals_raw['position']) ? (float) $gsc_totals_raw['position'] : 0.0,
                 ],
                 'daily' => $gsc_daily,
+                'pages' => $gsc_pages,
             ],
             'ga4' => [
                 'connected' => !empty($ga4_raw['connected']),
@@ -1429,8 +1481,11 @@ class ICap_SEO_Service_Client
                     'page_views' => isset($ga4_totals_raw['page_views']) ? (int) $ga4_totals_raw['page_views'] : 0,
                     'engagement_rate' => isset($ga4_totals_raw['engagement_rate']) ? (float) $ga4_totals_raw['engagement_rate'] : 0.0,
                     'avg_session_duration' => isset($ga4_totals_raw['avg_session_duration']) ? (float) $ga4_totals_raw['avg_session_duration'] : 0.0,
+                    'users' => isset($ga4_totals_raw['users']) ? (int) $ga4_totals_raw['users'] : 0,
                 ],
                 'daily' => $ga4_daily,
+                'pages' => $ga4_pages,
+                'channels' => $ga4_channels,
             ],
         ];
     }

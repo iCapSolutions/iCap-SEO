@@ -2037,6 +2037,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_gsc_connected = !empty($performance_gsc['connected']);
             $performance_gsc_totals = isset($performance_gsc['totals']) && is_array($performance_gsc['totals']) ? $performance_gsc['totals'] : [];
             $performance_gsc_daily = isset($performance_gsc['daily']) && is_array($performance_gsc['daily']) ? $performance_gsc['daily'] : [];
+            $performance_gsc_pages = isset($performance_gsc['pages']) && is_array($performance_gsc['pages']) ? $performance_gsc['pages'] : [];
 
             $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
             ?>
@@ -2204,6 +2205,41 @@ if ($notice_code === 'remediation_apply_noop') {
                         <p class="description icap-seo-performance-chart-caption"><?php esc_html_e('Each line is shown relative to its own high/low for the window, not a shared value scale. Hover the chart for exact values on any day.', 'icap-seo'); ?></p>
                     </div>
                 <?php endif; ?>
+
+                <?php if (!empty($performance_gsc_pages)) : ?>
+                    <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Pages', 'icap-seo'); ?></h3>
+                    <p class="description"><?php esc_html_e('Your highest-clicking pages in Search Console over the last 28 days.', 'icap-seo'); ?></p>
+                    <div class="icap-seo-table-wrap">
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e('Page', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Clicks', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Impressions', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('CTR', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Position', 'icap-seo'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($performance_gsc_pages as $gsc_page_row) :
+                                    $gsc_page_url = isset($gsc_page_row['url']) ? (string) $gsc_page_row['url'] : '';
+                                    if ($gsc_page_url === '') {
+                                        continue;
+                                    }
+                                    $gsc_page_display = wp_parse_url($gsc_page_url, PHP_URL_PATH) ?: $gsc_page_url;
+                                    ?>
+                                    <tr>
+                                        <td><a href="<?php echo esc_url($gsc_page_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($gsc_page_display); ?></a></td>
+                                        <td><?php echo esc_html(number_format_i18n((int) ($gsc_page_row['clicks'] ?? 0))); ?></td>
+                                        <td><?php echo esc_html(number_format_i18n((int) ($gsc_page_row['impressions'] ?? 0))); ?></td>
+                                        <td><?php echo esc_html(number_format((float) ($gsc_page_row['ctr'] ?? 0) * 100, 1) . '%'); ?></td>
+                                        <td><?php echo esc_html(number_format((float) ($gsc_page_row['position'] ?? 0), 1)); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'site-analytics') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['site-analytics']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Site Analytics', 'icap-seo'); ?></h2>
@@ -2212,6 +2248,8 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_ga4 = isset($seo_performance['ga4']) && is_array($seo_performance['ga4']) ? $seo_performance['ga4'] : [];
             $performance_ga4_connected = !empty($performance_ga4['connected']);
             $performance_ga4_totals = isset($performance_ga4['totals']) && is_array($performance_ga4['totals']) ? $performance_ga4['totals'] : [];
+            $performance_ga4_pages = isset($performance_ga4['pages']) && is_array($performance_ga4['pages']) ? $performance_ga4['pages'] : [];
+            $performance_ga4_channels = isset($performance_ga4['channels']) && is_array($performance_ga4['channels']) ? $performance_ga4['channels'] : [];
 
             $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
             ?>
@@ -2230,7 +2268,11 @@ if ($notice_code === 'remediation_apply_noop') {
                     ?>
                 </p>
             <?php else : ?>
-                <div class="icap-seo-cards">
+                <div class="icap-seo-cards icap-seo-cards--5">
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Users', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_ga4_totals['users'] ?? 0))); ?></p>
+                    </div>
                     <div class="icap-seo-card">
                         <h3><?php esc_html_e('Sessions', 'icap-seo'); ?></h3>
                         <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_ga4_totals['sessions'] ?? 0))); ?></p>
@@ -2248,6 +2290,76 @@ if ($notice_code === 'remediation_apply_noop') {
                         <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_ga4_totals['avg_session_duration'] ?? 0), 0) . 's'); ?></p>
                     </div>
                 </div>
+
+                <?php if (!empty($performance_ga4_channels)) :
+                    $channel_max_sessions = max(array_column($performance_ga4_channels, 'sessions'));
+                    ?>
+                    <h3 class="icap-seo-section-heading"><?php esc_html_e('Traffic by Channel', 'icap-seo'); ?></h3>
+                    <p class="description"><?php esc_html_e('Where sessions came from over the last 28 days.', 'icap-seo'); ?></p>
+                    <ul class="icap-seo-channel-breakdown">
+                        <?php foreach ($performance_ga4_channels as $channel_row) :
+                            $channel_name = isset($channel_row['channel']) ? (string) $channel_row['channel'] : '';
+                            if ($channel_name === '') {
+                                continue;
+                            }
+                            $channel_sessions = (int) ($channel_row['sessions'] ?? 0);
+                            $channel_users = (int) ($channel_row['users'] ?? 0);
+                            $channel_bar_percent = $channel_max_sessions > 0 ? round(($channel_sessions / $channel_max_sessions) * 100, 1) : 0;
+                            ?>
+                            <li class="icap-seo-channel-breakdown-item">
+                                <span class="icap-seo-channel-breakdown-label"><?php echo esc_html($channel_name); ?></span>
+                                <span class="icap-seo-channel-breakdown-bar-track">
+                                    <span class="icap-seo-channel-breakdown-bar-fill" style="width: <?php echo esc_attr((string) $channel_bar_percent); ?>%;"></span>
+                                </span>
+                                <span class="icap-seo-channel-breakdown-value">
+                                    <?php
+                                    echo esc_html(sprintf(
+                                        /* translators: 1: session count, 2: user count */
+                                        __('%1$s sessions · %2$s users', 'icap-seo'),
+                                        number_format_i18n($channel_sessions),
+                                        number_format_i18n($channel_users)
+                                    ));
+                                    ?>
+                                </span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+
+                <?php if (!empty($performance_ga4_pages)) : ?>
+                    <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Pages', 'icap-seo'); ?></h3>
+                    <p class="description"><?php esc_html_e('Your highest-traffic pages in Google Analytics over the last 28 days.', 'icap-seo'); ?></p>
+                    <div class="icap-seo-table-wrap">
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e('Page', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Sessions', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Page Views', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Users', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Engagement Rate', 'icap-seo'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($performance_ga4_pages as $ga4_page_row) :
+                                    $ga4_page_path = isset($ga4_page_row['path']) ? (string) $ga4_page_row['path'] : '';
+                                    if ($ga4_page_path === '') {
+                                        continue;
+                                    }
+                                    $ga4_page_url = esc_url(home_url($ga4_page_path));
+                                    ?>
+                                    <tr>
+                                        <td><a href="<?php echo $ga4_page_url; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped via esc_url() above ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($ga4_page_path); ?></a></td>
+                                        <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['sessions'] ?? 0))); ?></td>
+                                        <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['page_views'] ?? 0))); ?></td>
+                                        <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['users'] ?? 0))); ?></td>
+                                        <td><?php echo esc_html(number_format((float) ($ga4_page_row['engagement_rate'] ?? 0) * 100, 1) . '%'); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'notifications') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['notifications']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Notifications', 'icap-seo'); ?></h2>
