@@ -169,6 +169,7 @@ $tabs = [
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
     'content-scores' => __('Content Scores', 'icap-seo'),
     'seo-performance' => __('SEO Performance', 'icap-seo'),
+    'site-analytics' => __('Site Analytics', 'icap-seo'),
     'notifications' => __('Notifications', 'icap-seo'),
     'redirects' => __('Redirects', 'icap-seo'),
     'local-seo' => __('Local SEO', 'icap-seo'),
@@ -182,6 +183,7 @@ $tab_icons = [
     'setup-wizard' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
     'content-scores' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1Z"/><path d="M8 5H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/><path d="m9 12 2 2 4-4"/></svg>',
     'seo-performance' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>',
+    'site-analytics' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="5"/><rect x="12" y="9" width="3" height="9"/><rect x="17" y="5" width="3" height="13"/></svg>',
     'notifications' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
     'redirects' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a4 4 0 0 1 4 4v1"/><path d="m15 4 4 4-4 4"/><path d="M20 17H9a4 4 0 0 1-4-4v-1"/><path d="m9 20-4-4 4-4"/></svg>',
     'local-seo' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -2029,21 +2031,16 @@ if ($notice_code === 'remediation_apply_noop') {
             <?php endif; ?>
         <?php elseif ($active_tab === 'seo-performance') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['seo-performance']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('SEO Performance', 'icap-seo'); ?></h2>
-            <p class="description"><?php esc_html_e('Site-wide traffic and search visibility from Google Search Console and Google Analytics, over the last 28 days.', 'icap-seo'); ?></p>
+            <p class="description"><?php esc_html_e('Site-wide search visibility from Google Search Console, over the last 28 days.', 'icap-seo'); ?></p>
             <?php
             $performance_gsc = isset($seo_performance['gsc']) && is_array($seo_performance['gsc']) ? $seo_performance['gsc'] : [];
             $performance_gsc_connected = !empty($performance_gsc['connected']);
             $performance_gsc_totals = isset($performance_gsc['totals']) && is_array($performance_gsc['totals']) ? $performance_gsc['totals'] : [];
             $performance_gsc_daily = isset($performance_gsc['daily']) && is_array($performance_gsc['daily']) ? $performance_gsc['daily'] : [];
 
-            $performance_ga4 = isset($seo_performance['ga4']) && is_array($seo_performance['ga4']) ? $seo_performance['ga4'] : [];
-            $performance_ga4_connected = !empty($performance_ga4['connected']);
-            $performance_ga4_totals = isset($performance_ga4['totals']) && is_array($performance_ga4['totals']) ? $performance_ga4['totals'] : [];
-
             $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
             ?>
 
-            <h3 style="margin-top:20px;"><?php esc_html_e('Search Console', 'icap-seo'); ?></h3>
             <?php if (!$performance_gsc_connected) : ?>
                 <p class="description">
                     <?php
@@ -2208,8 +2205,17 @@ if ($notice_code === 'remediation_apply_noop') {
                     </div>
                 <?php endif; ?>
             <?php endif; ?>
+        <?php elseif ($active_tab === 'site-analytics') : ?>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['site-analytics']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Site Analytics', 'icap-seo'); ?></h2>
+            <p class="description"><?php esc_html_e('Site-wide traffic from Google Analytics, over the last 28 days.', 'icap-seo'); ?></p>
+            <?php
+            $performance_ga4 = isset($seo_performance['ga4']) && is_array($seo_performance['ga4']) ? $seo_performance['ga4'] : [];
+            $performance_ga4_connected = !empty($performance_ga4['connected']);
+            $performance_ga4_totals = isset($performance_ga4['totals']) && is_array($performance_ga4['totals']) ? $performance_ga4['totals'] : [];
 
-            <h3 style="margin-top:24px;"><?php esc_html_e('Google Analytics', 'icap-seo'); ?></h3>
+            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+            ?>
+
             <?php if (!$performance_ga4_connected) : ?>
                 <p class="description">
                     <?php
