@@ -84,6 +84,10 @@
     margin-top: 12px;
 }
 
+.icap-seo-cards--5 {
+    grid-template-columns: repeat(5, 1fr);
+}
+
 @media (max-width: 960px) {
     .icap-seo-cards {
         grid-template-columns: repeat(2, 1fr);
@@ -216,6 +220,62 @@
 
 .icap-seo-table-wrap {
     margin-top: 12px;
+}
+
+.icap-seo-section-heading {
+    margin: 24px 0 4px;
+}
+
+.icap-seo-channel-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.icap-seo-channel-breakdown-item {
+    display: grid;
+    grid-template-columns: 140px 1fr auto;
+    align-items: center;
+    gap: 12px;
+}
+
+.icap-seo-channel-breakdown-label {
+    font-size: 13px;
+    color: #1d2327;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.icap-seo-channel-breakdown-bar-track {
+    display: block;
+    height: 8px;
+    border-radius: 4px;
+    background: #f0f0f1;
+}
+
+.icap-seo-channel-breakdown-bar-fill {
+    display: block;
+    height: 100%;
+    min-width: 4px;
+    border-radius: 4px;
+    background: #2a78d6;
+}
+
+.icap-seo-channel-breakdown-value {
+    font-size: 12px;
+    color: #787c82;
+    white-space: nowrap;
+}
+
+@media (max-width: 782px) {
+    .icap-seo-channel-breakdown-item {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
 }
 
 .icap-seo-rollup {

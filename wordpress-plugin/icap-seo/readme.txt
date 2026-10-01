@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.120
+Stable tag: 0.1.121
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,10 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.121 =
+* Site Analytics tab: added a Users tile, a traffic-by-channel breakdown (Organic Search, Direct, Referral, etc.), and a Top Pages table of your highest-traffic pages from Google Analytics.
+* SEO Performance tab: added a Top Pages table of your highest-clicking pages from Search Console, under the trend chart.
 
 = 0.1.120 =
 * Split the SEO Performance tab in two: it now holds only Search Console stats (clicks, impressions, CTR, position), and a new "Site Analytics" tab (right after it) holds the Google Analytics stats (sessions, page views, engagement rate, session duration) - the first step toward expanding each with its own per-page breakdowns.
