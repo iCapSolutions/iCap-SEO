@@ -1361,6 +1361,7 @@ class ICap_SEO_Service_Client
                 'pages' => [],
                 'keywords' => [],
                 'total_keywords' => 0,
+                'keyword_totals' => ['clicks' => 0, 'top3' => 0, 'top10' => 0, 'avg_position' => 0.0],
             ],
             'ga4' => [
                 'connected' => false,
@@ -1462,6 +1463,8 @@ class ICap_SEO_Service_Client
             }
         }
 
+        $gsc_keyword_totals_raw = isset($gsc_raw['keyword_totals']) && is_array($gsc_raw['keyword_totals']) ? $gsc_raw['keyword_totals'] : [];
+
         $ga4_channels = [];
         if (isset($ga4_raw['channels']) && is_array($ga4_raw['channels'])) {
             foreach ($ga4_raw['channels'] as $row) {
@@ -1491,6 +1494,12 @@ class ICap_SEO_Service_Client
                 'pages' => $gsc_pages,
                 'keywords' => $gsc_keywords,
                 'total_keywords' => isset($gsc_raw['total_keywords']) ? (int) $gsc_raw['total_keywords'] : 0,
+                'keyword_totals' => [
+                    'clicks' => isset($gsc_keyword_totals_raw['clicks']) ? (int) $gsc_keyword_totals_raw['clicks'] : 0,
+                    'top3' => isset($gsc_keyword_totals_raw['top3']) ? (int) $gsc_keyword_totals_raw['top3'] : 0,
+                    'top10' => isset($gsc_keyword_totals_raw['top10']) ? (int) $gsc_keyword_totals_raw['top10'] : 0,
+                    'avg_position' => isset($gsc_keyword_totals_raw['avg_position']) ? (float) $gsc_keyword_totals_raw['avg_position'] : 0.0,
+                ],
             ],
             'ga4' => [
                 'connected' => !empty($ga4_raw['connected']),
