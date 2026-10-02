@@ -2369,11 +2369,36 @@ if ($notice_code === 'remediation_apply_noop') {
             <?php
             $performance_gsc_keywords_tab = isset($seo_performance['gsc']) && is_array($seo_performance['gsc']) ? $seo_performance['gsc'] : [];
             $performance_gsc_keywords_connected = !empty($performance_gsc_keywords_tab['connected']);
-            $performance_gsc_keywords_totals = isset($performance_gsc_keywords_tab['totals']) && is_array($performance_gsc_keywords_tab['totals']) ? $performance_gsc_keywords_tab['totals'] : [];
+            $performance_gsc_keyword_totals = isset($performance_gsc_keywords_tab['keyword_totals']) && is_array($performance_gsc_keywords_tab['keyword_totals']) ? $performance_gsc_keywords_tab['keyword_totals'] : [];
             $performance_gsc_keywords_list = isset($performance_gsc_keywords_tab['keywords']) && is_array($performance_gsc_keywords_tab['keywords']) ? $performance_gsc_keywords_tab['keywords'] : [];
             $performance_gsc_total_keywords = (int) ($performance_gsc_keywords_tab['total_keywords'] ?? 0);
 
             $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+
+            $keywords_orderby = $keywords_orderby ?? 'clicks';
+            $keywords_order = $keywords_order ?? 'desc';
+            // WordPress-native sortable-column markup (manage-column/sortable/sorted +
+            // sorting-indicators) - the small up/down triangle is drawn by wp-admin's own
+            // bundled CSS (no image asset), so no custom arrow styling is needed here, just
+            // the same classes/structure WP_List_Table itself emits.
+            $keywords_sort_columns = [
+                'query' => ['label' => __('Keyword', 'icap-seo'), 'desc_first' => false],
+                'clicks' => ['label' => __('Clicks', 'icap-seo'), 'desc_first' => true],
+                'impressions' => ['label' => __('Impressions', 'icap-seo'), 'desc_first' => true],
+                'ctr' => ['label' => __('CTR', 'icap-seo'), 'desc_first' => true],
+                'position' => ['label' => __('Position', 'icap-seo'), 'desc_first' => false],
+            ];
+            $keywords_sort_link = static function (string $column, bool $desc_first) use ($keywords_orderby, $keywords_order): string {
+                if ($keywords_orderby === $column) {
+                    $next_order = $keywords_order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    $next_order = $desc_first ? 'desc' : 'asc';
+                }
+                return esc_url(add_query_arg(
+                    ['page' => 'icap-seo', 'tab' => 'keywords', 'orderby' => $column, 'order' => $next_order],
+                    admin_url('admin.php')
+                ));
+            };
             ?>
 
             <?php if (!$performance_gsc_keywords_connected) : ?>
@@ -2396,20 +2421,20 @@ if ($notice_code === 'remediation_apply_noop') {
                         <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n($performance_gsc_total_keywords)); ?></p>
                     </div>
                     <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Top 3 Rankings', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_gsc_keyword_totals['top3'] ?? 0))); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Top 10 Rankings', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_gsc_keyword_totals['top10'] ?? 0))); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
                         <h3><?php esc_html_e('Total Clicks', 'icap-seo'); ?></h3>
-                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_gsc_keywords_totals['clicks'] ?? 0))); ?></p>
-                    </div>
-                    <div class="icap-seo-card">
-                        <h3><?php esc_html_e('Total Impressions', 'icap-seo'); ?></h3>
-                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_gsc_keywords_totals['impressions'] ?? 0))); ?></p>
-                    </div>
-                    <div class="icap-seo-card">
-                        <h3><?php esc_html_e('Avg CTR', 'icap-seo'); ?></h3>
-                        <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_gsc_keywords_totals['ctr'] ?? 0) * 100, 1) . '%'); ?></p>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_gsc_keyword_totals['clicks'] ?? 0))); ?></p>
                     </div>
                     <div class="icap-seo-card">
                         <h3><?php esc_html_e('Avg Position', 'icap-seo'); ?></h3>
-                        <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_gsc_keywords_totals['position'] ?? 0), 1)); ?></p>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_gsc_keyword_totals['avg_position'] ?? 0), 1)); ?></p>
                     </div>
                 </div>
 
@@ -2417,14 +2442,30 @@ if ($notice_code === 'remediation_apply_noop') {
                     <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Keywords', 'icap-seo'); ?></h3>
                     <p class="description"><?php esc_html_e('Your highest-clicking search queries in Search Console over the last 28 days.', 'icap-seo'); ?></p>
                     <div class="icap-seo-table-wrap">
-                        <table class="widefat striped">
+                        <table class="wp-list-table widefat striped">
                             <thead>
                                 <tr>
-                                    <th><?php esc_html_e('Keyword', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Clicks', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Impressions', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('CTR', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Position', 'icap-seo'); ?></th>
+                                    <?php foreach ($keywords_sort_columns as $keywords_column_key => $keywords_column_meta) :
+                                        $keywords_column_is_sorted = $keywords_orderby === $keywords_column_key;
+                                        $keywords_column_classes = ['manage-column', 'column-' . $keywords_column_key];
+                                        if ($keywords_column_is_sorted) {
+                                            $keywords_column_classes[] = 'sorted';
+                                            $keywords_column_classes[] = $keywords_order;
+                                        } else {
+                                            $keywords_column_classes[] = 'sortable';
+                                            $keywords_column_classes[] = $keywords_column_meta['desc_first'] ? 'asc' : 'desc';
+                                        }
+                                        ?>
+                                        <th scope="col" class="<?php echo esc_attr(implode(' ', $keywords_column_classes)); ?>"<?php echo $keywords_column_is_sorted ? ' aria-sort="' . ($keywords_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
+                                            <a href="<?php echo $keywords_sort_link($keywords_column_key, $keywords_column_meta['desc_first']); ?>">
+                                                <span><?php echo esc_html($keywords_column_meta['label']); ?></span>
+                                                <span class="sorting-indicators">
+                                                    <span class="sorting-indicator asc" aria-hidden="true"></span>
+                                                    <span class="sorting-indicator desc" aria-hidden="true"></span>
+                                                </span>
+                                            </a>
+                                        </th>
+                                    <?php endforeach; ?>
                                 </tr>
                             </thead>
                             <tbody>

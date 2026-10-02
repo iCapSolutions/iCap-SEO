@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.124
+Stable tag: 0.1.125
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.125 =
+* Keywords tab: replaced the generic stats row with keyword-specific tiles (Total Keywords, Top 3 Rankings, Top 10 Rankings, Total Clicks, Avg Position), and made every column in the Top Keywords table sortable using WordPress's native sortable-column arrows.
 
 = 0.1.124 =
 * Added a new Keywords tab: total keywords, total clicks, total impressions, average CTR, and average position tiles, plus a table of your highest-clicking search queries from Google Search Console over the last 28 days.

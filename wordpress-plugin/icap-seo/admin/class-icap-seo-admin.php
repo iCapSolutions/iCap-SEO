@@ -433,6 +433,8 @@ class ICap_SEO_Admin
         $scan_status_data = [];
         $latest_content_scores_meta = [];
         $seo_performance = [];
+        $keywords_orderby = 'clicks';
+        $keywords_order = 'desc';
         $selected_content_key = '';
         $content_score_detail = [];
         $content_score_detail_error = '';
@@ -464,6 +466,37 @@ class ICap_SEO_Admin
 
             if (in_array($active_tab, ['seo-performance', 'site-analytics', 'keywords'], true)) {
                 $seo_performance = $this->service_client->get_seo_performance($allow_live_fetch);
+
+                if ($active_tab === 'keywords' && isset($seo_performance['gsc']['keywords']) && is_array($seo_performance['gsc']['keywords'])) {
+                    // Re-sorts the already-fetched (server-capped top-20-by-clicks) rows in
+                    // place - a pure front-end reorder, same no-extra-API-call shape as the
+                    // Content Scores table's orderby/order handling above.
+                    $keywords_orderby = isset($_GET['orderby']) ? sanitize_key(wp_unslash($_GET['orderby'])) : 'clicks';
+                    if (!in_array($keywords_orderby, ['query', 'clicks', 'impressions', 'ctr', 'position'], true)) {
+                        $keywords_orderby = 'clicks';
+                    }
+                    $keywords_order = isset($_GET['order']) ? strtolower(sanitize_key(wp_unslash($_GET['order']))) : 'desc';
+                    if (!in_array($keywords_order, ['asc', 'desc'], true)) {
+                        $keywords_order = 'desc';
+                    }
+                    $keywords_list = $seo_performance['gsc']['keywords'];
+                    usort($keywords_list, static function (array $a, array $b) use ($keywords_orderby, $keywords_order): int {
+                        if ($keywords_orderby === 'query') {
+                            $comparison = strcasecmp((string) ($a['query'] ?? ''), (string) ($b['query'] ?? ''));
+                        } elseif ($keywords_orderby === 'impressions') {
+                            $comparison = ((int) ($a['impressions'] ?? 0)) <=> ((int) ($b['impressions'] ?? 0));
+                        } elseif ($keywords_orderby === 'ctr') {
+                            $comparison = ((float) ($a['ctr'] ?? 0)) <=> ((float) ($b['ctr'] ?? 0));
+                        } elseif ($keywords_orderby === 'position') {
+                            // Lower position is better (position 1 = top result).
+                            $comparison = ((float) ($a['position'] ?? 0)) <=> ((float) ($b['position'] ?? 0));
+                        } else {
+                            $comparison = ((int) ($a['clicks'] ?? 0)) <=> ((int) ($b['clicks'] ?? 0));
+                        }
+                        return $keywords_order === 'desc' ? -$comparison : $comparison;
+                    });
+                    $seo_performance['gsc']['keywords'] = $keywords_list;
+                }
             }
 
             if ($active_tab === 'content-scores' || $active_tab === 'overview') {
