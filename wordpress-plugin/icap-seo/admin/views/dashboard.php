@@ -170,6 +170,7 @@ $tabs = [
     'content-scores' => __('Content Scores', 'icap-seo'),
     'seo-performance' => __('SEO Performance', 'icap-seo'),
     'site-analytics' => __('Site Analytics', 'icap-seo'),
+    'keywords' => __('Keywords', 'icap-seo'),
     'notifications' => __('Notifications', 'icap-seo'),
     'redirects' => __('Redirects', 'icap-seo'),
     'local-seo' => __('Local SEO', 'icap-seo'),
@@ -184,6 +185,7 @@ $tab_icons = [
     'content-scores' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1Z"/><path d="M8 5H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/><path d="m9 12 2 2 4-4"/></svg>',
     'seo-performance' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>',
     'site-analytics' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="5"/><rect x="12" y="9" width="3" height="9"/><rect x="17" y="5" width="3" height="13"/></svg>',
+    'keywords' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
     'notifications' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
     'redirects' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a4 4 0 0 1 4 4v1"/><path d="m15 4 4 4-4 4"/><path d="M20 17H9a4 4 0 0 1-4-4v-1"/><path d="m9 20-4-4 4-4"/></svg>',
     'local-seo' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -2354,6 +2356,90 @@ if ($notice_code === 'remediation_apply_noop') {
                                         <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['page_views'] ?? 0))); ?></td>
                                         <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['users'] ?? 0))); ?></td>
                                         <td><?php echo esc_html(number_format((float) ($ga4_page_row['engagement_rate'] ?? 0) * 100, 1) . '%'); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php elseif ($active_tab === 'keywords') : ?>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['keywords']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Keywords', 'icap-seo'); ?></h2>
+            <p class="description"><?php esc_html_e('Search queries driving clicks and impressions in Google Search Console, over the last 28 days.', 'icap-seo'); ?></p>
+            <?php
+            $performance_gsc_keywords_tab = isset($seo_performance['gsc']) && is_array($seo_performance['gsc']) ? $seo_performance['gsc'] : [];
+            $performance_gsc_keywords_connected = !empty($performance_gsc_keywords_tab['connected']);
+            $performance_gsc_keywords_totals = isset($performance_gsc_keywords_tab['totals']) && is_array($performance_gsc_keywords_tab['totals']) ? $performance_gsc_keywords_tab['totals'] : [];
+            $performance_gsc_keywords_list = isset($performance_gsc_keywords_tab['keywords']) && is_array($performance_gsc_keywords_tab['keywords']) ? $performance_gsc_keywords_tab['keywords'] : [];
+            $performance_gsc_total_keywords = (int) ($performance_gsc_keywords_tab['total_keywords'] ?? 0);
+
+            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+            ?>
+
+            <?php if (!$performance_gsc_keywords_connected) : ?>
+                <p class="description">
+                    <?php
+                    echo wp_kses(
+                        sprintf(
+                            /* translators: %s: link to the Settings tab */
+                            __('Connect Google Search Console in %s to see which keywords are driving clicks and impressions here.', 'icap-seo'),
+                            '<a href="' . $performance_settings_url . '">' . esc_html__('Settings', 'icap-seo') . '</a>'
+                        ),
+                        ['a' => ['href' => []]]
+                    );
+                    ?>
+                </p>
+            <?php else : ?>
+                <div class="icap-seo-cards icap-seo-cards--5">
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Total Keywords', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n($performance_gsc_total_keywords)); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Total Clicks', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_gsc_keywords_totals['clicks'] ?? 0))); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Total Impressions', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format_i18n((int) ($performance_gsc_keywords_totals['impressions'] ?? 0))); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Avg CTR', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_gsc_keywords_totals['ctr'] ?? 0) * 100, 1) . '%'); ?></p>
+                    </div>
+                    <div class="icap-seo-card">
+                        <h3><?php esc_html_e('Avg Position', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_gsc_keywords_totals['position'] ?? 0), 1)); ?></p>
+                    </div>
+                </div>
+
+                <?php if (!empty($performance_gsc_keywords_list)) : ?>
+                    <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Keywords', 'icap-seo'); ?></h3>
+                    <p class="description"><?php esc_html_e('Your highest-clicking search queries in Search Console over the last 28 days.', 'icap-seo'); ?></p>
+                    <div class="icap-seo-table-wrap">
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e('Keyword', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Clicks', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Impressions', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('CTR', 'icap-seo'); ?></th>
+                                    <th><?php esc_html_e('Position', 'icap-seo'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($performance_gsc_keywords_list as $gsc_keyword_row) :
+                                    $gsc_keyword_query = isset($gsc_keyword_row['query']) ? (string) $gsc_keyword_row['query'] : '';
+                                    if ($gsc_keyword_query === '') {
+                                        continue;
+                                    }
+                                    ?>
+                                    <tr>
+                                        <td><?php echo esc_html($gsc_keyword_query); ?></td>
+                                        <td><?php echo esc_html(number_format_i18n((int) ($gsc_keyword_row['clicks'] ?? 0))); ?></td>
+                                        <td><?php echo esc_html(number_format_i18n((int) ($gsc_keyword_row['impressions'] ?? 0))); ?></td>
+                                        <td><?php echo esc_html(number_format((float) ($gsc_keyword_row['ctr'] ?? 0) * 100, 1) . '%'); ?></td>
+                                        <td><?php echo esc_html(number_format((float) ($gsc_keyword_row['position'] ?? 0), 1)); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

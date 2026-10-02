@@ -1359,6 +1359,8 @@ class ICap_SEO_Service_Client
                 'totals' => ['clicks' => 0, 'impressions' => 0, 'ctr' => 0.0, 'position' => 0.0],
                 'daily' => [],
                 'pages' => [],
+                'keywords' => [],
+                'total_keywords' => 0,
             ],
             'ga4' => [
                 'connected' => false,
@@ -1400,6 +1402,22 @@ class ICap_SEO_Service_Client
                 }
                 $gsc_pages[] = [
                     'url' => esc_url_raw((string) $row['url']),
+                    'clicks' => isset($row['clicks']) ? (int) $row['clicks'] : 0,
+                    'impressions' => isset($row['impressions']) ? (int) $row['impressions'] : 0,
+                    'ctr' => isset($row['ctr']) ? (float) $row['ctr'] : 0.0,
+                    'position' => isset($row['position']) ? (float) $row['position'] : 0.0,
+                ];
+            }
+        }
+
+        $gsc_keywords = [];
+        if (isset($gsc_raw['keywords']) && is_array($gsc_raw['keywords'])) {
+            foreach ($gsc_raw['keywords'] as $row) {
+                if (!is_array($row) || !isset($row['query'])) {
+                    continue;
+                }
+                $gsc_keywords[] = [
+                    'query' => sanitize_text_field((string) $row['query']),
                     'clicks' => isset($row['clicks']) ? (int) $row['clicks'] : 0,
                     'impressions' => isset($row['impressions']) ? (int) $row['impressions'] : 0,
                     'ctr' => isset($row['ctr']) ? (float) $row['ctr'] : 0.0,
@@ -1471,6 +1489,8 @@ class ICap_SEO_Service_Client
                 ],
                 'daily' => $gsc_daily,
                 'pages' => $gsc_pages,
+                'keywords' => $gsc_keywords,
+                'total_keywords' => isset($gsc_raw['total_keywords']) ? (int) $gsc_raw['total_keywords'] : 0,
             ],
             'ga4' => [
                 'connected' => !empty($ga4_raw['connected']),
