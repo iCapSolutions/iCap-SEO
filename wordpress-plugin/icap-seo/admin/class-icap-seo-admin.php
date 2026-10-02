@@ -462,7 +462,7 @@ class ICap_SEO_Admin
                 $score_snapshot = $this->service_client->get_site_score_snapshot($allow_live_fetch);
             }
 
-            if (in_array($active_tab, ['seo-performance', 'site-analytics'], true)) {
+            if (in_array($active_tab, ['seo-performance', 'site-analytics', 'keywords'], true)) {
                 $seo_performance = $this->service_client->get_seo_performance($allow_live_fetch);
             }
 
