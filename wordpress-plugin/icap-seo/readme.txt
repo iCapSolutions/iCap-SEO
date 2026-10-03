@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.125
+Stable tag: 0.1.126
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.126 =
+* Rolled WordPress's native sortable-column arrows (used on Keywords) out to every other data table in the plugin: Content Scores, the SEO Performance and Site Analytics Top Pages tables, Active Redirects, and Recently Seen 404s are now all sortable by clicking a column header, using the same native WP markup throughout.
 
 = 0.1.125 =
 * Keywords tab: replaced the generic stats row with keyword-specific tiles (Total Keywords, Top 3 Rankings, Top 10 Rankings, Total Clicks, Avg Position), and made every column in the Top Keywords table sortable using WordPress's native sortable-column arrows.
