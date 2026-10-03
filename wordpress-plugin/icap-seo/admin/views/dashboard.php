@@ -164,6 +164,40 @@ if (!function_exists('icap_seo_friendly_layer_names')) {
     }
 }
 
+if (!function_exists('icap_seo_render_sortable_th')) {
+    // Renders one <th> using WordPress's own native sortable-column markup/classes
+    // (manage-column/sortable/sorted/sorting-indicators) - the same structure
+    // WP_List_Table itself emits, so the up/down triangle is drawn by wp-admin's
+    // already-loaded bundled CSS (list-tables.css, part of the global wp-admin
+    // stylesheet), not a custom asset or styling. $desc_first controls which
+    // direction clicking an unsorted column applies first (and which faint arrow
+    // shows before it's clicked) - true for numeric/metric columns where "biggest
+    // first" is the useful default, false for text/position columns where "A-Z" or
+    // "best (lowest) first" is.
+    function icap_seo_render_sortable_th(string $label, bool $is_sorted, string $current_order, bool $desc_first, string $href): void
+    {
+        $classes = ['manage-column'];
+        if ($is_sorted) {
+            $classes[] = 'sorted';
+            $classes[] = $current_order;
+        } else {
+            $classes[] = 'sortable';
+            $classes[] = $desc_first ? 'asc' : 'desc';
+        }
+        ?>
+        <th scope="col" class="<?php echo esc_attr(implode(' ', $classes)); ?>"<?php echo $is_sorted ? ' aria-sort="' . esc_attr($current_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
+            <a href="<?php echo esc_url($href); ?>">
+                <span><?php echo esc_html($label); ?></span>
+                <span class="sorting-indicators">
+                    <span class="sorting-indicator asc" aria-hidden="true"></span>
+                    <span class="sorting-indicator desc" aria-hidden="true"></span>
+                </span>
+            </a>
+        </th>
+        <?php
+    }
+}
+
 $tabs = [
     'overview' => __('Overview', 'icap-seo'),
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
@@ -715,10 +749,11 @@ if ($notice_code === 'remediation_apply_noop') {
             <?php
             $content_scores_orderby = $content_scores_orderby ?? 'title';
             $content_scores_order = $content_scores_order ?? 'asc';
-            $content_scores_sort_link = static function (string $column, string $default_order) use ($content_scores_orderby, $content_scores_order): string {
-                $next_order = $default_order;
+            $content_scores_sort_link = static function (string $column, bool $desc_first) use ($content_scores_orderby, $content_scores_order): string {
                 if ($content_scores_orderby === $column) {
-                    $next_order = ($content_scores_order === 'asc') ? 'desc' : 'asc';
+                    $next_order = $content_scores_order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    $next_order = $desc_first ? 'desc' : 'asc';
                 }
                 return esc_url(add_query_arg(
                     [
@@ -807,57 +842,15 @@ if ($notice_code === 'remediation_apply_noop') {
                 <table class="widefat striped">
                     <thead>
                         <tr>
-                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'title' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'title' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
-                                <a href="<?php echo $content_scores_sort_link('title', 'asc'); ?>">
-                                    <span><?php esc_html_e('Title', 'icap-seo'); ?></span>
-                                    <?php if ($content_scores_orderby === 'title') : ?>
-                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
+                            <?php icap_seo_render_sortable_th(__('Title', 'icap-seo'), $content_scores_orderby === 'title', $content_scores_order, false, $content_scores_sort_link('title', false)); ?>
                             <th><?php esc_html_e('Type', 'icap-seo'); ?></th>
                             <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
-                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'score' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'score' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
-                                <a href="<?php echo $content_scores_sort_link('score', 'desc'); ?>">
-                                    <span><?php esc_html_e('iCap Score', 'icap-seo'); ?></span>
-                                    <?php if ($content_scores_orderby === 'score') : ?>
-                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
+                            <?php icap_seo_render_sortable_th(__('iCap Score', 'icap-seo'), $content_scores_orderby === 'score', $content_scores_order, true, $content_scores_sort_link('score', true)); ?>
                             <th><?php esc_html_e('Search Console', 'icap-seo'); ?></th>
-                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'clicks' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'clicks' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
-                                <a href="<?php echo $content_scores_sort_link('clicks', 'desc'); ?>">
-                                    <span><?php esc_html_e('Clicks (28d)', 'icap-seo'); ?></span>
-                                    <?php if ($content_scores_orderby === 'clicks') : ?>
-                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
-                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'position' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'position' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
-                                <a href="<?php echo $content_scores_sort_link('position', 'asc'); ?>">
-                                    <span><?php esc_html_e('Avg Position', 'icap-seo'); ?></span>
-                                    <?php if ($content_scores_orderby === 'position') : ?>
-                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
-                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'sessions' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'sessions' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
-                                <a href="<?php echo $content_scores_sort_link('sessions', 'desc'); ?>">
-                                    <span><?php esc_html_e('Sessions (28d)', 'icap-seo'); ?></span>
-                                    <?php if ($content_scores_orderby === 'sessions') : ?>
-                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
-                            <th scope="col" class="icap-seo-sortable-col<?php echo $content_scores_orderby === 'engagement' ? ' is-sorted' : ''; ?>"<?php echo $content_scores_orderby === 'engagement' ? ' aria-sort="' . ($content_scores_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
-                                <a href="<?php echo $content_scores_sort_link('engagement', 'desc'); ?>">
-                                    <span><?php esc_html_e('Engagement Rate', 'icap-seo'); ?></span>
-                                    <?php if ($content_scores_orderby === 'engagement') : ?>
-                                        <span class="icap-seo-sort-arrow" aria-hidden="true"><?php echo $content_scores_order === 'asc' ? '&#9650;' : '&#9660;'; ?></span>
-                                    <?php endif; ?>
-                                </a>
-                            </th>
+                            <?php icap_seo_render_sortable_th(__('Clicks (28d)', 'icap-seo'), $content_scores_orderby === 'clicks', $content_scores_order, true, $content_scores_sort_link('clicks', true)); ?>
+                            <?php icap_seo_render_sortable_th(__('Avg Position', 'icap-seo'), $content_scores_orderby === 'position', $content_scores_order, false, $content_scores_sort_link('position', false)); ?>
+                            <?php icap_seo_render_sortable_th(__('Sessions (28d)', 'icap-seo'), $content_scores_orderby === 'sessions', $content_scores_order, true, $content_scores_sort_link('sessions', true)); ?>
+                            <?php icap_seo_render_sortable_th(__('Engagement Rate', 'icap-seo'), $content_scores_orderby === 'engagement', $content_scores_order, true, $content_scores_sort_link('engagement', true)); ?>
                             <th><?php esc_html_e('Details', 'icap-seo'); ?></th>
                         </tr>
                     </thead>
@@ -2042,6 +2035,27 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_gsc_pages = isset($performance_gsc['pages']) && is_array($performance_gsc['pages']) ? $performance_gsc['pages'] : [];
 
             $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+
+            $seo_performance_pages_orderby = $seo_performance_pages_orderby ?? 'clicks';
+            $seo_performance_pages_order = $seo_performance_pages_order ?? 'desc';
+            $seo_performance_pages_columns = [
+                'url' => ['label' => __('Page', 'icap-seo'), 'desc_first' => false],
+                'clicks' => ['label' => __('Clicks', 'icap-seo'), 'desc_first' => true],
+                'impressions' => ['label' => __('Impressions', 'icap-seo'), 'desc_first' => true],
+                'ctr' => ['label' => __('CTR', 'icap-seo'), 'desc_first' => true],
+                'position' => ['label' => __('Position', 'icap-seo'), 'desc_first' => false],
+            ];
+            $seo_performance_pages_sort_link = static function (string $column, bool $desc_first) use ($seo_performance_pages_orderby, $seo_performance_pages_order): string {
+                if ($seo_performance_pages_orderby === $column) {
+                    $next_order = $seo_performance_pages_order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    $next_order = $desc_first ? 'desc' : 'asc';
+                }
+                return esc_url(add_query_arg(
+                    ['page' => 'icap-seo', 'tab' => 'seo-performance', 'orderby' => $column, 'order' => $next_order],
+                    admin_url('admin.php')
+                ));
+            };
             ?>
 
             <?php if (!$performance_gsc_connected) : ?>
@@ -2212,14 +2226,18 @@ if ($notice_code === 'remediation_apply_noop') {
                     <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Pages', 'icap-seo'); ?></h3>
                     <p class="description"><?php esc_html_e('Your highest-clicking pages in Search Console over the last 28 days.', 'icap-seo'); ?></p>
                     <div class="icap-seo-table-wrap">
-                        <table class="widefat striped">
+                        <table class="wp-list-table widefat striped">
                             <thead>
                                 <tr>
-                                    <th><?php esc_html_e('Page', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Clicks', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Impressions', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('CTR', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Position', 'icap-seo'); ?></th>
+                                    <?php foreach ($seo_performance_pages_columns as $seo_performance_pages_column_key => $seo_performance_pages_column_meta) :
+                                        icap_seo_render_sortable_th(
+                                            $seo_performance_pages_column_meta['label'],
+                                            $seo_performance_pages_orderby === $seo_performance_pages_column_key,
+                                            $seo_performance_pages_order,
+                                            $seo_performance_pages_column_meta['desc_first'],
+                                            $seo_performance_pages_sort_link($seo_performance_pages_column_key, $seo_performance_pages_column_meta['desc_first'])
+                                        );
+                                    endforeach; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2254,6 +2272,27 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_ga4_channels = isset($performance_ga4['channels']) && is_array($performance_ga4['channels']) ? $performance_ga4['channels'] : [];
 
             $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+
+            $site_analytics_pages_orderby = $site_analytics_pages_orderby ?? 'sessions';
+            $site_analytics_pages_order = $site_analytics_pages_order ?? 'desc';
+            $site_analytics_pages_columns = [
+                'path' => ['label' => __('Page', 'icap-seo'), 'desc_first' => false],
+                'sessions' => ['label' => __('Sessions', 'icap-seo'), 'desc_first' => true],
+                'page_views' => ['label' => __('Page Views', 'icap-seo'), 'desc_first' => true],
+                'users' => ['label' => __('Users', 'icap-seo'), 'desc_first' => true],
+                'engagement_rate' => ['label' => __('Engagement Rate', 'icap-seo'), 'desc_first' => true],
+            ];
+            $site_analytics_pages_sort_link = static function (string $column, bool $desc_first) use ($site_analytics_pages_orderby, $site_analytics_pages_order): string {
+                if ($site_analytics_pages_orderby === $column) {
+                    $next_order = $site_analytics_pages_order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    $next_order = $desc_first ? 'desc' : 'asc';
+                }
+                return esc_url(add_query_arg(
+                    ['page' => 'icap-seo', 'tab' => 'site-analytics', 'orderby' => $column, 'order' => $next_order],
+                    admin_url('admin.php')
+                ));
+            };
             ?>
 
             <?php if (!$performance_ga4_connected) : ?>
@@ -2332,14 +2371,18 @@ if ($notice_code === 'remediation_apply_noop') {
                     <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Pages', 'icap-seo'); ?></h3>
                     <p class="description"><?php esc_html_e('Your highest-traffic pages in Google Analytics over the last 28 days.', 'icap-seo'); ?></p>
                     <div class="icap-seo-table-wrap">
-                        <table class="widefat striped">
+                        <table class="wp-list-table widefat striped">
                             <thead>
                                 <tr>
-                                    <th><?php esc_html_e('Page', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Sessions', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Page Views', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Users', 'icap-seo'); ?></th>
-                                    <th><?php esc_html_e('Engagement Rate', 'icap-seo'); ?></th>
+                                    <?php foreach ($site_analytics_pages_columns as $site_analytics_pages_column_key => $site_analytics_pages_column_meta) :
+                                        icap_seo_render_sortable_th(
+                                            $site_analytics_pages_column_meta['label'],
+                                            $site_analytics_pages_orderby === $site_analytics_pages_column_key,
+                                            $site_analytics_pages_order,
+                                            $site_analytics_pages_column_meta['desc_first'],
+                                            $site_analytics_pages_sort_link($site_analytics_pages_column_key, $site_analytics_pages_column_meta['desc_first'])
+                                        );
+                                    endforeach; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2446,26 +2489,14 @@ if ($notice_code === 'remediation_apply_noop') {
                             <thead>
                                 <tr>
                                     <?php foreach ($keywords_sort_columns as $keywords_column_key => $keywords_column_meta) :
-                                        $keywords_column_is_sorted = $keywords_orderby === $keywords_column_key;
-                                        $keywords_column_classes = ['manage-column', 'column-' . $keywords_column_key];
-                                        if ($keywords_column_is_sorted) {
-                                            $keywords_column_classes[] = 'sorted';
-                                            $keywords_column_classes[] = $keywords_order;
-                                        } else {
-                                            $keywords_column_classes[] = 'sortable';
-                                            $keywords_column_classes[] = $keywords_column_meta['desc_first'] ? 'asc' : 'desc';
-                                        }
-                                        ?>
-                                        <th scope="col" class="<?php echo esc_attr(implode(' ', $keywords_column_classes)); ?>"<?php echo $keywords_column_is_sorted ? ' aria-sort="' . ($keywords_order === 'asc' ? 'ascending' : 'descending') . '"' : ''; ?>>
-                                            <a href="<?php echo $keywords_sort_link($keywords_column_key, $keywords_column_meta['desc_first']); ?>">
-                                                <span><?php echo esc_html($keywords_column_meta['label']); ?></span>
-                                                <span class="sorting-indicators">
-                                                    <span class="sorting-indicator asc" aria-hidden="true"></span>
-                                                    <span class="sorting-indicator desc" aria-hidden="true"></span>
-                                                </span>
-                                            </a>
-                                        </th>
-                                    <?php endforeach; ?>
+                                        icap_seo_render_sortable_th(
+                                            $keywords_column_meta['label'],
+                                            $keywords_orderby === $keywords_column_key,
+                                            $keywords_order,
+                                            $keywords_column_meta['desc_first'],
+                                            $keywords_sort_link($keywords_column_key, $keywords_column_meta['desc_first'])
+                                        );
+                                    endforeach; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2517,6 +2548,47 @@ if ($notice_code === 'remediation_apply_noop') {
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['redirects']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Redirects', 'icap-seo'); ?></h2>
             <p class="description"><?php esc_html_e('Send visitors and search engines from an old URL on this site to a new one. Useful after moving or renaming a page so you don\'t lose traffic or backlinks to a broken link.', 'icap-seo'); ?></p>
 
+            <?php
+            $redirects_orderby = $redirects_orderby ?? 'source';
+            $redirects_order = $redirects_order ?? 'asc';
+            $redirects_columns = [
+                'source' => ['label' => __('Old path', 'icap-seo'), 'desc_first' => false],
+                'target' => ['label' => __('New URL', 'icap-seo'), 'desc_first' => false],
+                'type' => ['label' => __('Type', 'icap-seo'), 'desc_first' => false],
+            ];
+            $redirects_sort_link = static function (string $column, bool $desc_first) use ($redirects_orderby, $redirects_order): string {
+                if ($redirects_orderby === $column) {
+                    $next_order = $redirects_order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    $next_order = $desc_first ? 'desc' : 'asc';
+                }
+                return esc_url(add_query_arg(
+                    ['page' => 'icap-seo', 'tab' => 'redirects', 'redirects_orderby' => $column, 'redirects_order' => $next_order],
+                    admin_url('admin.php')
+                ));
+            };
+
+            $log_404_orderby = $log_404_orderby ?? 'hits';
+            $log_404_order = $log_404_order ?? 'desc';
+            $log_404_columns = [
+                'path' => ['label' => __('Path', 'icap-seo'), 'desc_first' => false],
+                'hits' => ['label' => __('Hits', 'icap-seo'), 'desc_first' => true],
+                'last_seen' => ['label' => __('Last seen', 'icap-seo'), 'desc_first' => true],
+                'referrer' => ['label' => __('Referrer', 'icap-seo'), 'desc_first' => false],
+            ];
+            $log_404_sort_link = static function (string $column, bool $desc_first) use ($log_404_orderby, $log_404_order): string {
+                if ($log_404_orderby === $column) {
+                    $next_order = $log_404_order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    $next_order = $desc_first ? 'desc' : 'asc';
+                }
+                return esc_url(add_query_arg(
+                    ['page' => 'icap-seo', 'tab' => 'redirects', 'log_404_orderby' => $column, 'log_404_order' => $next_order],
+                    admin_url('admin.php')
+                ));
+            };
+            ?>
+
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-add-redirect-form">
                 <input type="hidden" name="action" value="icap_seo_add_redirect">
                 <?php wp_nonce_field('icap_seo_add_redirect'); ?>
@@ -2559,9 +2631,15 @@ if ($notice_code === 'remediation_apply_noop') {
                 <table class="wp-list-table widefat fixed striped">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e('Old path', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('New URL', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('Type', 'icap-seo'); ?></th>
+                            <?php foreach ($redirects_columns as $redirects_column_key => $redirects_column_meta) :
+                                icap_seo_render_sortable_th(
+                                    $redirects_column_meta['label'],
+                                    $redirects_orderby === $redirects_column_key,
+                                    $redirects_order,
+                                    $redirects_column_meta['desc_first'],
+                                    $redirects_sort_link($redirects_column_key, $redirects_column_meta['desc_first'])
+                                );
+                            endforeach; ?>
                             <th></th>
                         </tr>
                     </thead>
@@ -2602,10 +2680,15 @@ if ($notice_code === 'remediation_apply_noop') {
                 <table class="wp-list-table widefat fixed striped">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e('Path', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('Hits', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('Last seen', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('Referrer', 'icap-seo'); ?></th>
+                            <?php foreach ($log_404_columns as $log_404_column_key => $log_404_column_meta) :
+                                icap_seo_render_sortable_th(
+                                    $log_404_column_meta['label'],
+                                    $log_404_orderby === $log_404_column_key,
+                                    $log_404_order,
+                                    $log_404_column_meta['desc_first'],
+                                    $log_404_sort_link($log_404_column_key, $log_404_column_meta['desc_first'])
+                                );
+                            endforeach; ?>
                             <th></th>
                         </tr>
                     </thead>

@@ -435,6 +435,10 @@ class ICap_SEO_Admin
         $seo_performance = [];
         $keywords_orderby = 'clicks';
         $keywords_order = 'desc';
+        $seo_performance_pages_orderby = 'clicks';
+        $seo_performance_pages_order = 'desc';
+        $site_analytics_pages_orderby = 'sessions';
+        $site_analytics_pages_order = 'desc';
         $selected_content_key = '';
         $content_score_detail = [];
         $content_score_detail_error = '';
@@ -452,6 +456,48 @@ class ICap_SEO_Admin
         $registration_challenge = [];
         $redirects = $active_tab === 'redirects' ? $this->get_redirects() : [];
         $log_404 = in_array($active_tab, ['redirects', 'notifications'], true) ? $this->get_404_log() : [];
+        $redirects_orderby = 'source';
+        $redirects_order = 'asc';
+        $log_404_orderby = 'hits';
+        $log_404_order = 'desc';
+        if ($active_tab === 'redirects') {
+            // Redirects and the 404 log are two separate tables on this one tab, so each
+            // needs its own orderby/order param pair (redirects_*/log_404_* instead of the
+            // generic orderby/order every other tab's single table uses) - otherwise
+            // sorting one table would silently also re-sort the other.
+            $redirects_sorted = $this->sort_rows_by_request(
+                $redirects,
+                [
+                    'source' => static fn(array $row) => strtolower((string) ($row['source'] ?? '')),
+                    'target' => static fn(array $row) => strtolower((string) ($row['target'] ?? '')),
+                    'type' => static fn(array $row) => (string) ($row['type'] ?? ''),
+                ],
+                'source',
+                'asc',
+                'redirects_orderby',
+                'redirects_order'
+            );
+            $redirects = $redirects_sorted['rows'];
+            $redirects_orderby = $redirects_sorted['orderby'];
+            $redirects_order = $redirects_sorted['order'];
+
+            $log_404_sorted = $this->sort_rows_by_request(
+                $log_404,
+                [
+                    'path' => static fn(array $row) => strtolower((string) ($row['path'] ?? '')),
+                    'hits' => static fn(array $row) => (int) ($row['hits'] ?? 0),
+                    'last_seen' => static fn(array $row) => (string) ($row['last_seen'] ?? ''),
+                    'referrer' => static fn(array $row) => strtolower((string) ($row['referrer'] ?? '')),
+                ],
+                'hits',
+                'desc',
+                'log_404_orderby',
+                'log_404_order'
+            );
+            $log_404 = $log_404_sorted['rows'];
+            $log_404_orderby = $log_404_sorted['orderby'];
+            $log_404_order = $log_404_sorted['order'];
+        }
         $local_business = $active_tab === 'local-seo' ? $this->get_local_business() : [];
         $local_business_days = self::LOCAL_BUSINESS_DAYS;
         $local_business_types = self::LOCAL_BUSINESS_TYPES;
@@ -467,35 +513,62 @@ class ICap_SEO_Admin
             if (in_array($active_tab, ['seo-performance', 'site-analytics', 'keywords'], true)) {
                 $seo_performance = $this->service_client->get_seo_performance($allow_live_fetch);
 
+                // Each block below re-sorts the already-fetched (server-capped top-20) rows
+                // in place - a pure front-end reorder, no extra API call, same shape as the
+                // Content Scores table's orderby/order handling above.
                 if ($active_tab === 'keywords' && isset($seo_performance['gsc']['keywords']) && is_array($seo_performance['gsc']['keywords'])) {
-                    // Re-sorts the already-fetched (server-capped top-20-by-clicks) rows in
-                    // place - a pure front-end reorder, same no-extra-API-call shape as the
-                    // Content Scores table's orderby/order handling above.
-                    $keywords_orderby = isset($_GET['orderby']) ? sanitize_key(wp_unslash($_GET['orderby'])) : 'clicks';
-                    if (!in_array($keywords_orderby, ['query', 'clicks', 'impressions', 'ctr', 'position'], true)) {
-                        $keywords_orderby = 'clicks';
-                    }
-                    $keywords_order = isset($_GET['order']) ? strtolower(sanitize_key(wp_unslash($_GET['order']))) : 'desc';
-                    if (!in_array($keywords_order, ['asc', 'desc'], true)) {
-                        $keywords_order = 'desc';
-                    }
-                    $keywords_list = $seo_performance['gsc']['keywords'];
-                    usort($keywords_list, static function (array $a, array $b) use ($keywords_orderby, $keywords_order): int {
-                        if ($keywords_orderby === 'query') {
-                            $comparison = strcasecmp((string) ($a['query'] ?? ''), (string) ($b['query'] ?? ''));
-                        } elseif ($keywords_orderby === 'impressions') {
-                            $comparison = ((int) ($a['impressions'] ?? 0)) <=> ((int) ($b['impressions'] ?? 0));
-                        } elseif ($keywords_orderby === 'ctr') {
-                            $comparison = ((float) ($a['ctr'] ?? 0)) <=> ((float) ($b['ctr'] ?? 0));
-                        } elseif ($keywords_orderby === 'position') {
+                    $keywords_sorted = $this->sort_rows_by_request(
+                        $seo_performance['gsc']['keywords'],
+                        [
+                            'query' => static fn(array $row) => strtolower((string) ($row['query'] ?? '')),
+                            'clicks' => static fn(array $row) => (int) ($row['clicks'] ?? 0),
+                            'impressions' => static fn(array $row) => (int) ($row['impressions'] ?? 0),
+                            'ctr' => static fn(array $row) => (float) ($row['ctr'] ?? 0),
                             // Lower position is better (position 1 = top result).
-                            $comparison = ((float) ($a['position'] ?? 0)) <=> ((float) ($b['position'] ?? 0));
-                        } else {
-                            $comparison = ((int) ($a['clicks'] ?? 0)) <=> ((int) ($b['clicks'] ?? 0));
-                        }
-                        return $keywords_order === 'desc' ? -$comparison : $comparison;
-                    });
-                    $seo_performance['gsc']['keywords'] = $keywords_list;
+                            'position' => static fn(array $row) => (float) ($row['position'] ?? 0),
+                        ],
+                        'clicks',
+                        'desc'
+                    );
+                    $seo_performance['gsc']['keywords'] = $keywords_sorted['rows'];
+                    $keywords_orderby = $keywords_sorted['orderby'];
+                    $keywords_order = $keywords_sorted['order'];
+                }
+
+                if ($active_tab === 'seo-performance' && isset($seo_performance['gsc']['pages']) && is_array($seo_performance['gsc']['pages'])) {
+                    $seo_performance_pages_sorted = $this->sort_rows_by_request(
+                        $seo_performance['gsc']['pages'],
+                        [
+                            'url' => static fn(array $row) => strtolower((string) ($row['url'] ?? '')),
+                            'clicks' => static fn(array $row) => (int) ($row['clicks'] ?? 0),
+                            'impressions' => static fn(array $row) => (int) ($row['impressions'] ?? 0),
+                            'ctr' => static fn(array $row) => (float) ($row['ctr'] ?? 0),
+                            'position' => static fn(array $row) => (float) ($row['position'] ?? 0),
+                        ],
+                        'clicks',
+                        'desc'
+                    );
+                    $seo_performance['gsc']['pages'] = $seo_performance_pages_sorted['rows'];
+                    $seo_performance_pages_orderby = $seo_performance_pages_sorted['orderby'];
+                    $seo_performance_pages_order = $seo_performance_pages_sorted['order'];
+                }
+
+                if ($active_tab === 'site-analytics' && isset($seo_performance['ga4']['pages']) && is_array($seo_performance['ga4']['pages'])) {
+                    $site_analytics_pages_sorted = $this->sort_rows_by_request(
+                        $seo_performance['ga4']['pages'],
+                        [
+                            'path' => static fn(array $row) => strtolower((string) ($row['path'] ?? '')),
+                            'sessions' => static fn(array $row) => (int) ($row['sessions'] ?? 0),
+                            'page_views' => static fn(array $row) => (int) ($row['page_views'] ?? 0),
+                            'users' => static fn(array $row) => (int) ($row['users'] ?? 0),
+                            'engagement_rate' => static fn(array $row) => (float) ($row['engagement_rate'] ?? 0),
+                        ],
+                        'sessions',
+                        'desc'
+                    );
+                    $seo_performance['ga4']['pages'] = $site_analytics_pages_sorted['rows'];
+                    $site_analytics_pages_orderby = $site_analytics_pages_sorted['orderby'];
+                    $site_analytics_pages_order = $site_analytics_pages_sorted['order'];
                 }
             }
 
@@ -508,46 +581,26 @@ class ICap_SEO_Admin
                     // already renders - no separate API call.
                     $content_scores_rollup = $this->build_content_scores_rollup($content_scores);
 
-                    $content_scores_orderby = isset($_GET['orderby']) ? sanitize_key(wp_unslash($_GET['orderby'])) : 'title';
-                    if (!in_array($content_scores_orderby, ['title', 'score', 'clicks', 'position', 'sessions', 'engagement'], true)) {
-                        $content_scores_orderby = 'title';
-                    }
-                    $content_scores_order = isset($_GET['order']) ? strtolower(sanitize_key(wp_unslash($_GET['order']))) : 'asc';
-                    if (!in_array($content_scores_order, ['asc', 'desc'], true)) {
-                        $content_scores_order = 'asc';
-                    }
-                    usort($content_scores, static function (array $a, array $b) use ($content_scores_orderby, $content_scores_order): int {
-                        if ($content_scores_orderby === 'score') {
-                            $a_value = isset($a['icap_score_numeric']) ? (int) $a['icap_score_numeric'] : 0;
-                            $b_value = isset($b['icap_score_numeric']) ? (int) $b['icap_score_numeric'] : 0;
-                            $comparison = $a_value <=> $b_value;
-                        } elseif ($content_scores_orderby === 'clicks') {
-                            // No-data (null) rows sort as if they had zero clicks - there's
-                            // no meaningful "worse than zero" for a count.
-                            $a_value = isset($a['google_clicks']) ? (int) $a['google_clicks'] : 0;
-                            $b_value = isset($b['google_clicks']) ? (int) $b['google_clicks'] : 0;
-                            $comparison = $a_value <=> $b_value;
-                        } elseif ($content_scores_orderby === 'position') {
-                            // Lower position is better (position 1 = top result). No-data
-                            // rows sort as the worst possible position, not zero/best.
-                            $a_value = isset($a['google_position']) ? (float) $a['google_position'] : PHP_FLOAT_MAX;
-                            $b_value = isset($b['google_position']) ? (float) $b['google_position'] : PHP_FLOAT_MAX;
-                            $comparison = $a_value <=> $b_value;
-                        } elseif ($content_scores_orderby === 'sessions') {
-                            $a_value = isset($a['google_sessions']) ? (int) $a['google_sessions'] : 0;
-                            $b_value = isset($b['google_sessions']) ? (int) $b['google_sessions'] : 0;
-                            $comparison = $a_value <=> $b_value;
-                        } elseif ($content_scores_orderby === 'engagement') {
-                            $a_value = isset($a['google_engagement_rate']) ? (float) $a['google_engagement_rate'] : 0.0;
-                            $b_value = isset($b['google_engagement_rate']) ? (float) $b['google_engagement_rate'] : 0.0;
-                            $comparison = $a_value <=> $b_value;
-                        } else {
-                            $a_value = (isset($a['title']) && is_string($a['title'])) ? $a['title'] : '';
-                            $b_value = (isset($b['title']) && is_string($b['title'])) ? $b['title'] : '';
-                            $comparison = strcasecmp($a_value, $b_value);
-                        }
-                        return $content_scores_order === 'desc' ? -$comparison : $comparison;
-                    });
+                    $content_scores_sorted = $this->sort_rows_by_request(
+                        $content_scores,
+                        [
+                            // No-data (null) rows sort as if they had zero clicks/sessions/
+                            // engagement - there's no meaningful "worse than zero" for a
+                            // count - but as the WORST possible position, not zero/best,
+                            // since position 1 is the best result.
+                            'title' => static fn(array $row) => (isset($row['title']) && is_string($row['title'])) ? strtolower($row['title']) : '',
+                            'score' => static fn(array $row) => isset($row['icap_score_numeric']) ? (int) $row['icap_score_numeric'] : 0,
+                            'clicks' => static fn(array $row) => isset($row['google_clicks']) ? (int) $row['google_clicks'] : 0,
+                            'position' => static fn(array $row) => isset($row['google_position']) ? (float) $row['google_position'] : PHP_FLOAT_MAX,
+                            'sessions' => static fn(array $row) => isset($row['google_sessions']) ? (int) $row['google_sessions'] : 0,
+                            'engagement' => static fn(array $row) => isset($row['google_engagement_rate']) ? (float) $row['google_engagement_rate'] : 0.0,
+                        ],
+                        'title',
+                        'asc'
+                    );
+                    $content_scores = $content_scores_sorted['rows'];
+                    $content_scores_orderby = $content_scores_sorted['orderby'];
+                    $content_scores_order = $content_scores_sorted['order'];
 
                     $selected_content_key = isset($_GET['content_key'])
                         ? sanitize_text_field((string) wp_unslash($_GET['content_key']))
@@ -695,6 +748,42 @@ class ICap_SEO_Admin
         ]);
 
         $this->redirect_with_notice('settings_saved', 'settings');
+    }
+
+    /**
+     * Re-sorts $rows by a GET-param-selected column, using $column_extractors to pull a
+     * comparable value for each candidate column. Falls back to $default_orderby/
+     * $default_order when the GET params are absent or name a column not in
+     * $column_extractors (never trusts the raw param as a column name). Returns the
+     * resorted rows plus the orderby/order actually applied, so the view can render the
+     * active sort state (header classes, arrow direction) without re-deriving it. Distinct
+     * $orderby_param/$order_param let two tables on the same tab (e.g. Redirects + the 404
+     * log) carry independent sort state in the same URL.
+     */
+    private function sort_rows_by_request(
+        array $rows,
+        array $column_extractors,
+        string $default_orderby,
+        string $default_order,
+        string $orderby_param = 'orderby',
+        string $order_param = 'order'
+    ): array {
+        $orderby = isset($_GET[$orderby_param]) ? sanitize_key(wp_unslash($_GET[$orderby_param])) : $default_orderby;
+        if (!array_key_exists($orderby, $column_extractors)) {
+            $orderby = $default_orderby;
+        }
+        $order = isset($_GET[$order_param]) ? strtolower(sanitize_key(wp_unslash($_GET[$order_param]))) : $default_order;
+        if (!in_array($order, ['asc', 'desc'], true)) {
+            $order = $default_order;
+        }
+
+        $extractor = $column_extractors[$orderby];
+        usort($rows, static function ($a, $b) use ($extractor, $order): int {
+            $comparison = $extractor($a) <=> $extractor($b);
+            return $order === 'desc' ? -$comparison : $comparison;
+        });
+
+        return ['rows' => $rows, 'orderby' => $orderby, 'order' => $order];
     }
 
     /**
