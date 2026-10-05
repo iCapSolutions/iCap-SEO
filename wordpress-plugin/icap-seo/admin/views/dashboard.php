@@ -1025,17 +1025,17 @@ if ($notice_code === 'remediation_apply_noop') {
                         : [];
                     // Free image and heading checks run against this page's rendered HTML, so
                     // they don't depend on the scan service. Service rows win when both report a code.
-                    $local_check_rows = $detail_permalink !== '' ? ICap_SEO_Local_Checks::run_for_permalink($detail_permalink) : null;
-                    $local_checks_ran = $local_check_rows !== null;
-                    if ($local_checks_ran) {
-                        $detail_issue_codes = array_map(
-                            static fn($row): string => is_array($row) && isset($row['issue_code']) ? sanitize_key((string) $row['issue_code']) : '',
-                            $detail_issues
-                        );
-                        foreach ($local_check_rows as $local_row) {
-                            if (!in_array($local_row['issue_code'], $detail_issue_codes, true)) {
-                                $detail_issues[] = $local_row;
-                            }
+                    $local_post_id = $detail_permalink !== '' ? url_to_postid($detail_permalink) : 0;
+                    $local_body_html = $local_post_id > 0 ? (string) apply_filters('the_content', get_post_field('post_content', $local_post_id)) : '';
+                    $local_result = ICap_SEO_Local_Checks::run_for_post($detail_permalink, $local_body_html);
+                    $local_codes_ran = $local_result['ran'];
+                    $detail_issue_codes = array_map(
+                        static fn($row): string => is_array($row) && isset($row['issue_code']) ? sanitize_key((string) $row['issue_code']) : '',
+                        $detail_issues
+                    );
+                    foreach ($local_result['issues'] as $local_row) {
+                        if (!in_array($local_row['issue_code'], $detail_issue_codes, true)) {
+                            $detail_issues[] = $local_row;
                         }
                     }
                     $severity_order = ['critical' => 0, 'high' => 1, 'medium' => 2, 'low' => 3];
@@ -1354,7 +1354,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                             $catalog_status_key = 'warn';
                                         } elseif ($catalog_premium && !$catalog_is_premium_scan) {
                                             $catalog_status_key = $catalog_has_scan_data ? 'locked_plan' : 'not_scanned';
-                                        } elseif (!$local_checks_ran && !$catalog_is_premium_scan && in_array($catalog_code, ICap_SEO_Local_Checks::CHECKED_CODES, true)) {
+                                        } elseif (!$catalog_is_premium_scan && in_array($catalog_code, ICap_SEO_Local_Checks::CHECKED_CODES, true) && !in_array($catalog_code, $local_codes_ran, true)) {
                                             // The page couldn't be fetched for the local check, so "Passing" would be unverified.
                                             $catalog_status_key = 'not_scanned';
                                         } elseif ($catalog_is_preempted) {

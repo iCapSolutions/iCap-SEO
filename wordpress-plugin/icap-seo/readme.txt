@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.133
+Stable tag: 0.1.134
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,8 +26,8 @@ iCap SEO runs a real, cloud-connected SEO scan of your site — 38 checks across
 
 **Free vs. Premium**
 
-* **Free**: a real baseline on-page audit — title tags, meta descriptions, headings (including H2/H3 structure), content depth, and image checks (alt text, width/height, lazy loading) — plus social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt, and Local SEO. Fully usable on its own, no credit card required.
-* **Premium**: the full 31-check catalog — technical crawlability, security headers, content quality and readability, structured data, and link health — plus AI-assisted drafting.
+* **Free**: a real baseline on-page audit — title tags, meta descriptions, headings (including H2/H3 structure), content depth, image checks (alt text, width/height, lazy loading), canonical URL, JSON-LD presence, and basic internal-link checks — plus social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt, and Local SEO. Fully usable on its own, no credit card required.
+* **Premium**: the full 31-check catalog — technical crawlability, security headers, content quality and readability, structured data validation, and broken or external link checks — plus AI-assisted drafting and automated internal-link suggestions.
 
 iCap SEO is a cloud-connected plugin: scans run against the iCap SEO service, which your site talks to after you register it with a token. See the FAQ below for what that means for your data.
 
@@ -114,6 +114,9 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings, the plu
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.134 =
+* Canonical URL, JSON-LD presence, and basic internal-link checks now run on your own site, so they are part of the free tier. Page results are cached for 10 minutes; nothing is sent to our servers for these checks.
 
 = 0.1.133 =
 * Image alt text, width/height, lazy loading, and heading structure checks now run on your own site, so they are part of the free tier. Results are cached for 10 minutes; nothing is sent to our servers for these checks.

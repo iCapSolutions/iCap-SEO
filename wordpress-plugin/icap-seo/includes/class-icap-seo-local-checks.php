@@ -1,9 +1,10 @@
 <?php
 /**
- * Local (on-site) detection for the free checks: image optimization and heading
- * structure. The rendered page is fetched from this site and checked inside
- * WordPress, so no backend call is needed. The rules mirror the scan service's
- * image and heading checks, so a page gets the same result either way.
+ * Local (on-site) detection for the free checks: image optimization, heading
+ * structure, canonical URL, JSON-LD presence, and internal links. Page-level
+ * checks run against the page fetched from this site; link checks run against
+ * the post body. The rules mirror the scan service's checks, so a page gets the
+ * same result either way.
  */
 
 if (!defined('ABSPATH')) {
@@ -19,23 +20,47 @@ class ICap_SEO_Local_Checks
         'images_missing_dimensions',
         'images_not_lazy_loaded',
         'limited_heading_structure',
+        'missing_canonical',
+        'missing_jsonld_schema',
+        'no_links_detected',
+        'low_internal_linking',
     ];
 
     private const CACHE_SECONDS = 600;
 
     /**
-     * Fetch the rendered page and run every local check on it.
+     * Run every local check for a post.
      *
-     * @return array<int, array<string, string>>|null Issue rows, or null when the page could not be fetched.
+     * @return array{issues: array<int, array<string, string>>, ran: string[]}
+     *         `ran` lists the codes that were actually evaluated. Page-level codes are
+     *         absent when the page couldn't be fetched.
      */
-    public static function run_for_permalink(string $permalink): ?array
+    public static function run_for_post(string $permalink, string $body_html): array
     {
-        $html = self::fetch_rendered_html($permalink);
-        if ($html === null) {
-            return null;
+        $issues = [];
+        $ran = [];
+
+        $page_html = self::fetch_rendered_html($permalink);
+        if ($page_html !== null) {
+            $issues = array_merge(
+                $issues,
+                self::image_issues($page_html),
+                self::heading_issues($page_html),
+                self::canonical_issues($page_html),
+                self::jsonld_issues($page_html)
+            );
+            $ran = array_merge($ran, [
+                'no_images_detected', 'images_missing_alt', 'images_missing_dimensions', 'images_not_lazy_loaded',
+                'limited_heading_structure', 'missing_canonical', 'missing_jsonld_schema',
+            ]);
         }
 
-        return array_merge(self::image_issues($html), self::heading_issues($html));
+        // Link checks read the post body, so they run even when the page fetch fails.
+        $link_base = $permalink !== '' ? $permalink : home_url();
+        $issues = array_merge($issues, self::link_issues($body_html, $link_base));
+        $ran = array_merge($ran, ['no_links_detected', 'low_internal_linking']);
+
+        return ['issues' => $issues, 'ran' => $ran];
     }
 
     /**
@@ -150,8 +175,7 @@ class ICap_SEO_Local_Checks
     }
 
     /**
-     * Heading check. Flags pages with fewer than two H2/H3 headings, as the scan
-     * service does.
+     * Heading check. Flags pages with fewer than two H2/H3 headings.
      *
      * @return array<int, array<string, string>>
      */
@@ -165,6 +189,102 @@ class ICap_SEO_Local_Checks
                 'low',
                 'Few secondary headings detected (H2/H3).',
                 'Improve heading hierarchy for readability and topic structure.'
+            )];
+        }
+
+        return [];
+    }
+
+    /**
+     * Canonical check. Flags pages with no rel="canonical" link tag.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function canonical_issues(string $html): array
+    {
+        if (preg_match('/<link[^>]+rel=["\']canonical["\'][^>]*>/i', $html) === 1) {
+            return [];
+        }
+
+        return [self::issue(
+            'missing_canonical',
+            'medium',
+            'Canonical link tag is missing.',
+            'Add <link rel="canonical"> to enforce preferred URL.'
+        )];
+    }
+
+    /**
+     * JSON-LD presence check. Flags pages with no application/ld+json block. Checking
+     * required properties and types stays with the scan service.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function jsonld_issues(string $html): array
+    {
+        $count = preg_match_all('/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>/i', $html);
+
+        if ($count > 0) {
+            return [];
+        }
+
+        return [self::issue(
+            'missing_jsonld_schema',
+            'medium',
+            'No JSON-LD schema block detected.',
+            'Add relevant JSON-LD schema markup for page/entity type.'
+        )];
+    }
+
+    /**
+     * Internal link checks, run against the post body. Mirrors the scan service:
+     * a page with no crawlable links gets only no_links_detected; otherwise fewer
+     * than two internal links gets low_internal_linking.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function link_issues(string $body_html, string $permalink): array
+    {
+        $site_netloc = strtolower((string) wp_parse_url($permalink, PHP_URL_HOST));
+
+        $hrefs = [];
+        preg_match_all('/<a\b[^>]*>/i', $body_html, $anchor_tags);
+        foreach ($anchor_tags[0] as $tag) {
+            if (!preg_match('/href=["\']([^"\']+)["\']/i', $tag, $href_match)) {
+                continue;
+            }
+            $href = trim($href_match[1]);
+            if ($href === ''
+                || strpos($href, '#') === 0
+                || preg_match('/^(javascript|mailto|tel):/i', $href) === 1) {
+                continue;
+            }
+            $hrefs[] = $href;
+        }
+
+        if (count($hrefs) === 0) {
+            return [self::issue(
+                'no_links_detected',
+                'medium',
+                'No crawlable links were detected.',
+                'Add contextual internal links to improve discoverability.'
+            )];
+        }
+
+        $internal_count = 0;
+        foreach ($hrefs as $href) {
+            $href_netloc = strtolower((string) wp_parse_url($href, PHP_URL_HOST));
+            if (strpos($href, '/') === 0 || $href_netloc === '' || $href_netloc === $site_netloc) {
+                $internal_count++;
+            }
+        }
+
+        if ($internal_count < 2) {
+            return [self::issue(
+                'low_internal_linking',
+                'low',
+                'Internal linking density is low.',
+                'Add more relevant internal links to related content.'
             )];
         }
 
