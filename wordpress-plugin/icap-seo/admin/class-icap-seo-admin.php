@@ -2290,10 +2290,8 @@ class ICap_SEO_Admin
         $apply_images_dimensions_recommendation = in_array('images_missing_dimensions', $normalized_codes, true);
         $apply_images_lazy_loading_recommendation = in_array('images_not_lazy_loaded', $normalized_codes, true);
         $apply_canonical_recommendation = in_array('missing_canonical', $normalized_codes, true);
-        $apply_jsonld_schema_recommendation =
-            in_array('missing_jsonld_schema', $normalized_codes, true)
-            || in_array('schema_type_missing', $normalized_codes, true)
-            || in_array('schema_missing_required_properties', $normalized_codes, true);
+        // Only the free presence check applies locally. Type and required-property fixes are premium and stay with the scan service.
+        $apply_jsonld_schema_recommendation = in_array('missing_jsonld_schema', $normalized_codes, true);
         $apply_heading_structure_recommendation = in_array('limited_heading_structure', $normalized_codes, true);
         $apply_internal_linking_recommendation =
             in_array('low_internal_linking', $normalized_codes, true)
