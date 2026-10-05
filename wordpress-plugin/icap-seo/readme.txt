@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.127
+Stable tag: 0.1.128
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.128 =
+* Maintenance: internal link suggestions now exclude the current page without an exclusion query parameter, and read-only admin display state and nonce-protected form fields are documented in code. No visible behavior change.
 
 = 0.1.127 =
 * Maintenance: removed a debug log call from the dashboard fallback path, switched redirect handling to wp_safe_redirect() with the configured target host explicitly allowed, and tightened escaping and input sanitization on a few admin screens. No visible behavior change.
