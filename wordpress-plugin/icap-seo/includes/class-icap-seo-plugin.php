@@ -162,7 +162,7 @@ class ICap_SEO_Plugin
         if ($url === '' || $this->output->is_another_seo_plugin_active()) {
             return;
         }
-        if (get_option('icap_seo_indexnow_enabled', '1') !== '1') {
+        if (get_option('icap_seo_indexnow_enabled', '0') !== '1') {
             return;
         }
 

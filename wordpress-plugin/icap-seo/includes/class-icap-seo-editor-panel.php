@@ -334,30 +334,13 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
             // measurePixelWidth() against the rendered text itself, so the same
             // measurement logic isn't duplicated in PHP against a second set of
             // font-metric assumptions.
-            ?>
-            <script>
-            ( function () {
-                try {
-                    var titleEl = document.getElementById( 'icap-seo-metabox-serp-title' );
-                    var noteEl = document.getElementById( 'icap-seo-metabox-serp-note' );
-                    if ( ! titleEl || ! noteEl ) {
-                        return;
-                    }
-                    var canvas = document.createElement( 'canvas' );
-                    var ctx = canvas.getContext( '2d' );
-                    if ( ! ctx ) {
-                        return;
-                    }
-                    ctx.font = '400 20px Arial, sans-serif';
-                    var width = ctx.measureText( titleEl.textContent || '' ).width;
-                    if ( width > 600 ) {
-                        titleEl.classList.add( 'is-overflow' );
-                        noteEl.hidden = false;
-                    }
-                } catch ( err ) {}
-            } )();
-            </script>
-            <?php
+            wp_enqueue_script(
+                'icap-seo-serp-overflow',
+                ICAP_SEO_PLUGIN_URL . 'assets/js/serp-overflow.js',
+                [],
+                ICAP_SEO_VERSION,
+                true
+            );
         }
 
         public function enqueue_assets(): void

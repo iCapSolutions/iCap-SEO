@@ -286,7 +286,7 @@ class ICap_SEO_Admin
         add_filter('manage_pages_columns', [$this, 'add_score_columns']);
         add_action('manage_posts_custom_column', [$this, 'render_score_columns'], 10, 2);
         add_action('manage_pages_custom_column', [$this, 'render_score_columns'], 10, 2);
-        add_action('admin_head-edit.php', [$this, 'output_list_column_styles']);
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_list_column_styles']);
     }
 
     public function add_score_columns(array $columns): array
@@ -315,11 +315,15 @@ class ICap_SEO_Admin
         echo esc_html($score_data['icap_score']);
     }
 
-    public function output_list_column_styles(): void
+    public function enqueue_list_column_styles(string $hook): void
     {
-        echo '<style>
-            .column-icap_seo_score { width: 9%; }
-        </style>';
+        if ($hook !== 'edit.php') {
+            return;
+        }
+
+        wp_register_style('icap-seo-list-columns', false, [], ICAP_SEO_VERSION);
+        wp_enqueue_style('icap-seo-list-columns');
+        wp_add_inline_style('icap-seo-list-columns', '.column-icap_seo_score { width: 9%; }');
     }
 
     public function render_dashboard(): void
