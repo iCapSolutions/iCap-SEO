@@ -77,6 +77,8 @@ class ICap_SEO_Local_Checks
         }
 
         $permalink = (string) get_permalink($post);
+        // Core hook: render the post body the way WordPress does, so link and image checks see the same HTML a visitor gets.
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- the_content is a WordPress core hook, not a plugin hook.
         $body_html = (string) apply_filters('the_content', $post->post_content);
         $result = self::run_for_post($permalink, $body_html);
 
