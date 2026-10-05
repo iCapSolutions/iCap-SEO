@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 require_once ICAP_SEO_PLUGIN_DIR . 'includes/class-icap-seo-service-client.php';
 require_once ICAP_SEO_PLUGIN_DIR . 'includes/class-icap-seo-output.php';
 require_once ICAP_SEO_PLUGIN_DIR . 'includes/class-icap-seo-editor-panel.php';
+require_once ICAP_SEO_PLUGIN_DIR . 'includes/class-icap-seo-local-checks.php';
 require_once ICAP_SEO_PLUGIN_DIR . 'admin/class-icap-seo-admin.php';
 
 class ICap_SEO_Plugin
