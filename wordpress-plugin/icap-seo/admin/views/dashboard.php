@@ -997,6 +997,49 @@ if ($notice_code === 'remediation_apply_noop') {
                     <div class="notice notice-error inline">
                         <p><?php echo esc_html($content_score_detail_error); ?></p>
                     </div>
+                <?php elseif (empty($content_score_detail) && !empty($local_only_detail)) : ?>
+                    <div class="notice notice-info inline" style="margin: 0 0 12px;">
+                        <p><?php esc_html_e('Free checks run on this site without any connection. Register your site to get scores, full scans, and suggested fixes.', 'icap-seo'); ?></p>
+                    </div>
+                    <h3><?php echo esc_html($local_only_detail['title'] !== '' ? $local_only_detail['title'] : __('Untitled content', 'icap-seo')); ?></h3>
+                    <?php if ($local_only_detail['permalink'] !== '') : ?>
+                        <p><a href="<?php echo esc_url($local_only_detail['permalink']); ?>" target="_blank" rel="noopener"><?php esc_html_e('View published URL', 'icap-seo'); ?></a></p>
+                    <?php endif; ?>
+                    <?php
+                    $local_issue_by_code = [];
+                    foreach ($local_only_detail['issues'] as $local_issue_row) {
+                        $local_issue_by_code[$local_issue_row['issue_code']] = $local_issue_row;
+                    }
+                    ?>
+                    <table class="widefat striped">
+                        <thead>
+                            <tr>
+                                <th><?php esc_html_e('Check', 'icap-seo'); ?></th>
+                                <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
+                                <th><?php esc_html_e('Details / Fix', 'icap-seo'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach (ICap_SEO_Local_Checks::labels() as $local_code => $local_label) : ?>
+                                <tr>
+                                    <td><?php echo esc_html($local_label); ?></td>
+                                    <?php if (isset($local_issue_by_code[$local_code])) : ?>
+                                        <td><?php esc_html_e('Needs attention', 'icap-seo'); ?></td>
+                                        <td>
+                                            <?php echo esc_html($local_issue_by_code[$local_code]['description']); ?>
+                                            <br><em><?php echo esc_html($local_issue_by_code[$local_code]['recommended_fix']); ?></em>
+                                        </td>
+                                    <?php elseif (in_array($local_code, $local_only_detail['ran'], true)) : ?>
+                                        <td><?php esc_html_e('Passing', 'icap-seo'); ?></td>
+                                        <td>&mdash;</td>
+                                    <?php else : ?>
+                                        <td><?php esc_html_e('Not yet checked', 'icap-seo'); ?></td>
+                                        <td><?php esc_html_e('The page could not be read from this site, so this check did not run.', 'icap-seo'); ?></td>
+                                    <?php endif; ?>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 <?php elseif (empty($content_score_detail)) : ?>
                     <p><?php esc_html_e('No detail data available for this content key yet.', 'icap-seo'); ?></p>
                 <?php else : ?>
