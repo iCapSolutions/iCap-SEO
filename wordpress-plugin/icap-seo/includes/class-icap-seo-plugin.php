@@ -67,14 +67,11 @@ class ICap_SEO_Plugin
     }
 
     /**
-     * Redirects are admin-configured (manage_options capability, validated with
-     * esc_url_raw() at save time in ICap_SEO_Admin::handle_add_redirect()), not
-     * request-controlled input being reflected back - unlike this plugin's OAuth/
-     * Stripe redirects, an external destination here is a deliberate, trusted
-     * setting, so wp_redirect() (not wp_safe_redirect()) is the correct choice:
-     * redirect managers in every competitor plugin support sending visitors to
-     * another domain, and wp_safe_redirect() would silently rewrite that to the
-     * homepage instead.
+     * Redirect targets are admin-configured (manage_options capability, validated
+     * with esc_url_raw() at save time in ICap_SEO_Admin::handle_add_redirect()), so
+     * the destination host is allowed explicitly for this one redirect via the
+     * allowed_redirect_hosts filter. Everything else still goes through
+     * wp_safe_redirect()'s default host check.
      */
     public function maybe_apply_redirect(): void
     {
@@ -94,7 +91,15 @@ class ICap_SEO_Plugin
                 continue;
             }
             $status = ((string) ($row['type'] ?? '301')) === '302' ? 302 : 301;
-            wp_redirect($target, $status);
+            $target_host = wp_parse_url($target, PHP_URL_HOST);
+            $allow_target_host = static function (array $hosts) use ($target_host): array {
+                if (is_string($target_host) && $target_host !== '') {
+                    $hosts[] = $target_host;
+                }
+                return $hosts;
+            };
+            add_filter('allowed_redirect_hosts', $allow_target_host);
+            wp_safe_redirect($target, $status);
             exit;
         }
     }
@@ -253,6 +258,7 @@ class ICap_SEO_Plugin
         // to escape against: Content-Type is already sent, and post titles can't
         // contain newlines to fake extra lines.
         header('Content-Type: text/plain; charset=utf-8');
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- text/plain response; HTML escaping would corrupt the markdown output (see comment above).
         echo implode("\n", $lines);
         exit;
     }

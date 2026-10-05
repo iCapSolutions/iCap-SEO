@@ -653,14 +653,14 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php esc_html_e('Google Search Console:', 'icap-seo'); ?>
                     <span class="icap-seo-meta-value"><?php echo esc_html($wizard_gsc_label); ?></span>
                     <?php if ($wizard_google_status !== 'connected') : ?>
-                        &middot; <a href="<?php echo $wizard_settings_url; ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
+                        &middot; <a href="<?php echo esc_url($wizard_settings_url); ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
                     <?php endif; ?>
                 </p>
                 <p class="icap-seo-meta-line">
                     <?php esc_html_e('Google Analytics:', 'icap-seo'); ?>
                     <span class="icap-seo-meta-value"><?php echo esc_html($wizard_analytics_connected ? __('Connected', 'icap-seo') : __('Not connected', 'icap-seo')); ?></span>
                     <?php if (!$wizard_analytics_connected) : ?>
-                        &middot; <a href="<?php echo $wizard_settings_url; ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
+                        &middot; <a href="<?php echo esc_url($wizard_settings_url); ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
                     <?php endif; ?>
                 </p>
                 <p><?php esc_html_e('Run scans and review results from the Overview and Content Scores tabs.', 'icap-seo'); ?></p>
