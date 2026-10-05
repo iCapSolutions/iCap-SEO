@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.134
+Stable tag: 0.1.135
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -114,6 +114,9 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings, the plu
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.135 =
+* The overview now lists which checks are free and which are premium.
 
 = 0.1.134 =
 * Canonical URL, JSON-LD presence, and basic internal-link checks now run on your own site, so they are part of the free tier. Page results are cached for 10 minutes; nothing is sent to our servers for these checks.

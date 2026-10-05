@@ -3371,11 +3371,12 @@ if ($notice_code === 'remediation_apply_noop') {
                 <p><?php esc_html_e('iCap SEO runs a cloud-connected scan of your site — 38 checks across 6 categories — and fixes most of what it finds, automatically or with a preview you approve first.', 'icap-seo'); ?></p>
                 <ul>
                     <li><?php esc_html_e('Baseline on-page audit — title tags, meta descriptions, headings, content depth', 'icap-seo'); ?> <em>(<?php esc_html_e('Free', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Crawlability & security — HTTPS, canonical URLs, robots.txt, security headers', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Image checks — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Free', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Canonical URLs, JSON-LD presence, and basic internal links', 'icap-seo'); ?> <em>(<?php esc_html_e('Free', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Crawlability & security — HTTPS, robots.txt, noindex, security headers', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Content quality & readability — depth, structure, plain-language clarity', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Structured data — schema.org / JSON-LD for richer search results', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Image optimization — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Internal & external links — discoverability and broken-link detection', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Structured data validation — required properties and types for richer search results', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('External and broken link checks', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                 </ul>
                 <p><?php esc_html_e('Also included, free, outside the 38-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, automatic search-engine indexing pings, an llms.txt file for AI assistants, and LocalBusiness structured data for businesses with a physical location.', 'icap-seo'); ?></p>
             </div>
