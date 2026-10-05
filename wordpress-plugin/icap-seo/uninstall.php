@@ -21,11 +21,11 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
     exit;
 }
 
-$settings = get_option('icap_seo_settings', []);
-$site_id = is_array($settings) ? (string) ($settings['site_id'] ?? '') : '';
+$icap_seo_settings = get_option('icap_seo_settings', []);
+$icap_seo_site_id = is_array($icap_seo_settings) ? (string) ($icap_seo_settings['site_id'] ?? '') : '';
 
-if ($site_id !== '') {
-    delete_transient(sprintf('icap_seo_scores_%s', md5($site_id)));
+if ($icap_seo_site_id !== '') {
+    delete_transient(sprintf('icap_seo_scores_%s', md5($icap_seo_site_id)));
 }
 
 delete_option('icap_seo_settings');

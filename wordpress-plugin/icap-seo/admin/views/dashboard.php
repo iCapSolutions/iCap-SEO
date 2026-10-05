@@ -1,5 +1,6 @@
 <?php
 // phpcs:disable WordPress.Security.NonceVerification.Recommended -- $_GET reads in this view are read-only display state (tab, sort, notice codes). The page is gated by manage_options, and state-changing handlers verify nonces before writing.
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- this is a template included from the render method in class-icap-seo-admin.php; its variables are method-scoped, not true globals.
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -3421,3 +3422,4 @@ if ($notice_code === 'remediation_apply_noop') {
 </div>
 
 <?php // phpcs:enable WordPress.Security.NonceVerification.Recommended ?>
+<?php // phpcs:enable WordPress.NamingConventions.PrefixAllGlobals ?>
