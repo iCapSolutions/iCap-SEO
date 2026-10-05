@@ -64,6 +64,51 @@ class ICap_SEO_Local_Checks
     }
 
     /**
+     * Build the local-only detail for a post. Used for sites that aren't registered,
+     * so the free checks still show without any backend call.
+     *
+     * @return array{title: string, permalink: string, issues: array<int, array<string, string>>, ran: string[]}|null
+     */
+    public static function detail_for_post(int $post_id): ?array
+    {
+        $post = get_post($post_id);
+        if (!$post instanceof WP_Post) {
+            return null;
+        }
+
+        $permalink = (string) get_permalink($post);
+        $body_html = (string) apply_filters('the_content', $post->post_content);
+        $result = self::run_for_post($permalink, $body_html);
+
+        return [
+            'title' => get_the_title($post),
+            'permalink' => $permalink,
+            'issues' => $result['issues'],
+            'ran' => $result['ran'],
+        ];
+    }
+
+    /**
+     * Labels for each locally checked code, in display order.
+     *
+     * @return array<string, string>
+     */
+    public static function labels(): array
+    {
+        return [
+            'images_missing_alt' => __('Images have descriptive alt text', 'icap-seo'),
+            'images_missing_dimensions' => __('Images have explicit width/height attributes', 'icap-seo'),
+            'images_not_lazy_loaded' => __('Below-the-fold images use lazy loading', 'icap-seo'),
+            'no_images_detected' => __('Page includes relevant images', 'icap-seo'),
+            'limited_heading_structure' => __('Page has enough secondary headings (H2/H3)', 'icap-seo'),
+            'missing_canonical' => __('Page has a canonical URL', 'icap-seo'),
+            'missing_jsonld_schema' => __('Page has JSON-LD structured data', 'icap-seo'),
+            'no_links_detected' => __('Page includes crawlable links', 'icap-seo'),
+            'low_internal_linking' => __('Page links to enough related content', 'icap-seo'),
+        ];
+    }
+
+    /**
      * Fetch a page's rendered HTML from this site. Results are cached briefly so
      * repeat dashboard loads don't refetch the page.
      */

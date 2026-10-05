@@ -668,9 +668,20 @@ class ICap_SEO_Admin
                                     : __('Unable to load remediation preview right now.', 'icap-seo');
                             }
                         } else {
-                            $content_score_detail_error = isset($detail_result['error']['message']) && is_string($detail_result['error']['message'])
-                                ? sanitize_text_field($detail_result['error']['message'])
-                                : __('Unable to load content score details right now.', 'icap-seo');
+                            // Unregistered sites can't reach the backend. The free checks still run here
+                            // on the post itself, so show them instead of an error.
+                            $detail_error_code = isset($detail_result['error']['code']) && is_string($detail_result['error']['code'])
+                                ? sanitize_key($detail_result['error']['code'])
+                                : '';
+                            $local_post_id = $this->extract_post_id_from_content_key($selected_content_key);
+                            if (in_array($detail_error_code, ['live_fetch_disabled', 'site_not_configured'], true) && $local_post_id > 0) {
+                                $local_only_detail = ICap_SEO_Local_Checks::detail_for_post($local_post_id);
+                            }
+                            if (empty($local_only_detail)) {
+                                $content_score_detail_error = isset($detail_result['error']['message']) && is_string($detail_result['error']['message'])
+                                    ? sanitize_text_field($detail_result['error']['message'])
+                                    : __('Unable to load content score details right now.', 'icap-seo');
+                            }
                         }
                     }
                 }
