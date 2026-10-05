@@ -195,6 +195,7 @@ if (!class_exists('ICap_SEO_Output')) {
             // browsers don't decode inside <script> content). The real risk here is a
             // stored value containing a literal "</script>" breaking out of the tag, so
             // neutralize that specifically instead - the standard JSON-in-<script> mitigation.
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD body must stay raw JSON; esc_html() would corrupt it. "</" is neutralized above.
             echo '<script type="application/ld+json">' . str_replace('</', '<\/', $schema_json) . "</script>\n";
         }
 
@@ -331,6 +332,7 @@ if (!class_exists('ICap_SEO_Output')) {
                 return;
             }
 
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD body must stay raw JSON; esc_html() would corrupt it. "</" is neutralized above.
             echo '<script type="application/ld+json">' . str_replace('</', '<\/', $json) . "</script>\n";
         }
     }

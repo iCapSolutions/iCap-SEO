@@ -178,7 +178,7 @@ class ICap_SEO_Admin
 
         if (!$configured) {
             echo '<p>' . esc_html__('iCap SEO isn\'t connected yet.', 'icap-seo') . '</p>';
-            echo '<p><a href="' . $settings_url . '" class="button button-primary">'
+            echo '<p><a href="' . esc_url($settings_url) . '" class="button button-primary">'
                 . esc_html__('Finish setup', 'icap-seo') . '</a></p>';
             echo '</div>';
             return;
@@ -221,7 +221,7 @@ class ICap_SEO_Admin
             );
         }
 
-        echo '<p style="margin-bottom:0;"><a href="' . $content_scores_url . '">'
+        echo '<p style="margin-bottom:0;"><a href="' . esc_url($content_scores_url) . '">'
             . esc_html__('View Content Scores', 'icap-seo') . '</a></p>';
         echo '</div>';
     }
@@ -720,9 +720,6 @@ class ICap_SEO_Admin
             $content_depth_draft = ['html' => '', 'word_count' => 0];
             $readability_draft_paragraphs = [];
             $spelling_grammar_draft_paragraphs = [];
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('ICap SEO dashboard fallback: ' . $e->getMessage());
-            }
         }
 
         include ICAP_SEO_PLUGIN_DIR . 'admin/views/dashboard.php';
@@ -1671,14 +1668,11 @@ class ICap_SEO_Admin
             return;
         }
 
-        $approved_issue_codes_raw = isset($_POST['approved_issue_codes']) ? wp_unslash($_POST['approved_issue_codes']) : [];
-        if (!is_array($approved_issue_codes_raw)) {
-            $approved_issue_codes_raw = [];
-        }
-        $approved_issue_codes = array_map(
-            static fn($value): string => sanitize_key((string) $value),
-            $approved_issue_codes_raw
-        );
+        // phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- non-string entries are dropped, then every code runs through sanitize_key().
+        $approved_issue_codes = isset($_POST['approved_issue_codes']) && is_array($_POST['approved_issue_codes'])
+            ? array_map('sanitize_key', array_filter(wp_unslash($_POST['approved_issue_codes']), 'is_string'))
+            : [];
+        // phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
         $result = $this->service_client->get_content_remediation_preview($content_key, $approved_issue_codes, true);
         if ($result['success']) {
@@ -1716,14 +1710,11 @@ class ICap_SEO_Admin
             return;
         }
 
-        $approved_issue_codes_raw = isset($_POST['approved_issue_codes']) ? wp_unslash($_POST['approved_issue_codes']) : [];
-        if (!is_array($approved_issue_codes_raw)) {
-            $approved_issue_codes_raw = [];
-        }
-        $approved_issue_codes = array_map(
-            static fn($value): string => sanitize_key((string) $value),
-            $approved_issue_codes_raw
-        );
+        // phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- non-string entries are dropped, then every code runs through sanitize_key().
+        $approved_issue_codes = isset($_POST['approved_issue_codes']) && is_array($_POST['approved_issue_codes'])
+            ? array_map('sanitize_key', array_filter(wp_unslash($_POST['approved_issue_codes']), 'is_string'))
+            : [];
+        // phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $force_regenerate = isset($_POST['force_regenerate'])
             && sanitize_key((string) wp_unslash($_POST['force_regenerate'])) === '1';
 
@@ -3616,7 +3607,7 @@ class ICap_SEO_Admin
             'posts_per_page' => $limit,
             'orderby' => 'modified',
             'order' => 'DESC',
-            'exclude' => [$exclude_post_id],
+            'post__not_in' => [$exclude_post_id],
             'no_found_rows' => true,
         ]);
 
