@@ -2857,7 +2857,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <tr>
                             <th scope="row"><?php esc_html_e('IndexNow pings', 'icap-seo'); ?></th>
                             <td>
-                                <label><input type="checkbox" name="indexnow_enabled" value="1" <?php checked(get_option('icap_seo_indexnow_enabled', '1') === '1'); ?>> <?php esc_html_e('Notify Bing and Yandex when posts and pages are published, updated, or deleted', 'icap-seo'); ?></label>
+                                <label><input type="checkbox" name="indexnow_enabled" value="1" <?php checked(get_option('icap_seo_indexnow_enabled', '0') === '1'); ?>> <?php esc_html_e('Notify Bing and Yandex when posts and pages are published, updated, or deleted', 'icap-seo'); ?></label>
                                 <p class="description"><?php esc_html_e('Sends the URL of each changed post or page to the IndexNow service (api.indexnow.org), which shares it with Bing and Yandex. Untick to stop these notifications.', 'icap-seo'); ?></p>
                             </td>
                         </tr>

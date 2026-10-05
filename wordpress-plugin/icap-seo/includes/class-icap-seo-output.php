@@ -192,11 +192,12 @@ if (!class_exists('ICap_SEO_Output')) {
             }
 
             // esc_html() would corrupt valid JSON (it HTML-entity-encodes quotes, which
-            // browsers don't decode inside <script> content). The real risk here is a
-            // stored value containing a literal "</script>" breaking out of the tag, so
-            // neutralize that specifically instead - the standard JSON-in-<script> mitigation.
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD body must stay raw JSON; esc_html() would corrupt it. "</" is neutralized above.
-            echo '<script type="application/ld+json">' . str_replace('</', '<\/', $schema_json) . "</script>\n";
+            // browsers don't decode inside <script> content). A stored value containing
+            // "<" or ">" could break out of the tag, so replace both with their JSON
+            // unicode escapes. Those characters only occur inside JSON strings, where the
+            // escapes decode to the same value, so the JSON stays valid and unchanged.
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD body must stay raw JSON; esc_html() would corrupt it. "<" and ">" are neutralized above.
+            echo '<script type="application/ld+json">' . str_replace(['<', '>'], ['\u003C', '\u003E'], $schema_json) . "</script>\n";
         }
 
         /**
@@ -332,8 +333,8 @@ if (!class_exists('ICap_SEO_Output')) {
                 return;
             }
 
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD body must stay raw JSON; esc_html() would corrupt it. "</" is neutralized above.
-            echo '<script type="application/ld+json">' . str_replace('</', '<\/', $json) . "</script>\n";
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD body must stay raw JSON; esc_html() would corrupt it. "<" and ">" are neutralized above.
+            echo '<script type="application/ld+json">' . str_replace(['<', '>'], ['\u003C', '\u003E'], $json) . "</script>\n";
         }
     }
 }
