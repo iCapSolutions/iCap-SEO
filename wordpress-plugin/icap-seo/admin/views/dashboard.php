@@ -1023,6 +1023,21 @@ if ($notice_code === 'remediation_apply_noop') {
                     $detail_issues = isset($content_score_detail['issues']) && is_array($content_score_detail['issues'])
                         ? $content_score_detail['issues']
                         : [];
+                    // Free image and heading checks run against this page's rendered HTML, so
+                    // they don't depend on the scan service. Service rows win when both report a code.
+                    $local_check_rows = $detail_permalink !== '' ? ICap_SEO_Local_Checks::run_for_permalink($detail_permalink) : null;
+                    $local_checks_ran = $local_check_rows !== null;
+                    if ($local_checks_ran) {
+                        $detail_issue_codes = array_map(
+                            static fn($row): string => is_array($row) && isset($row['issue_code']) ? sanitize_key((string) $row['issue_code']) : '',
+                            $detail_issues
+                        );
+                        foreach ($local_check_rows as $local_row) {
+                            if (!in_array($local_row['issue_code'], $detail_issue_codes, true)) {
+                                $detail_issues[] = $local_row;
+                            }
+                        }
+                    }
                     $severity_order = ['critical' => 0, 'high' => 1, 'medium' => 2, 'low' => 3];
                     usort($detail_issues, static function ($left, $right) use ($severity_order): int {
                         $left_severity = isset($left['severity']) && is_string($left['severity']) ? sanitize_key($left['severity']) : 'medium';
@@ -1339,6 +1354,9 @@ if ($notice_code === 'remediation_apply_noop') {
                                             $catalog_status_key = 'warn';
                                         } elseif ($catalog_premium && !$catalog_is_premium_scan) {
                                             $catalog_status_key = $catalog_has_scan_data ? 'locked_plan' : 'not_scanned';
+                                        } elseif (!$local_checks_ran && !$catalog_is_premium_scan && in_array($catalog_code, ICap_SEO_Local_Checks::CHECKED_CODES, true)) {
+                                            // The page couldn't be fetched for the local check, so "Passing" would be unverified.
+                                            $catalog_status_key = 'not_scanned';
                                         } elseif ($catalog_is_preempted) {
                                             // This check is structurally gated behind another (e.g. schema_missing_required_properties
                                             // can't evaluate without a JSON-LD block existing first) - it never ran, so "Passing"
