@@ -162,6 +162,9 @@ class ICap_SEO_Plugin
         if ($url === '' || $this->output->is_another_seo_plugin_active()) {
             return;
         }
+        if (get_option('icap_seo_indexnow_enabled', '1') !== '1') {
+            return;
+        }
 
         $key = $this->get_or_create_indexnow_key();
         $endpoint = 'https://api.indexnow.org/indexnow'

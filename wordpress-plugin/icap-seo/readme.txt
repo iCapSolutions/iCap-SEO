@@ -1,10 +1,10 @@
 === iCap SEO ===
-Contributors: icapsolutions
+Contributors: ikirko
 Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.129
+Stable tag: 0.1.130
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,39 @@ General bugs, feature requests, and support questions: email support@icapsolutio
 vulnerabilities should go to security@icapsolutions.com instead of a public report — see
 https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy.
 
+== External services ==
+
+iCap SEO connects to the following external services. Nothing is sent to them until you register the site, run a scan, connect a Google account, or publish, update, or delete content with IndexNow pings turned on.
+
+= iCapSolutions cloud service =
+
+Used for site registration, running scans, generating scores and suggested fixes, AI-assisted drafts (when that feature is enabled), and billing.
+* Data sent: the site URL, the site ID and access token, and the public content of scanned pages (titles, headings, images, links, and body text). Registration requests also send the email address you enter. AI drafts send the relevant page content to our AI provider.
+* When: when you register the site, run a scan, request a draft, or manage billing.
+* Privacy policy: https://www.icapsolutions.com/about/privacy-policy.html
+* Terms of service: https://www.icapsolutions.com/about/terms-of-service.html
+
+= Google Search Console and Google Analytics =
+
+Optional. Connected from Settings with your own Google account, using read-only access. The data is fetched and processed by the iCapSolutions cloud service described above, and shown in your WordPress dashboard.
+
+* Data used: Search Console search performance and indexing data for properties you have verified, and Google Analytics (GA4) traffic data for the property you choose. Google account name and email are used to show which account is connected.
+* When: when you connect the account, and when the dashboard requests this data for the Overview, SEO Performance, Site Analytics, and Keywords tabs.
+* Revoke at any time from the plugin's Settings tab or from your Google Account's connected apps page.
+* Google privacy policy: https://policies.google.com/privacy
+* Google terms of service: https://policies.google.com/terms
+* Google API Services User Data Policy: https://developers.google.com/terms/api-services-user-data-policy
+
+= IndexNow =
+
+Optional, on by default. When you publish, update, or delete a post or page, the plugin sends that page's URL and a site-specific verification key to the IndexNow endpoint, which shares it with participating search engines (currently Bing and Yandex). Untick "IndexNow pings" in Settings to turn this off.
+
+* Endpoint: https://api.indexnow.org/indexnow
+* Data sent: the URL of the changed page and the site's IndexNow key. No personal data is sent.
+* About IndexNow: https://www.indexnow.org/
+* Bing privacy statement: https://privacy.microsoft.com/privacystatement
+* Yandex privacy policy: https://yandex.com/legal/privacy/
+
 == Screenshots ==
 
 1. Setup Wizard — connect and register a site in a few steps.
@@ -81,6 +114,9 @@ https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.130 =
+* Added an External services section to the readme and an IndexNow pings option in Settings (on by default; untick to stop pings). Existing behavior is unchanged.
 
 = 0.1.128 =
 * Maintenance: internal link suggestions now exclude the current page without an exclusion query parameter, and read-only admin display state and nonce-protected form fields are documented in code. No visible behavior change.

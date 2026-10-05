@@ -2830,7 +2830,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <th scope="row"><label for="icap-seo-api-base-url"><?php esc_html_e('API Base URL', 'icap-seo'); ?></label></th>
                             <td>
                                 <input id="icap-seo-api-base-url" name="api_base_url" type="url" class="regular-text" value="<?php echo esc_attr($connection_settings['api_base_url']); ?>" placeholder="https://api.example.com">
-                                <p class="description"><?php esc_html_e('Required for self-serve registration. Example: https://api.icapseo.com', 'icap-seo'); ?></p>
+                                <p class="description"><?php esc_html_e('Required for self-serve registration. Example: https://api.example.com', 'icap-seo'); ?></p>
                             </td>
                         </tr>
                         <tr>
@@ -2852,6 +2852,13 @@ if ($notice_code === 'remediation_apply_noop') {
                             <td>
                                 <input id="icap-seo-site-token" name="site_token" type="password" class="regular-text" value="<?php echo esc_attr($connection_settings['site_token']); ?>" autocomplete="off">
                                 <p class="description"><?php esc_html_e('Usually auto-filled after registration. Stored in WordPress options; rotate from customer portal when needed.', 'icap-seo'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e('IndexNow pings', 'icap-seo'); ?></th>
+                            <td>
+                                <label><input type="checkbox" name="indexnow_enabled" value="1" <?php checked(get_option('icap_seo_indexnow_enabled', '1') === '1'); ?>> <?php esc_html_e('Notify Bing and Yandex when posts and pages are published, updated, or deleted', 'icap-seo'); ?></label>
+                                <p class="description"><?php esc_html_e('Sends the URL of each changed post or page to the IndexNow service (api.indexnow.org), which shares it with Bing and Yandex. Untick to stop these notifications.', 'icap-seo'); ?></p>
                             </td>
                         </tr>
                     </tbody>

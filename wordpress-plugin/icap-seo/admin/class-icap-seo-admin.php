@@ -738,6 +738,8 @@ class ICap_SEO_Admin
         $registration_token = isset($_POST['registration_token']) ? sanitize_text_field((string) wp_unslash($_POST['registration_token'])) : '';
         $site_id = isset($_POST['site_id']) ? sanitize_text_field((string) wp_unslash($_POST['site_id'])) : '';
         $site_token = isset($_POST['site_token']) ? sanitize_text_field((string) wp_unslash($_POST['site_token'])) : '';
+        // Unchecked boxes are absent from the POST, so presence alone means "on".
+        $indexnow_enabled = isset($_POST['indexnow_enabled']) ? '1' : '0';
 
         $this->service_client->update_connection_settings([
             'api_base_url' => $api_base_url,
@@ -745,6 +747,7 @@ class ICap_SEO_Admin
             'site_id' => $site_id,
             'site_token' => $site_token,
         ]);
+        update_option('icap_seo_indexnow_enabled', $indexnow_enabled, false);
 
         $this->redirect_with_notice('settings_saved', 'settings');
     }
