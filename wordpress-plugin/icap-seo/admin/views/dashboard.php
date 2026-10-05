@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.Security.NonceVerification.Recommended -- $_GET reads in this view are read-only display state (tab, sort, notice codes). The page is gated by manage_options, and state-changing handlers verify nonces before writing.
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -3418,3 +3419,5 @@ if ($notice_code === 'remediation_apply_noop') {
         <?php endif; ?>
     </section>
 </div>
+
+<?php // phpcs:enable WordPress.Security.NonceVerification.Recommended ?>

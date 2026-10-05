@@ -1,5 +1,7 @@
 <?php
 
+// phpcs:disable WordPress.Security.NonceVerification.Recommended -- $_GET reads here are read-only display state (tab, sort, notice codes) on a page gated by manage_options. Every state-changing $_POST handler calls check_admin_referer() before writing.
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -3601,18 +3603,24 @@ class ICap_SEO_Admin
 
     private function get_internal_link_candidates(int $exclude_post_id, int $limit = 8): array
     {
+        // One extra row so the excluded post can be dropped in PHP without an exclusion query parameter.
         $posts = get_posts([
             'post_type' => ['post', 'page'],
             'post_status' => 'publish',
-            'posts_per_page' => $limit,
+            'posts_per_page' => $limit + 1,
             'orderby' => 'modified',
             'order' => 'DESC',
-            'post__not_in' => [$exclude_post_id],
             'no_found_rows' => true,
         ]);
 
         $candidates = [];
         foreach ($posts as $candidate_post) {
+            if ($candidate_post->ID === $exclude_post_id) {
+                continue;
+            }
+            if (count($candidates) >= $limit) {
+                break;
+            }
             $title = sanitize_text_field(get_the_title($candidate_post));
             $url = get_permalink($candidate_post);
             if ($title === '' || !is_string($url) || $url === '') {
@@ -5678,6 +5686,7 @@ class ICap_SEO_Admin
      */
     private function redirect_with_notice(string $notice_code, string $tab, array $extra_query_args = []): void
     {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- detail_tab is a hidden field on nonce-protected forms; every caller runs check_admin_referer() before reaching this helper.
         $posted_detail_tab = isset($_POST['detail_tab']) ? sanitize_key((string) wp_unslash($_POST['detail_tab'])) : '';
         $extra_query_args = array_filter(
             array_merge(['detail_tab' => $posted_detail_tab], $extra_query_args),
@@ -5699,3 +5708,5 @@ class ICap_SEO_Admin
         exit;
     }
 }
+
+// phpcs:enable WordPress.Security.NonceVerification.Recommended
