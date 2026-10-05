@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.130
+Stable tag: 0.1.131
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -114,6 +114,9 @@ Optional, on by default. When you publish, update, or delete a post or page, the
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.131 =
+* Plugin header: the Plugin URI now points to the iCap SEO product page, so it differs from the Author URI.
 
 = 0.1.130 =
 * Added an External services section to the readme and an IndexNow pings option in Settings (on by default; untick to stop pings). Existing behavior is unchanged.
