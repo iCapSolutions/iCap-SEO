@@ -99,7 +99,7 @@ Optional. Connected from Settings with your own Google account, using read-only 
 
 = IndexNow =
 
-Optional, off by default. Only if you tick "IndexNow pings" in Settings, the plugin sends a post or page's URL and a site-specific verification key to the IndexNow endpoint when you publish, update, or delete it. IndexNow shares the URL with participating search engines (currently Bing and Yandex). Untick the setting to turn this off.
+Optional, off by default. Only if you tick "IndexNow pings" in Settings, the plugin sends a post or page's URL and a site-specific verification key to the IndexNow endpoint when you publish, update, or delete it. IndexNow shares the URL with participating search engines (including Bing and Yandex). Untick the setting to turn this off.
 
 * Endpoint: https://api.indexnow.org/indexnow
 * Data sent: the URL of the changed page and the site's IndexNow key. No personal data is sent.
