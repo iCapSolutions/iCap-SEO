@@ -1,0 +1,97 @@
+name: Release
+
+# Publishes a GitHub release (plugin ZIP + SHA-256) whenever ICAP_SEO_VERSION on
+# main reaches a version that has no release yet. The README and the
+# icapsolutions.com plugin page send new installs to "latest release", so this
+# keeps that download current without a manual step.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - wordpress-plugin/icap-seo/icap-seo.php
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release plugin ZIP
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Read plugin version
+        id: version
+        run: |
+          set -euo pipefail
+          main_file=wordpress-plugin/icap-seo/icap-seo.php
+          constant="$(sed -nE "s/^define\('ICAP_SEO_VERSION',[[:space:]]*'([^']+)'\);/\1/p" "$main_file" | head -n1)"
+          header="$(sed -nE 's/^ \* Version:[[:space:]]*([^[:space:]]+).*$/\1/p' "$main_file" | head -n1)"
+          stable="$(sed -nE 's/^Stable tag:[[:space:]]*([^[:space:]]+).*$/\1/p' wordpress-plugin/icap-seo/readme.txt | head -n1)"
+          if ! [[ "$constant" == "$header" && "$constant" == "$stable" ]]; then
+            echo "::error::Version mismatch: ICAP_SEO_VERSION=$constant, header=$header, readme Stable tag=$stable"
+            exit 1
+          fi
+          echo "version=$constant" >> "$GITHUB_OUTPUT"
+          echo "tag=v$constant" >> "$GITHUB_OUTPUT"
+
+      - name: Check for an existing release
+        id: existing
+        run: |
+          if gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "Release ${{ steps.version.outputs.tag }} already exists; nothing to do."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup PHP
+        if: steps.existing.outputs.exists == 'false'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Lint plugin PHP files
+        if: steps.existing.outputs.exists == 'false'
+        run: |
+          set -e
+          find wordpress-plugin/icap-seo -name "*.php" -print0 | while IFS= read -r -d '' file; do
+            php -l "$file"
+          done
+
+      - name: Build ZIP
+        if: steps.existing.outputs.exists == 'false'
+        run: bash scripts/build-plugin-zip.sh
+
+      - name: Publish release
+        if: steps.existing.outputs.exists == 'false'
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.tag }}"
+          cat > release-notes.md <<EOF
+          Install: download \`icap-seo-${tag}.zip\` below, then in WordPress go to Plugins → Add New → Upload Plugin. Already on an older version? Upload it the same way and choose "Replace current with uploaded"; your settings are kept.
+
+          The SHA-256 checksum is attached as \`icap-seo-${tag}.sha256\`.
+          EOF
+          gh release create "$tag" \
+            "dist/icap-seo-${tag}.zip" \
+            "dist/icap-seo-${tag}.sha256" \
+            --target "$GITHUB_SHA" \
+            --title "iCap SEO ${tag}" \
+            --notes-file release-notes.md \
+            --generate-notes \
+            --latest
