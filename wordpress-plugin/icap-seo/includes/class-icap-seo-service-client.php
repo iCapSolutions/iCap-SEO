@@ -39,7 +39,7 @@ class ICap_SEO_Service_Client
             $default_api_base_url = 'https://api.icapsolutions.com';
         }
 
-        return array_merge(
+        $settings = array_merge(
             [
                 'api_base_url' => $default_api_base_url,
                 'site_id' => '',
@@ -54,6 +54,11 @@ class ICap_SEO_Service_Client
             ],
             $saved
         );
+        // The service address is fixed (overridable only with the ICAP_SEO_DEFAULT_API_BASE_URL
+        // constant), not a stored setting, so requests always go to the documented service.
+        $settings['api_base_url'] = $default_api_base_url;
+
+        return $settings;
     }
 
     public function update_connection_settings(array $partial_settings): void
@@ -66,15 +71,17 @@ class ICap_SEO_Service_Client
     {
         $scores = $this->get_content_scores_overview($allow_live_fetch);
 
-        if (!empty($scores)) {
-            $sum = 0;
-            $count = 0;
-
-            foreach ($scores as $row) {
+        $sum = 0;
+        $count = 0;
+        foreach ($scores as $row) {
+            // Posts the scan service hasn't scored have no numeric score.
+            if (isset($row['icap_score_numeric']) && is_numeric($row['icap_score_numeric'])) {
                 $sum += (int) $row['icap_score_numeric'];
                 $count++;
             }
+        }
 
+        if ($count > 0) {
             return [
                 'score' => $count > 0 ? sprintf('%d/100', (int) round($sum / $count)) : null,
                 'last_scan' => $this->get_connection_settings()['last_sync_at'] ?: 'Unknown',
@@ -208,7 +215,6 @@ class ICap_SEO_Service_Client
 
         foreach ($posts as $post) {
             $score_data = $this->build_placeholder_score_data((int) $post->ID);
-            $icap_score_numeric = (int) str_replace('/100', '', $score_data['icap_score']);
             $rows[] = [
                 'id' => (int) $post->ID,
                 'content_key' => sprintf('post_%d', (int) $post->ID),
@@ -217,7 +223,7 @@ class ICap_SEO_Service_Client
                 'status' => (string) $post->post_status,
                 'edit_link' => get_edit_post_link((int) $post->ID, ''),
                 'icap_score' => $score_data['icap_score'],
-                'icap_score_numeric' => $icap_score_numeric,
+                'icap_score_numeric' => null,
                 'google_coverage_state' => '',
                 'google_clicks' => null,
                 'google_position' => null,
@@ -476,70 +482,6 @@ class ICap_SEO_Service_Client
         return $result;
     }
 
-    public function apply_content_remediation(string $content_key, array $approved_issue_codes = [], bool $allow_live_fetch = true): array
-    {
-        if (!$allow_live_fetch) {
-            return [
-                'success' => false,
-                'error' => [
-                    'code' => 'live_fetch_disabled',
-                    'message' => 'Live remediation apply is disabled for this request.',
-                ],
-            ];
-        }
-
-        $settings = $this->get_connection_settings();
-        if (empty($settings['site_id']) || empty($settings['site_token'])) {
-            return [
-                'success' => false,
-                'error' => [
-                    'code' => 'site_not_configured',
-                    'message' => 'Site registration credentials are not configured.',
-                ],
-            ];
-        }
-
-        $resolved_content_key = sanitize_text_field(trim($content_key));
-        if ($resolved_content_key === '') {
-            return [
-                'success' => false,
-                'error' => [
-                    'code' => 'validation_error',
-                    'message' => 'Content key is required.',
-                ],
-            ];
-        }
-
-        $payload = [];
-        $normalized_issue_codes = $this->normalize_approved_issue_codes($approved_issue_codes);
-        if (!empty($normalized_issue_codes)) {
-            $payload['approved_issue_codes'] = $normalized_issue_codes;
-        }
-
-        $result = $this->api_request(
-            'POST',
-            sprintf(
-                '/v1/sites/%s/content-scores/%s/apply-remediation',
-                rawurlencode((string) $settings['site_id']),
-                rawurlencode($resolved_content_key)
-            ),
-            $payload
-        );
-        if (!$result['success']) {
-            return $result;
-        }
-
-        $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
-        $result['data'] = [
-            'remediation_job_id' => isset($data['remediation_job_id']) ? sanitize_text_field((string) $data['remediation_job_id']) : '',
-            'status' => isset($data['status']) ? sanitize_key((string) $data['status']) : '',
-            'queued_changes_count' => isset($data['queued_changes_count']) ? (int) $data['queued_changes_count'] : 0,
-            'requires_confirmation' => !empty($data['requires_confirmation']),
-        ];
-
-        return $result;
-    }
-
     public function request_ai_content_draft(string $content_key, string $generator, array $context): array
     {
         $settings = $this->get_connection_settings();
@@ -638,61 +580,6 @@ class ICap_SEO_Service_Client
      * Stateless - no content_key, no persistence, distinct from the scan/
      * remediation/ai-draft endpoints above.
      */
-    public function request_editor_quick_scan(array $schema_payload): array
-    {
-        $settings = $this->get_connection_settings();
-        if (empty($settings['site_id']) || empty($settings['site_token'])) {
-            return [
-                'success' => false,
-                'error' => [
-                    'code' => 'site_not_configured',
-                    'message' => 'Site registration credentials are not configured.',
-                ],
-            ];
-        }
-
-        $raw_fields = isset($schema_payload['fields']) && is_array($schema_payload['fields']) ? $schema_payload['fields'] : [];
-        $schema_fields = [];
-        foreach ($raw_fields as $key => $value) {
-            $schema_fields[sanitize_key((string) $key)] = sanitize_text_field((string) $value);
-        }
-
-        $payload = [
-            'schema_type' => isset($schema_payload['schema_type']) ? sanitize_text_field((string) $schema_payload['schema_type']) : '',
-            'schema_fields' => $schema_fields,
-        ];
-
-        $result = $this->api_request(
-            'POST',
-            sprintf('/v1/sites/%s/editor-quick-scan', rawurlencode((string) $settings['site_id'])),
-            $payload,
-            [],
-            true,
-            [],
-            8
-        );
-        if (!$result['success']) {
-            return $result;
-        }
-
-        $data = isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
-        $raw_issues = isset($data['issues']) && is_array($data['issues']) ? $data['issues'] : [];
-        $issues = [];
-        foreach ($raw_issues as $issue) {
-            if (!is_array($issue)) {
-                continue;
-            }
-            $issues[] = [
-                'issue_code' => isset($issue['issue_code']) ? sanitize_key((string) $issue['issue_code']) : '',
-                'severity' => isset($issue['severity']) ? sanitize_key((string) $issue['severity']) : 'medium',
-                'description' => isset($issue['description']) ? sanitize_text_field((string) $issue['description']) : '',
-            ];
-        }
-        $result['data'] = ['issues' => $issues];
-
-        return $result;
-    }
-
     private function normalize_layer_rows($raw_layers): array
     {
         if (!is_array($raw_layers)) {
@@ -805,9 +692,6 @@ class ICap_SEO_Service_Client
         $data = $result['data'];
         $updated = [];
 
-        if (!empty($data['api_base_url']) && is_string($data['api_base_url'])) {
-            $updated['api_base_url'] = esc_url_raw($data['api_base_url']);
-        }
         if (!empty($data['site_id']) && is_string($data['site_id'])) {
             $updated['site_id'] = sanitize_text_field($data['site_id']);
         }
@@ -1824,12 +1708,16 @@ class ICap_SEO_Service_Client
         return $index;
     }
 
+    /**
+     * Shown for a post the scan service hasn't scored yet. Open the page's detail
+     * view to run the free checks on this site.
+     */
     private function build_placeholder_score_data(int $post_id): array
     {
-        $icap_score_value = 60 + ($post_id % 35);
+        unset($post_id);
 
         return [
-            'icap_score' => sprintf('%d/100', $icap_score_value),
+            'icap_score' => __('Not scanned', 'icap-seo'),
         ];
     }
 

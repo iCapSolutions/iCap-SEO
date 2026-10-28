@@ -11,28 +11,29 @@ active, registered site. For step-by-step technical instructions, see [Getting s
    credentials are required to activate it.
 3. **Request access** — from the plugin's **Setup Wizard**, the customer requests a registration token by
    entering an email and choosing a plan (see [Requesting a token](#requesting-a-registration-token) below).
-4. **Connect & register** — the customer enters the API base URL and registration token in **Settings**, then
+4. **Connect & register** — the customer enters the registration token in **Settings**, then
    completes registration from **Setup Wizard**. Site credentials are provisioned automatically at this step —
    no manual key management.
 5. **First scan** — the customer triggers a scan from **Overview** and reviews results in **Content Scores**.
-6. **Grow into premium** — the customer can start billing checkout at any time from **Settings** to unlock the
-   full check catalog.
+6. **Grow into Premium** — the customer can start billing checkout at any time from **Settings** to add the
+   Premium checks run by the scan service.
 
 ## What works before you register
 
-Activating the plugin without registering gives you a limited, local-only preview, plus a set of always-free
-tools that never require registration at all:
+Everything that runs on your own site works without an account:
 
-- Basic on-page output (meta description, canonical URL, JSON-LD schema) generated from your existing content.
-- Placeholder content scores in **Content Scores**, so you can see the UI before connecting a real account.
-- Social sharing previews, the redirect manager and 404 log, automatic IndexNow pings, `/llms.txt`, and Local
-  SEO — fully functional with no account, no registration, and no cloud connection required.
+- The 16 free checks on every page in **Content Scores**, with their one-click fixes.
+- On-page output (meta description, canonical URL, JSON-LD schema, social sharing tags) generated from your
+  existing content.
+- The editor panel's quick checks and search and social previews.
+- The redirect manager and 404 log, `/llms.txt`, Local SEO, and optional IndexNow pings (off by default).
 
 ## What requires registration
 
-Everything that reflects your actual site — real content scoring, remediation suggestions, AI-assisted content
-drafts, scan triggers, and billing status — requires a completed registration (a valid site ID and site token).
-Until registration completes, these features return a "site not configured" state rather than real data.
+Features provided by the iCap SEO service need a completed registration (a valid site ID and site token):
+site-wide scans and scores, Premium checks, AI-assisted drafts, Google Search Console and Analytics reports, and
+billing. Until registration completes, these show a "site not configured" state, and nothing is sent to the
+service.
 
 ## Requesting a registration token
 

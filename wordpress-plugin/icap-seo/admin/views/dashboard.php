@@ -1,5 +1,4 @@
 <?php
-// phpcs:disable WordPress.Security.NonceVerification.Recommended -- $_GET reads in this view are read-only display state (tab, sort, notice codes). The page is gated by manage_options, and state-changing handlers verify nonces before writing.
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- this is a template included from the render method in class-icap-seo-admin.php; its variables are method-scoped, not true globals.
 if (!defined('ABSPATH')) {
     exit;
@@ -200,7 +199,7 @@ if (!function_exists('icap_seo_render_sortable_th')) {
     }
 }
 
-$tabs = [
+$icap_seo_tabs = [
     'overview' => __('Overview', 'icap-seo'),
     'setup-wizard' => __('Setup Wizard', 'icap-seo'),
     'content-scores' => __('Content Scores', 'icap-seo'),
@@ -226,6 +225,16 @@ $tab_icons = [
     'redirects' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a4 4 0 0 1 4 4v1"/><path d="m15 4 4 4-4 4"/><path d="M20 17H9a4 4 0 0 1-4-4v-1"/><path d="m9 20-4-4 4-4"/></svg>',
     'local-seo' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
     'settings' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+];
+
+// Allowed markup for the hardcoded icons above, so they are escaped at output like everything else.
+$tab_icon_allowed_html = [
+    'svg' => ['viewbox' => true, 'width' => true, 'height' => true, 'fill' => true, 'stroke' => true, 'stroke-width' => true, 'stroke-linecap' => true, 'stroke-linejoin' => true, 'aria-hidden' => true],
+    'path' => ['d' => true],
+    'rect' => ['x' => true, 'y' => true, 'width' => true, 'height' => true, 'rx' => true],
+    'circle' => ['cx' => true, 'cy' => true, 'r' => true],
+    'line' => ['x1' => true, 'y1' => true, 'x2' => true, 'y2' => true],
+    'polyline' => ['points' => true],
 ];
 
 $notice_map = [
@@ -302,7 +311,6 @@ $notice_map = [
     'ai_credit_checkout_returned' => ['type' => 'updated', 'message' => __('AI credit purchase completed. Your balance has been updated below.', 'icap-seo')],
     'ai_credit_checkout_cancelled' => ['type' => 'error', 'message' => __('AI credit purchase was canceled before completion.', 'icap-seo')],
     'remediation_preview_ready' => ['type' => 'updated', 'message' => __('Remediation preview refreshed for this content item.', 'icap-seo')],
-    'remediation_apply_queued' => ['type' => 'updated', 'message' => __('Remediation apply request was accepted and queued.', 'icap-seo')],
     'remediation_apply_title_updated' => ['type' => 'updated', 'message' => __('Remediation applied locally for this item. Re-scan to verify score movement.', 'icap-seo')],
     'remediation_apply_noop' => ['type' => 'error', 'message' => __('No local SEO field changes were applied for this recommendation.', 'icap-seo')],
     'remediation_apply_title_update_failed' => ['type' => 'error', 'message' => __('Remediation request was accepted, but local field updates could not be applied. Verify edit permissions and content key mapping.', 'icap-seo')],
@@ -310,9 +318,7 @@ $notice_map = [
     'remediation_validation_error' => ['type' => 'error', 'message' => __('Remediation request failed validation. Refresh content details and retry.', 'icap-seo')],
     'remediation_auth_error' => ['type' => 'error', 'message' => __('Remediation request failed authentication. Re-register the site credentials and retry.', 'icap-seo')],
     'remediation_preview_unavailable' => ['type' => 'error', 'message' => __('Remediation preview is temporarily unavailable. Please retry shortly.', 'icap-seo')],
-    'remediation_apply_unavailable' => ['type' => 'error', 'message' => __('Remediation apply is temporarily unavailable. Please retry shortly.', 'icap-seo')],
     'remediation_preview_failed' => ['type' => 'error', 'message' => __('Remediation preview failed with an unexpected response.', 'icap-seo')],
-    'remediation_apply_failed' => ['type' => 'error', 'message' => __('Remediation apply failed with an unexpected response.', 'icap-seo')],
     'content_depth_preview_ready' => ['type' => 'updated', 'message' => __('Content depth draft generated. Review it below before publishing.', 'icap-seo')],
     'content_depth_already_sufficient' => ['type' => 'error', 'message' => __('No-op: this page already meets the content depth word-count target.', 'icap-seo')],
     'content_depth_published' => ['type' => 'updated', 'message' => __('Content depth draft published to this page. Re-scan to verify score movement.', 'icap-seo')],
@@ -383,15 +389,15 @@ if (isset($latest_scores_scan_layers['executed']) && is_array($latest_scores_sca
 }
 $notice_override_message = '';
 if ($notice_code === 'remediation_apply_title_updated') {
-    $title_before = isset($_GET['title_before']) ? sanitize_text_field((string) wp_unslash($_GET['title_before'])) : '';
-    $title_after = isset($_GET['title_after']) ? sanitize_text_field((string) wp_unslash($_GET['title_after'])) : '';
-    $title_changed = isset($_GET['title_changed'])
-        ? sanitize_key((string) wp_unslash($_GET['title_changed'])) === '1'
+    $title_before = isset($_GET['title_before']) ? sanitize_text_field((string) wp_unslash($_GET['title_before'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $title_after = isset($_GET['title_after']) ? sanitize_text_field((string) wp_unslash($_GET['title_after'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $title_changed = isset($_GET['title_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        ? sanitize_key((string) wp_unslash($_GET['title_changed'])) === '1' // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         : $title_before !== $title_after;
-    $excerpt_before = isset($_GET['excerpt_before']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_before'])) : '';
-    $excerpt_after = isset($_GET['excerpt_after']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_after'])) : '';
-    $excerpt_changed = isset($_GET['excerpt_changed'])
-        ? sanitize_key((string) wp_unslash($_GET['excerpt_changed'])) === '1'
+    $excerpt_before = isset($_GET['excerpt_before']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_before'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $excerpt_after = isset($_GET['excerpt_after']) ? sanitize_text_field((string) wp_unslash($_GET['excerpt_after'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $excerpt_changed = isset($_GET['excerpt_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        ? sanitize_key((string) wp_unslash($_GET['excerpt_changed'])) === '1' // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         : $excerpt_before !== $excerpt_after;
 
     if ($title_changed) {
@@ -410,10 +416,10 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $excerpt_after !== '' ? $excerpt_after : __('(empty)', 'icap-seo')
         );
     }
-    $h1_before = isset($_GET['h1_before']) ? sanitize_text_field((string) wp_unslash($_GET['h1_before'])) : '';
-    $h1_after = isset($_GET['h1_after']) ? sanitize_text_field((string) wp_unslash($_GET['h1_after'])) : '';
-    $h1_changed = isset($_GET['h1_changed'])
-        ? sanitize_key((string) wp_unslash($_GET['h1_changed'])) === '1'
+    $h1_before = isset($_GET['h1_before']) ? sanitize_text_field((string) wp_unslash($_GET['h1_before'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $h1_after = isset($_GET['h1_after']) ? sanitize_text_field((string) wp_unslash($_GET['h1_after'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $h1_changed = isset($_GET['h1_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        ? sanitize_key((string) wp_unslash($_GET['h1_changed'])) === '1' // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         : $h1_before !== $h1_after;
     if ($h1_changed) {
         $notice_override_message .= ' ' . sprintf(
@@ -423,10 +429,10 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $h1_after !== '' ? $h1_after : __('(empty)', 'icap-seo')
         );
     }
-    $images_alt_before = isset($_GET['images_alt_before']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_alt_before'])) : 0;
-    $images_alt_updated_count = isset($_GET['images_alt_updated_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_alt_updated_count'])) : 0;
-    $images_alt_changed = isset($_GET['images_alt_changed'])
-        && sanitize_key((string) wp_unslash($_GET['images_alt_changed'])) === '1';
+    $images_alt_before = isset($_GET['images_alt_before']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_alt_before'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $images_alt_updated_count = isset($_GET['images_alt_updated_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_alt_updated_count'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $images_alt_changed = isset($_GET['images_alt_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        && sanitize_key((string) wp_unslash($_GET['images_alt_changed'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($images_alt_changed) {
         $notice_override_message .= ' ' . sprintf(
             /* translators: %1$d: number of images updated, %2$d: number of images that were missing alt text */
@@ -435,10 +441,10 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $images_alt_before
         );
     }
-    $images_dimensions_before = isset($_GET['images_dimensions_before']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_dimensions_before'])) : 0;
-    $images_dimensions_updated_count = isset($_GET['images_dimensions_updated_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_dimensions_updated_count'])) : 0;
-    $images_dimensions_changed = isset($_GET['images_dimensions_changed'])
-        && sanitize_key((string) wp_unslash($_GET['images_dimensions_changed'])) === '1';
+    $images_dimensions_before = isset($_GET['images_dimensions_before']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_dimensions_before'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $images_dimensions_updated_count = isset($_GET['images_dimensions_updated_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_dimensions_updated_count'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $images_dimensions_changed = isset($_GET['images_dimensions_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        && sanitize_key((string) wp_unslash($_GET['images_dimensions_changed'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($images_dimensions_changed) {
         $notice_override_message .= ' ' . sprintf(
             /* translators: %1$d: number of images updated, %2$d: number of images that were missing dimensions */
@@ -447,10 +453,10 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $images_dimensions_before
         );
     }
-    $images_lazy_before = isset($_GET['images_lazy_before']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_lazy_before'])) : 0;
-    $images_lazy_updated_count = isset($_GET['images_lazy_updated_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_lazy_updated_count'])) : 0;
-    $images_lazy_changed = isset($_GET['images_lazy_changed'])
-        && sanitize_key((string) wp_unslash($_GET['images_lazy_changed'])) === '1';
+    $images_lazy_before = isset($_GET['images_lazy_before']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_lazy_before'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $images_lazy_updated_count = isset($_GET['images_lazy_updated_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['images_lazy_updated_count'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $images_lazy_changed = isset($_GET['images_lazy_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        && sanitize_key((string) wp_unslash($_GET['images_lazy_changed'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($images_lazy_changed) {
         $notice_override_message .= ' ' . sprintf(
             /* translators: %1$d: number of images updated, %2$d: number of eligible images */
@@ -459,9 +465,9 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $images_lazy_before
         );
     }
-    $canonical_after = isset($_GET['canonical_after']) ? esc_url_raw((string) wp_unslash($_GET['canonical_after'])) : '';
-    $canonical_changed = isset($_GET['canonical_changed'])
-        && sanitize_key((string) wp_unslash($_GET['canonical_changed'])) === '1';
+    $canonical_after = isset($_GET['canonical_after']) ? esc_url_raw((string) wp_unslash($_GET['canonical_after'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $canonical_changed = isset($_GET['canonical_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        && sanitize_key((string) wp_unslash($_GET['canonical_changed'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($canonical_changed) {
         $notice_override_message .= ' ' . sprintf(
             /* translators: %s: the new canonical URL */
@@ -469,9 +475,9 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $canonical_after !== '' ? $canonical_after : __('(empty)', 'icap-seo')
         );
     }
-    $jsonld_schema_after = isset($_GET['jsonld_schema_after']) ? sanitize_text_field((string) wp_unslash($_GET['jsonld_schema_after'])) : '';
-    $jsonld_schema_changed = isset($_GET['jsonld_schema_changed'])
-        && sanitize_key((string) wp_unslash($_GET['jsonld_schema_changed'])) === '1';
+    $jsonld_schema_after = isset($_GET['jsonld_schema_after']) ? sanitize_text_field((string) wp_unslash($_GET['jsonld_schema_after'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $jsonld_schema_changed = isset($_GET['jsonld_schema_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        && sanitize_key((string) wp_unslash($_GET['jsonld_schema_changed'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($jsonld_schema_changed) {
         $notice_override_message .= ' ' . sprintf(
             /* translators: %s: the JSON-LD schema type added */
@@ -479,9 +485,9 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $jsonld_schema_after !== '' ? $jsonld_schema_after : __('unknown type', 'icap-seo')
         );
     }
-    $headings_added_count = isset($_GET['headings_added_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['headings_added_count'])) : 0;
-    $heading_structure_changed = isset($_GET['heading_structure_changed'])
-        && sanitize_key((string) wp_unslash($_GET['heading_structure_changed'])) === '1';
+    $headings_added_count = isset($_GET['headings_added_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['headings_added_count'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $heading_structure_changed = isset($_GET['heading_structure_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        && sanitize_key((string) wp_unslash($_GET['heading_structure_changed'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($heading_structure_changed) {
         $notice_override_message .= ' ' . sprintf(
             /* translators: %d: number of headings added */
@@ -489,9 +495,9 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $headings_added_count
         );
     }
-    $internal_links_added_count = isset($_GET['internal_links_added_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['internal_links_added_count'])) : 0;
-    $internal_linking_changed = isset($_GET['internal_linking_changed'])
-        && sanitize_key((string) wp_unslash($_GET['internal_linking_changed'])) === '1';
+    $internal_links_added_count = isset($_GET['internal_links_added_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['internal_links_added_count'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $internal_linking_changed = isset($_GET['internal_linking_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        && sanitize_key((string) wp_unslash($_GET['internal_linking_changed'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($internal_linking_changed) {
         $notice_override_message .= ' ' . sprintf(
             /* translators: %d: number of internal links added */
@@ -499,9 +505,9 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $internal_links_added_count
         );
     }
-    $paragraphs_added_count = isset($_GET['paragraphs_added_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['paragraphs_added_count'])) : 0;
-    $paragraph_structure_changed = isset($_GET['paragraph_structure_changed'])
-        && sanitize_key((string) wp_unslash($_GET['paragraph_structure_changed'])) === '1';
+    $paragraphs_added_count = isset($_GET['paragraphs_added_count']) ? (int) sanitize_text_field((string) wp_unslash($_GET['paragraphs_added_count'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    $paragraph_structure_changed = isset($_GET['paragraph_structure_changed']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        && sanitize_key((string) wp_unslash($_GET['paragraph_structure_changed'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($paragraph_structure_changed) {
         $notice_override_message .= ' ' . sprintf(
             /* translators: %d: number of paragraphs added */
@@ -514,7 +520,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
     }
 }
 if ($notice_code === 'content_rescan_complete') {
-    $scan_id_notice = isset($_GET['scan_id']) ? sanitize_text_field((string) wp_unslash($_GET['scan_id'])) : '';
+    $scan_id_notice = isset($_GET['scan_id']) ? sanitize_text_field((string) wp_unslash($_GET['scan_id'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($scan_id_notice !== '') {
         $notice_override_message = sprintf(
             /* translators: %s: the scan ID */
@@ -524,7 +530,7 @@ if ($notice_code === 'content_rescan_complete') {
     }
 }
 if ($notice_code === 'content_depth_published') {
-    $content_depth_words_added_notice = isset($_GET['content_depth_words_added']) ? (int) sanitize_text_field((string) wp_unslash($_GET['content_depth_words_added'])) : 0;
+    $content_depth_words_added_notice = isset($_GET['content_depth_words_added']) ? (int) sanitize_text_field((string) wp_unslash($_GET['content_depth_words_added'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     $notice_override_message = sprintf(
         /* translators: %d: number of words added */
         __('Content depth draft published: %d words added to this page. Re-scan to verify score movement.', 'icap-seo'),
@@ -532,7 +538,7 @@ if ($notice_code === 'content_depth_published') {
     );
 }
 if ($notice_code === 'remediation_apply_noop') {
-    $noop_reason = isset($_GET['noop_reason']) ? sanitize_key((string) wp_unslash($_GET['noop_reason'])) : '';
+    $noop_reason = isset($_GET['noop_reason']) ? sanitize_key((string) wp_unslash($_GET['noop_reason'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($noop_reason === 'title_already_within_range') {
         $notice_override_message = __('No-op: title is already within the recommended 20-65 character range.', 'icap-seo');
     } elseif ($noop_reason === 'title_generation_failed') {
@@ -593,7 +599,7 @@ if ($notice_code === 'remediation_apply_noop') {
     <?php endif; ?>
 
     <nav class="nav-tab-wrapper">
-        <?php foreach ($tabs as $tab_key => $label) : ?>
+        <?php foreach ($icap_seo_tabs as $tab_key => $label) : ?>
             <?php
             $tab_url = add_query_arg(
                 [
@@ -605,7 +611,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $active_class = $active_tab === $tab_key ? ' nav-tab-active' : '';
             ?>
             <a href="<?php echo esc_url($tab_url); ?>" class="nav-tab<?php echo esc_attr($active_class); ?>">
-                <span class="icap-seo-tab-icon" aria-hidden="true"><?php echo $tab_icons[$tab_key] ?? ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup above, not user input ?></span>
+                <span class="icap-seo-tab-icon" aria-hidden="true"><?php echo wp_kses($tab_icons[$tab_key] ?? '', $tab_icon_allowed_html); ?></span>
                 <?php echo esc_html($label); ?>
             </a>
         <?php endforeach; ?>
@@ -614,7 +620,7 @@ if ($notice_code === 'remediation_apply_noop') {
     <section class="icap-seo-content">
         <?php if ($active_tab === 'setup-wizard') : ?>
             <?php $is_connected = $connection_settings['site_id'] !== '' && $connection_settings['site_token'] !== ''; ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['setup-wizard']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['setup-wizard'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
             <div class="icap-seo-panel">
             <p class="description">
                 <?php esc_html_e('iCap SEO connects this site to iCapSolutions\' cloud scanning service. Running a scan sends the scanned page\'s public content to that service to generate scores and suggested fixes; nothing is published or changed on your site without your explicit approval.', 'icap-seo'); ?>
@@ -727,7 +733,7 @@ if ($notice_code === 'remediation_apply_noop') {
             </p>
         <?php elseif ($active_tab === 'content-scores') : ?>
             <?php if ($selected_content_key === '') : ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['content-scores']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['content-scores'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
             <?php if ($latest_scores_scan_id !== '') : ?>
                 <p class="icap-seo-meta-line">
                     <?php esc_html_e('Latest scan:', 'icap-seo'); ?>
@@ -887,12 +893,16 @@ if ($notice_code === 'remediation_apply_noop') {
                                         $row_score_percent = isset($row['icap_score_numeric']) ? max(0, min(100, (int) $row['icap_score_numeric'])) : 0;
                                         $row_score_color = icap_seo_score_color($row_score_percent);
                                         ?>
+                                        <?php if (!isset($row['icap_score_numeric'])) : ?>
+                                            <span class="icap-seo-score-bar-label"><?php echo esc_html($row['icap_score']); ?></span>
+                                        <?php else : ?>
                                         <div class="icap-seo-score-bar-wrap">
                                             <div class="icap-seo-score-bar-track">
                                                 <div class="icap-seo-score-bar-fill" style="width: <?php echo esc_attr((string) $row_score_percent); ?>%; background-color: <?php echo esc_attr($row_score_color); ?>;"></div>
                                             </div>
                                             <span class="icap-seo-score-bar-label"><?php echo esc_html($row['icap_score']); ?></span>
                                         </div>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php
@@ -997,49 +1007,6 @@ if ($notice_code === 'remediation_apply_noop') {
                     <div class="notice notice-error inline">
                         <p><?php echo esc_html($content_score_detail_error); ?></p>
                     </div>
-                <?php elseif (empty($content_score_detail) && !empty($local_only_detail)) : ?>
-                    <div class="notice notice-info inline" style="margin: 0 0 12px;">
-                        <p><?php esc_html_e('Free checks run on this site without any connection. Register your site to get scores, full scans, and suggested fixes.', 'icap-seo'); ?></p>
-                    </div>
-                    <h3><?php echo esc_html($local_only_detail['title'] !== '' ? $local_only_detail['title'] : __('Untitled content', 'icap-seo')); ?></h3>
-                    <?php if ($local_only_detail['permalink'] !== '') : ?>
-                        <p><a href="<?php echo esc_url($local_only_detail['permalink']); ?>" target="_blank" rel="noopener"><?php esc_html_e('View published URL', 'icap-seo'); ?></a></p>
-                    <?php endif; ?>
-                    <?php
-                    $local_issue_by_code = [];
-                    foreach ($local_only_detail['issues'] as $local_issue_row) {
-                        $local_issue_by_code[$local_issue_row['issue_code']] = $local_issue_row;
-                    }
-                    ?>
-                    <table class="widefat striped">
-                        <thead>
-                            <tr>
-                                <th><?php esc_html_e('Check', 'icap-seo'); ?></th>
-                                <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
-                                <th><?php esc_html_e('Details / Fix', 'icap-seo'); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach (ICap_SEO_Local_Checks::labels() as $local_code => $local_label) : ?>
-                                <tr>
-                                    <td><?php echo esc_html($local_label); ?></td>
-                                    <?php if (isset($local_issue_by_code[$local_code])) : ?>
-                                        <td><?php esc_html_e('Needs attention', 'icap-seo'); ?></td>
-                                        <td>
-                                            <?php echo esc_html($local_issue_by_code[$local_code]['description']); ?>
-                                            <br><em><?php echo esc_html($local_issue_by_code[$local_code]['recommended_fix']); ?></em>
-                                        </td>
-                                    <?php elseif (in_array($local_code, $local_only_detail['ran'], true)) : ?>
-                                        <td><?php esc_html_e('Passing', 'icap-seo'); ?></td>
-                                        <td>&mdash;</td>
-                                    <?php else : ?>
-                                        <td><?php esc_html_e('Not yet checked', 'icap-seo'); ?></td>
-                                        <td><?php esc_html_e('The page could not be read from this site, so this check did not run.', 'icap-seo'); ?></td>
-                                    <?php endif; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
                 <?php elseif (empty($content_score_detail)) : ?>
                     <p><?php esc_html_e('No detail data available for this content key yet.', 'icap-seo'); ?></p>
                 <?php else : ?>
@@ -1263,6 +1230,11 @@ if ($notice_code === 'remediation_apply_noop') {
                             </div>
                         <?php endif; ?>
                     </div>
+                    <?php if (!empty($content_detail_is_local)) : ?>
+                    <div class="notice notice-info inline" style="margin:12px 0;">
+                        <p><?php esc_html_e('These free checks ran on this site, and their fixes apply here without any connection. Registering adds the Premium checks, full-site scans, and AI drafts from the iCap SEO service.', 'icap-seo'); ?></p>
+                    </div>
+                    <?php else : ?>
                     <div class="icap-seo-actions" style="margin:12px 0;">
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form">
                             <input type="hidden" name="action" value="icap_seo_rescan_content">
@@ -1278,8 +1250,9 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php esc_html_e('Runs a focused cloud scan for this page only, then refreshes score/recommendation details without waiting for a full-site scan.', 'icap-seo'); ?>
                         </p>
                     </div>
+                    <?php endif; ?>
                     <?php
-                    $content_detail_tab = isset($_GET['detail_tab']) ? sanitize_key(wp_unslash($_GET['detail_tab'])) : 'recommendations';
+                    $content_detail_tab = isset($_GET['detail_tab']) ? sanitize_key(wp_unslash($_GET['detail_tab'])) : 'recommendations'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
                     if (!in_array($content_detail_tab, ['recommendations', 'ai-drafts', 'history'], true)) {
                         $content_detail_tab = 'recommendations';
                     }
@@ -1346,12 +1319,11 @@ if ($notice_code === 'remediation_apply_noop') {
                         }
                     }
                     $catalog_is_premium_scan = $latest_scores_scan_tier === 'premium';
-                    $catalog_has_scan_data = $latest_scores_scan_tier !== '';
                     $catalog_status_colors = [
                         'good' => ['bg' => '#eafaf0', 'fg' => '#1e7f4f', 'label' => __('Passing', 'icap-seo')],
                         'warn' => ['bg' => '#fdf0e0', 'fg' => '#9a5b0a', 'label' => __('Needs attention', 'icap-seo')],
                         'applied' => ['bg' => '#eef3fc', 'fg' => '#2455c7', 'label' => __('Applied — pending rescan', 'icap-seo')],
-                        'locked_plan' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Premium — not included in current plan', 'icap-seo')],
+                        'locked_plan' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Premium service check', 'icap-seo')],
                         'not_scanned' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Not yet scanned', 'icap-seo')],
                         'not_evaluated' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Not evaluated', 'icap-seo')],
                     ];
@@ -1396,7 +1368,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                         } elseif ($catalog_is_open) {
                                             $catalog_status_key = 'warn';
                                         } elseif ($catalog_premium && !$catalog_is_premium_scan) {
-                                            $catalog_status_key = $catalog_has_scan_data ? 'locked_plan' : 'not_scanned';
+                                            $catalog_status_key = 'locked_plan';
                                         } elseif (!$catalog_is_premium_scan && in_array($catalog_code, ICap_SEO_Local_Checks::CHECKED_CODES, true) && !in_array($catalog_code, $local_codes_ran, true)) {
                                             // The page couldn't be fetched for the local check, so "Passing" would be unverified.
                                             $catalog_status_key = 'not_scanned';
@@ -1497,7 +1469,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                                 <?php elseif ($catalog_status_key === 'applied') : ?>
                                                     <?php esc_html_e('Applied locally — will show Passing after the next rescan confirms it.', 'icap-seo'); ?>
                                                 <?php elseif ($catalog_status_key === 'locked_plan') : ?>
-                                                    <?php esc_html_e('Upgrade to Premium to unlock this check.', 'icap-seo'); ?>
+                                                    <?php esc_html_e('This check runs in the iCap SEO Premium scan service.', 'icap-seo'); ?>
                                                 <?php elseif ($catalog_status_key === 'not_scanned') : ?>
                                                     <?php esc_html_e('Runs on your next scan.', 'icap-seo'); ?>
                                                 <?php else : ?>
@@ -1745,7 +1717,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 $issue_severity = isset($issue['severity']) ? sanitize_text_field((string) $issue['severity']) : 'medium';
                                 $issue_description = isset($issue['description']) ? sanitize_text_field((string) $issue['description']) : '';
                                 $issue_recommended_fix = isset($issue['recommended_fix']) ? sanitize_text_field((string) $issue['recommended_fix']) : '';
-                                $can_regenerate = in_array($issue_code, ['missing_meta_description', 'meta_description_length_out_of_range', 'title_length_out_of_range', 'missing_title_tag', 'missing_h1', 'images_missing_alt', 'images_missing_dimensions', 'images_not_lazy_loaded', 'missing_canonical', 'missing_jsonld_schema', 'schema_type_missing', 'schema_missing_required_properties', 'limited_heading_structure', 'low_internal_linking', 'no_links_detected', 'limited_paragraph_structure'], true);
+                                $can_regenerate = in_array($issue_code, ['missing_meta_description', 'meta_description_length_out_of_range', 'title_length_out_of_range', 'missing_title_tag', 'missing_h1', 'images_missing_alt', 'images_missing_dimensions', 'images_not_lazy_loaded', 'missing_canonical', 'missing_jsonld_schema', 'limited_heading_structure', 'low_internal_linking', 'no_links_detected', 'limited_paragraph_structure'], true);
                                 ?>
                                 <li>
                                     <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
@@ -1777,7 +1749,9 @@ if ($notice_code === 'remediation_apply_noop') {
                     <p class="description"><?php esc_html_e('Preview/apply actions only include open recommendations. Locally applied items are excluded until a rescan refreshes cloud findings.', 'icap-seo'); ?></p>
                     <p class="description"><?php esc_html_e('Content depth recommendations are excluded from "Apply all" — use the Content depth expansion preview/publish flow above instead.', 'icap-seo'); ?></p>
                     </div>
-                    <?php if ($remediation_preview_error !== '') : ?>
+                    <?php if (!empty($content_detail_is_local)) : ?>
+                        <?php // The proposed-changes preview comes from the iCap SEO service; on-site detail applies fixes directly. ?>
+                    <?php elseif ($remediation_preview_error !== '') : ?>
                         <div class="notice notice-error inline">
                             <p><?php echo esc_html($remediation_preview_error); ?></p>
                         </div>
@@ -1838,6 +1812,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <?php endif; ?>
                     <?php endif; ?>
                     <div class="icap-seo-actions">
+                        <?php if (empty($content_detail_is_local)) : ?>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="icap_seo_preview_remediation">
                             <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
@@ -1854,6 +1829,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php endforeach; ?>
                             <button type="submit" class="button"><?php esc_html_e('Refresh remediation preview', 'icap-seo'); ?></button>
                         </form>
+                        <?php endif; ?>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="icap_seo_apply_remediation">
                             <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
@@ -2088,7 +2064,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'seo-performance') : ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['seo-performance']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('SEO Performance', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['seo-performance'], $tab_icon_allowed_html); ?></span><?php esc_html_e('SEO Performance', 'icap-seo'); ?></h2>
             <p class="description"><?php esc_html_e('Site-wide search visibility from Google Search Console, over the last 28 days.', 'icap-seo'); ?></p>
             <?php
             $performance_gsc = isset($seo_performance['gsc']) && is_array($seo_performance['gsc']) ? $seo_performance['gsc'] : [];
@@ -2325,7 +2301,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'site-analytics') : ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['site-analytics']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Site Analytics', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['site-analytics'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Site Analytics', 'icap-seo'); ?></h2>
             <p class="description"><?php esc_html_e('Site-wide traffic from Google Analytics, over the last 28 days.', 'icap-seo'); ?></p>
             <?php
             $performance_ga4 = isset($seo_performance['ga4']) && is_array($seo_performance['ga4']) ? $seo_performance['ga4'] : [];
@@ -2454,10 +2430,10 @@ if ($notice_code === 'remediation_apply_noop') {
                                     if ($ga4_page_path === '') {
                                         continue;
                                     }
-                                    $ga4_page_url = esc_url(home_url($ga4_page_path));
+                                    $ga4_page_url = home_url($ga4_page_path);
                                     ?>
                                     <tr>
-                                        <td><a href="<?php echo $ga4_page_url; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped via esc_url() above ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($ga4_page_path); ?></a></td>
+                                        <td><a href="<?php echo esc_url($ga4_page_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($ga4_page_path); ?></a></td>
                                         <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['sessions'] ?? 0))); ?></td>
                                         <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['page_views'] ?? 0))); ?></td>
                                         <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['users'] ?? 0))); ?></td>
@@ -2470,7 +2446,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'keywords') : ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['keywords']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Keywords', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['keywords'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Keywords', 'icap-seo'); ?></h2>
             <p class="description"><?php esc_html_e('Search queries driving clicks and impressions in Google Search Console, over the last 28 days.', 'icap-seo'); ?></p>
             <?php
             $performance_gsc_keywords_tab = isset($seo_performance['gsc']) && is_array($seo_performance['gsc']) ? $seo_performance['gsc'] : [];
@@ -2583,7 +2559,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'notifications') : ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['notifications']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Notifications', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['notifications'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Notifications', 'icap-seo'); ?></h2>
             <p class="description"><?php esc_html_e('Things worth your attention, pulled from across this plugin into one place - Google connection issues, billing problems, and unresolved broken links.', 'icap-seo'); ?></p>
 
             <?php if (empty($notifications)) : ?>
@@ -2608,7 +2584,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 </ul>
             <?php endif; ?>
         <?php elseif ($active_tab === 'redirects') : ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['redirects']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Redirects', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['redirects'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Redirects', 'icap-seo'); ?></h2>
             <p class="description"><?php esc_html_e('Send visitors and search engines from an old URL on this site to a new one. Useful after moving or renaming a page so you don\'t lose traffic or backlinks to a broken link.', 'icap-seo'); ?></p>
 
             <?php
@@ -2660,7 +2636,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <tr>
                             <th scope="row"><label for="icap-seo-redirect-source"><?php esc_html_e('Old path', 'icap-seo'); ?></label></th>
                             <td>
-                                <?php $redirect_source_prefill = isset($_GET['prefill_source']) ? sanitize_text_field((string) wp_unslash($_GET['prefill_source'])) : ''; ?>
+                                <?php $redirect_source_prefill = isset($_GET['prefill_source']) ? sanitize_text_field((string) wp_unslash($_GET['prefill_source'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing. ?>
                                 <input id="icap-seo-redirect-source" name="redirect_source" type="text" class="regular-text" placeholder="/old-page/" value="<?php echo esc_attr($redirect_source_prefill); ?>">
                                 <p class="description"><?php esc_html_e('The path on this site to redirect from, e.g. /old-page/.', 'icap-seo'); ?></p>
                             </td>
@@ -2794,7 +2770,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 </table>
             <?php endif; ?>
         <?php elseif ($active_tab === 'local-seo') : ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['local-seo']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Local SEO', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['local-seo'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Local SEO', 'icap-seo'); ?></h2>
             <p class="description"><?php esc_html_e('For businesses with a physical location or local service area. Fill this in to add LocalBusiness structured data to every page, so Google can build a Maps/Knowledge Panel listing from it. Leave it blank if this doesn\'t apply to your site - nothing is output until a business name and address are set.', 'icap-seo'); ?></p>
 
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-local-business-form">
@@ -2879,7 +2855,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 </p>
             </form>
         <?php elseif ($active_tab === 'settings') : ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['settings']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Settings', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['settings'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Settings', 'icap-seo'); ?></h2>
             <h3><?php esc_html_e('Connection', 'icap-seo'); ?></h3>
             <p class="description"><?php esc_html_e('API credentials used to register this site and run scans. Running a scan sends the scanned page\'s public content to iCapSolutions\' cloud service to generate scores and suggested fixes.', 'icap-seo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
@@ -2888,10 +2864,10 @@ if ($notice_code === 'remediation_apply_noop') {
                 <table class="form-table" role="presentation">
                     <tbody>
                         <tr>
-                            <th scope="row"><label for="icap-seo-api-base-url"><?php esc_html_e('API Base URL', 'icap-seo'); ?></label></th>
+                            <th scope="row"><?php esc_html_e('Service address', 'icap-seo'); ?></th>
                             <td>
-                                <input id="icap-seo-api-base-url" name="api_base_url" type="url" class="regular-text" value="<?php echo esc_attr($connection_settings['api_base_url']); ?>" placeholder="https://api.example.com">
-                                <p class="description"><?php esc_html_e('Required for self-serve registration. Example: https://api.example.com', 'icap-seo'); ?></p>
+                                <?php echo esc_html($connection_settings['api_base_url']); ?>
+                                <p class="description"><?php esc_html_e('The iCap SEO service this site connects to after you register it. See "External services" in the plugin readme for what is sent.', 'icap-seo'); ?></p>
                             </td>
                         </tr>
                         <tr>
@@ -3083,7 +3059,7 @@ if ($notice_code === 'remediation_apply_noop') {
 
             <hr>
             <h3><?php esc_html_e('Billing', 'icap-seo'); ?></h3>
-            <p class="description"><?php esc_html_e('Manage your iCap SEO subscription. Premium unlocks the full 38-check catalog.', 'icap-seo'); ?></p>
+            <p class="description"><?php esc_html_e('Manage your iCap SEO subscription. Premium adds 22 checks run by the iCap SEO scan service to the 16 free checks.', 'icap-seo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
                 <input type="hidden" name="action" value="icap_seo_check_billing_status">
                 <?php wp_nonce_field('icap_seo_check_billing_status'); ?>
@@ -3172,7 +3148,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $overview_rss_shows_full_text = (int) get_option('rss_use_excerpt', 0) === 0;
             $overview_site_health_ok = $overview_permalink_structure_ok && !$overview_rss_shows_full_text;
             ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo $tab_icons['overview']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hardcoded SVG markup, not user input ?></span><?php esc_html_e('Overview', 'icap-seo'); ?></h2>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['overview'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Overview', 'icap-seo'); ?></h2>
 
             <?php if (isset($google_connection_status['status']) && $google_connection_status['status'] === 'revoked') : ?>
                 <?php
@@ -3411,17 +3387,17 @@ if ($notice_code === 'remediation_apply_noop') {
             </div>
 
             <div class="icap-seo-feature-summary">
-                <p><?php esc_html_e('iCap SEO runs a cloud-connected scan of your site — 38 checks across 6 categories — and fixes most of what it finds, automatically or with a preview you approve first.', 'icap-seo'); ?></p>
+                <p><?php esc_html_e('iCap SEO checks your pages — 16 checks run on this site, plus 22 Premium checks in the iCap SEO scan service — and fixes most of what it finds, with one click or with a preview you approve first.', 'icap-seo'); ?></p>
                 <ul>
-                    <li><?php esc_html_e('Baseline on-page audit — title tags, meta descriptions, headings, content depth', 'icap-seo'); ?> <em>(<?php esc_html_e('Free', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Image checks — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Free', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Canonical URLs, JSON-LD presence, and basic internal links', 'icap-seo'); ?> <em>(<?php esc_html_e('Free', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Baseline on-page audit — title tags, meta descriptions, headings, paragraphs, content depth', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Image checks — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Canonical URLs, JSON-LD presence, and basic internal links', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Crawlability & security — HTTPS, robots.txt, noindex, security headers', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Content quality & readability — depth, structure, plain-language clarity', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Content quality & readability — depth and plain-language clarity', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Structured data validation — required properties and types for richer search results', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('External and broken link checks', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                 </ul>
-                <p><?php esc_html_e('Also included, free, outside the 38-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, automatic search-engine indexing pings, an llms.txt file for AI assistants, and LocalBusiness structured data for businesses with a physical location.', 'icap-seo'); ?></p>
+                <p><?php esc_html_e('Also included, free, outside the 38-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, optional IndexNow pings (off by default), an llms.txt file for AI assistants, and LocalBusiness structured data for businesses with a physical location.', 'icap-seo'); ?></p>
             </div>
 
             <?php if ($overview_is_premium) : ?>
@@ -3490,5 +3466,4 @@ if ($notice_code === 'remediation_apply_noop') {
     </section>
 </div>
 
-<?php // phpcs:enable WordPress.Security.NonceVerification.Recommended ?>
 <?php // phpcs:enable WordPress.NamingConventions.PrefixAllGlobals ?>

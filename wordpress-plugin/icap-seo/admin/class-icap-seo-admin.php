@@ -1,6 +1,5 @@
 <?php
 
-// phpcs:disable WordPress.Security.NonceVerification.Recommended -- $_GET reads here are read-only display state (tab, sort, notice codes) on a page gated by manage_options. Every state-changing $_POST handler calls check_admin_referer() before writing.
 
 if (!defined('ABSPATH')) {
     exit;
@@ -11,6 +10,8 @@ class ICap_SEO_Admin
     private ICap_SEO_Service_Client $service_client;
     private const SCORE_COLUMN_KEY = 'icap_seo_score';
     private const NOTICE_QUERY_KEY = 'icap_seo_notice';
+    // Markers that earlier versions placed around edited content. Nothing adds them
+    // now; they are only stripped when content is read.
     private const SEO_CHANGE_COMMENT_START = '<!-- SEO by iCap - https://icapsolutions.com -->';
     private const SEO_CHANGE_COMMENT_END = '<!-- /SEO by iCap - https://icapsolutions.com -->';
     private const REMEDIATION_HISTORY_META_KEY = '_icap_seo_remediation_history';
@@ -328,11 +329,11 @@ class ICap_SEO_Admin
 
     public function render_dashboard(): void
     {
-        $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'overview';
-        $notice_code = isset($_GET[self::NOTICE_QUERY_KEY]) ? sanitize_key(wp_unslash($_GET[self::NOTICE_QUERY_KEY])) : '';
-        $billing_state = isset($_GET['billing']) ? sanitize_key(wp_unslash($_GET['billing'])) : '';
-        $google_connected = isset($_GET['google_connected']) ? sanitize_key(wp_unslash($_GET['google_connected'])) : '';
-        $google_connect_error = isset($_GET['google_connect_error']) ? sanitize_key(wp_unslash($_GET['google_connect_error'])) : '';
+        $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'overview'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        $notice_code = isset($_GET[self::NOTICE_QUERY_KEY]) ? sanitize_key(wp_unslash($_GET[self::NOTICE_QUERY_KEY])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        $billing_state = isset($_GET['billing']) ? sanitize_key(wp_unslash($_GET['billing'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        $google_connected = isset($_GET['google_connected']) ? sanitize_key(wp_unslash($_GET['google_connected'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        $google_connect_error = isset($_GET['google_connect_error']) ? sanitize_key(wp_unslash($_GET['google_connect_error'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if ($notice_code === '') {
             if ($billing_state === 'success') {
                 $notice_code = 'billing_checkout_returned';
@@ -391,7 +392,7 @@ class ICap_SEO_Admin
         // "Change property" link on the Settings tab re-trigger discovery even when a
         // property_id is already saved, which the empty() check below otherwise blocks
         // forever once ANY property (including a wrong auto-discovered one) is saved.
-        $refresh_analytics_property = isset($_GET['refresh_analytics_property']) && sanitize_key(wp_unslash($_GET['refresh_analytics_property'])) === '1';
+        $refresh_analytics_property = isset($_GET['refresh_analytics_property']) && sanitize_key(wp_unslash($_GET['refresh_analytics_property'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (
             $active_tab === 'settings'
             && $analytics_scope_granted
@@ -410,7 +411,7 @@ class ICap_SEO_Admin
         // the Analytics block above.
         $search_console_property_candidates = [];
         $search_console_discovery_failed = false;
-        $refresh_search_console_property = isset($_GET['refresh_search_console_property']) && sanitize_key(wp_unslash($_GET['refresh_search_console_property'])) === '1';
+        $refresh_search_console_property = isset($_GET['refresh_search_console_property']) && sanitize_key(wp_unslash($_GET['refresh_search_console_property'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (
             $active_tab === 'settings'
             && ($google_connection_status['status'] ?? '') === 'connected'
@@ -457,6 +458,7 @@ class ICap_SEO_Admin
         $readability_draft_paragraphs = [];
         $spelling_grammar_draft_paragraphs = [];
         $content_detail_is_posts_page = false;
+        $content_detail_is_local = false;
         $seo_recommendation_catalog = $this->get_seo_recommendation_catalog();
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
         $registration_challenge = [];
@@ -608,8 +610,8 @@ class ICap_SEO_Admin
                     $content_scores_orderby = $content_scores_sorted['orderby'];
                     $content_scores_order = $content_scores_sorted['order'];
 
-                    $selected_content_key = isset($_GET['content_key'])
-                        ? sanitize_text_field((string) wp_unslash($_GET['content_key']))
+                    $selected_content_key = isset($_GET['content_key']) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+                        ? sanitize_text_field((string) wp_unslash($_GET['content_key'])) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
                         : '';
                     if ($selected_content_key !== '') {
                         $detail_result = $this->service_client->get_content_score_detail($selected_content_key, $allow_live_fetch);
@@ -617,22 +619,14 @@ class ICap_SEO_Admin
                             $content_score_detail = isset($detail_result['data']) && is_array($detail_result['data']) ? $detail_result['data'] : [];
                             $selected_post_id = $this->extract_post_id_from_content_key($selected_content_key);
                             if ($selected_post_id > 0) {
-                                $remediation_audit_entries = $this->get_remediation_history_for_post($selected_post_id);
-                                $locally_applied_issue_codes = $this->get_applied_issue_codes_for_post($selected_post_id);
-                                $selected_post = get_post($selected_post_id);
-                                if ($selected_post instanceof WP_Post) {
-                                    $current_meta_description_value = $this->get_current_meta_description_for_post($selected_post);
-                                }
-                                $content_depth_draft = $this->get_content_depth_draft_for_post($selected_post_id);
-                                $readability_draft_paragraphs = $this->get_readability_draft_for_post($selected_post_id);
-                                $spelling_grammar_draft_paragraphs = $this->get_spelling_grammar_draft_for_post($selected_post_id);
-                                // A page assigned as the site's Posts page (Settings > Reading) never
-                                // renders its own post_content on the front end - WordPress shows the
-                                // blog loop there instead - so content-body recommendations (headings,
-                                // paragraphs, images, links, content depth) can never be verified fixed
-                                // there, no matter how many times they're applied and rescanned.
-                                $content_detail_is_posts_page = get_option('show_on_front') === 'page'
-                                    && (int) get_option('page_for_posts') === $selected_post_id;
+                                $post_detail_state = $this->load_post_detail_state($selected_post_id);
+                                $remediation_audit_entries = $post_detail_state['remediation_audit_entries'];
+                                $locally_applied_issue_codes = $post_detail_state['locally_applied_issue_codes'];
+                                $current_meta_description_value = $post_detail_state['current_meta_description_value'];
+                                $content_depth_draft = $post_detail_state['content_depth_draft'];
+                                $readability_draft_paragraphs = $post_detail_state['readability_draft_paragraphs'];
+                                $spelling_grammar_draft_paragraphs = $post_detail_state['spelling_grammar_draft_paragraphs'];
+                                $content_detail_is_posts_page = $post_detail_state['content_detail_is_posts_page'];
                             }
 
                             $open_issue_codes = $this->filter_open_issue_codes(
@@ -674,10 +668,26 @@ class ICap_SEO_Admin
                                 ? sanitize_key($detail_result['error']['code'])
                                 : '';
                             $local_post_id = $this->extract_post_id_from_content_key($selected_content_key);
+                            $local_only_detail = null;
                             if (in_array($detail_error_code, ['live_fetch_disabled', 'site_not_configured'], true) && $local_post_id > 0) {
                                 $local_only_detail = ICap_SEO_Local_Checks::detail_for_post($local_post_id);
                             }
-                            if (empty($local_only_detail)) {
+                            if (!empty($local_only_detail)) {
+                                // Same detail view as a scanned page, built from the on-site checks, so
+                                // every free check and its fix works without registering.
+                                $content_score_detail = $this->build_local_content_detail($local_post_id, $local_only_detail);
+                                $content_detail_is_local = true;
+                                $post_detail_state = $this->load_post_detail_state($local_post_id);
+                                $remediation_audit_entries = $post_detail_state['remediation_audit_entries'];
+                                // The on-site checks re-run on every load, so an applied fix shows as
+                                // passing right away instead of waiting for a rescan.
+                                $locally_applied_issue_codes = [];
+                                $current_meta_description_value = $post_detail_state['current_meta_description_value'];
+                                $content_depth_draft = $post_detail_state['content_depth_draft'];
+                                $readability_draft_paragraphs = $post_detail_state['readability_draft_paragraphs'];
+                                $spelling_grammar_draft_paragraphs = $post_detail_state['spelling_grammar_draft_paragraphs'];
+                                $content_detail_is_posts_page = $post_detail_state['content_detail_is_posts_page'];
+                            } else {
                                 $content_score_detail_error = isset($detail_result['error']['message']) && is_string($detail_result['error']['message'])
                                     ? sanitize_text_field($detail_result['error']['message'])
                                     : __('Unable to load content score details right now.', 'icap-seo');
@@ -742,6 +752,54 @@ class ICap_SEO_Admin
         include ICAP_SEO_PLUGIN_DIR . 'admin/views/dashboard.php';
     }
 
+    /**
+     * Per-post state the content detail view needs, for both scanned and on-site-only detail.
+     */
+    private function load_post_detail_state(int $post_id): array
+    {
+        $selected_post = get_post($post_id);
+
+        return [
+            'remediation_audit_entries' => $this->get_remediation_history_for_post($post_id),
+            'locally_applied_issue_codes' => $this->get_applied_issue_codes_for_post($post_id),
+            'current_meta_description_value' => $selected_post instanceof WP_Post ? $this->get_current_meta_description_for_post($selected_post) : '',
+            'content_depth_draft' => $this->get_content_depth_draft_for_post($post_id),
+            'readability_draft_paragraphs' => $this->get_readability_draft_for_post($post_id),
+            'spelling_grammar_draft_paragraphs' => $this->get_spelling_grammar_draft_for_post($post_id),
+            // A page assigned as the site's Posts page (Settings > Reading) never
+            // renders its own post_content on the front end - WordPress shows the
+            // blog loop there instead - so content-body recommendations (headings,
+            // paragraphs, images, links, content depth) can never be verified fixed
+            // there, no matter how many times they're applied and rescanned.
+            'content_detail_is_posts_page' => get_option('show_on_front') === 'page'
+                && (int) get_option('page_for_posts') === $post_id,
+        ];
+    }
+
+    /**
+     * Content detail in the scan service's shape, built from the on-site checks. The
+     * score is the share of on-site checks that passed.
+     */
+    private function build_local_content_detail(int $post_id, array $local_detail): array
+    {
+        $ran_count = count($local_detail['ran']);
+        $failed_codes = array_unique(array_map(
+            static fn(array $row): string => (string) $row['issue_code'],
+            $local_detail['issues']
+        ));
+        $score = $ran_count > 0 ? (int) round(100 * max(0, $ran_count - count($failed_codes)) / $ran_count) : 0;
+
+        return [
+            'title' => (string) $local_detail['title'],
+            'status' => __('Checked on this site', 'icap-seo'),
+            'post_type' => (string) get_post_type($post_id),
+            'permalink' => (string) $local_detail['permalink'],
+            'overall_score' => $score,
+            'category_scores' => [],
+            'issues' => $local_detail['issues'],
+        ];
+    }
+
     public function handle_save_settings(): void
     {
         if (!current_user_can('manage_options')) {
@@ -749,7 +807,6 @@ class ICap_SEO_Admin
         }
         check_admin_referer('icap_seo_save_settings');
 
-        $api_base_url = isset($_POST['api_base_url']) ? esc_url_raw((string) wp_unslash($_POST['api_base_url'])) : '';
         $registration_token = isset($_POST['registration_token']) ? sanitize_text_field((string) wp_unslash($_POST['registration_token'])) : '';
         $site_id = isset($_POST['site_id']) ? sanitize_text_field((string) wp_unslash($_POST['site_id'])) : '';
         $site_token = isset($_POST['site_token']) ? sanitize_text_field((string) wp_unslash($_POST['site_token'])) : '';
@@ -757,7 +814,6 @@ class ICap_SEO_Admin
         $indexnow_enabled = isset($_POST['indexnow_enabled']) ? '1' : '0';
 
         $this->service_client->update_connection_settings([
-            'api_base_url' => $api_base_url,
             'registration_token' => $registration_token,
             'site_id' => $site_id,
             'site_token' => $site_token,
@@ -785,11 +841,11 @@ class ICap_SEO_Admin
         string $orderby_param = 'orderby',
         string $order_param = 'order'
     ): array {
-        $orderby = isset($_GET[$orderby_param]) ? sanitize_key(wp_unslash($_GET[$orderby_param])) : $default_orderby;
+        $orderby = isset($_GET[$orderby_param]) ? sanitize_key(wp_unslash($_GET[$orderby_param])) : $default_orderby; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (!array_key_exists($orderby, $column_extractors)) {
             $orderby = $default_orderby;
         }
-        $order = isset($_GET[$order_param]) ? strtolower(sanitize_key(wp_unslash($_GET[$order_param]))) : $default_order;
+        $order = isset($_GET[$order_param]) ? strtolower(sanitize_key(wp_unslash($_GET[$order_param]))) : $default_order; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (!in_array($order, ['asc', 'desc'], true)) {
             $order = $default_order;
         }
@@ -1738,98 +1794,82 @@ class ICap_SEO_Admin
         $force_regenerate = isset($_POST['force_regenerate'])
             && sanitize_key((string) wp_unslash($_POST['force_regenerate'])) === '1';
 
-        $result = $this->service_client->apply_content_remediation($content_key, $approved_issue_codes, true);
-        if ($result['success']) {
-            $local_apply_result = $this->apply_supported_local_remediation(
-                $content_key,
-                $approved_issue_codes,
-                $force_regenerate
+        // Fixes are applied here on the site and don't depend on the iCap SEO service,
+        // so they work the same whether or not the site is registered.
+        $local_apply_result = $this->apply_supported_local_remediation(
+            $content_key,
+            $approved_issue_codes,
+            $force_regenerate
+        );
+        $status = isset($local_apply_result['status']) ? sanitize_key((string) $local_apply_result['status']) : '';
+        if ($status === 'applied') {
+            // Meta description and canonical are saved as post meta, which doesn't fire save_post.
+            ICap_SEO_Local_Checks::clear_cache_for_post($this->extract_post_id_from_content_key($content_key));
+            $this->redirect_with_notice(
+                'remediation_apply_title_updated',
+                'content-scores',
+                [
+                    'content_key' => $content_key,
+                    'title_before' => isset($local_apply_result['title_before']) ? (string) $local_apply_result['title_before'] : '',
+                    'title_after' => isset($local_apply_result['title_after']) ? (string) $local_apply_result['title_after'] : '',
+                    'title_changed' => !empty($local_apply_result['title_changed']) ? '1' : '0',
+                    'excerpt_before' => isset($local_apply_result['excerpt_before']) ? (string) $local_apply_result['excerpt_before'] : '',
+                    'excerpt_after' => isset($local_apply_result['excerpt_after']) ? (string) $local_apply_result['excerpt_after'] : '',
+                    'excerpt_changed' => !empty($local_apply_result['excerpt_changed']) ? '1' : '0',
+                    'h1_before' => isset($local_apply_result['h1_before']) ? (string) $local_apply_result['h1_before'] : '',
+                    'h1_after' => isset($local_apply_result['h1_after']) ? (string) $local_apply_result['h1_after'] : '',
+                    'h1_changed' => !empty($local_apply_result['h1_changed']) ? '1' : '0',
+                    'images_alt_before' => isset($local_apply_result['images_alt_before']) ? (string) $local_apply_result['images_alt_before'] : '',
+                    'images_alt_after' => isset($local_apply_result['images_alt_after']) ? (string) $local_apply_result['images_alt_after'] : '',
+                    'images_alt_changed' => !empty($local_apply_result['images_alt_changed']) ? '1' : '0',
+                    'images_alt_updated_count' => isset($local_apply_result['images_alt_updated_count']) ? (string) $local_apply_result['images_alt_updated_count'] : '0',
+                    'images_dimensions_before' => isset($local_apply_result['images_dimensions_before']) ? (string) $local_apply_result['images_dimensions_before'] : '',
+                    'images_dimensions_after' => isset($local_apply_result['images_dimensions_after']) ? (string) $local_apply_result['images_dimensions_after'] : '',
+                    'images_dimensions_changed' => !empty($local_apply_result['images_dimensions_changed']) ? '1' : '0',
+                    'images_dimensions_updated_count' => isset($local_apply_result['images_dimensions_updated_count']) ? (string) $local_apply_result['images_dimensions_updated_count'] : '0',
+                    'images_lazy_before' => isset($local_apply_result['images_lazy_before']) ? (string) $local_apply_result['images_lazy_before'] : '',
+                    'images_lazy_after' => isset($local_apply_result['images_lazy_after']) ? (string) $local_apply_result['images_lazy_after'] : '',
+                    'images_lazy_changed' => !empty($local_apply_result['images_lazy_changed']) ? '1' : '0',
+                    'images_lazy_updated_count' => isset($local_apply_result['images_lazy_updated_count']) ? (string) $local_apply_result['images_lazy_updated_count'] : '0',
+                    'canonical_before' => isset($local_apply_result['canonical_before']) ? (string) $local_apply_result['canonical_before'] : '',
+                    'canonical_after' => isset($local_apply_result['canonical_after']) ? (string) $local_apply_result['canonical_after'] : '',
+                    'canonical_changed' => !empty($local_apply_result['canonical_changed']) ? '1' : '0',
+                    'jsonld_schema_before' => isset($local_apply_result['jsonld_schema_before']) ? (string) $local_apply_result['jsonld_schema_before'] : '',
+                    'jsonld_schema_after' => isset($local_apply_result['jsonld_schema_after']) ? (string) $local_apply_result['jsonld_schema_after'] : '',
+                    'jsonld_schema_changed' => !empty($local_apply_result['jsonld_schema_changed']) ? '1' : '0',
+                    'heading_structure_before' => isset($local_apply_result['heading_structure_before']) ? (string) $local_apply_result['heading_structure_before'] : '',
+                    'heading_structure_after' => isset($local_apply_result['heading_structure_after']) ? (string) $local_apply_result['heading_structure_after'] : '',
+                    'heading_structure_changed' => !empty($local_apply_result['heading_structure_changed']) ? '1' : '0',
+                    'headings_added_count' => isset($local_apply_result['headings_added_count']) ? (string) $local_apply_result['headings_added_count'] : '0',
+                    'internal_links_before' => isset($local_apply_result['internal_links_before']) ? (string) $local_apply_result['internal_links_before'] : '',
+                    'internal_links_after' => isset($local_apply_result['internal_links_after']) ? (string) $local_apply_result['internal_links_after'] : '',
+                    'internal_linking_changed' => !empty($local_apply_result['internal_linking_changed']) ? '1' : '0',
+                    'internal_links_added_count' => isset($local_apply_result['internal_links_added_count']) ? (string) $local_apply_result['internal_links_added_count'] : '0',
+                    'paragraph_structure_before' => isset($local_apply_result['paragraph_structure_before']) ? (string) $local_apply_result['paragraph_structure_before'] : '',
+                    'paragraph_structure_after' => isset($local_apply_result['paragraph_structure_after']) ? (string) $local_apply_result['paragraph_structure_after'] : '',
+                    'paragraph_structure_changed' => !empty($local_apply_result['paragraph_structure_changed']) ? '1' : '0',
+                    'paragraphs_added_count' => isset($local_apply_result['paragraphs_added_count']) ? (string) $local_apply_result['paragraphs_added_count'] : '0',
+                    'regenerated' => $force_regenerate ? '1' : '0',
+                ]
             );
-            $status = isset($local_apply_result['status']) ? sanitize_key((string) $local_apply_result['status']) : '';
-            if ($status === 'applied') {
-                $this->redirect_with_notice(
-                    'remediation_apply_title_updated',
-                    'content-scores',
-                    [
-                        'content_key' => $content_key,
-                        'title_before' => isset($local_apply_result['title_before']) ? (string) $local_apply_result['title_before'] : '',
-                        'title_after' => isset($local_apply_result['title_after']) ? (string) $local_apply_result['title_after'] : '',
-                        'title_changed' => !empty($local_apply_result['title_changed']) ? '1' : '0',
-                        'excerpt_before' => isset($local_apply_result['excerpt_before']) ? (string) $local_apply_result['excerpt_before'] : '',
-                        'excerpt_after' => isset($local_apply_result['excerpt_after']) ? (string) $local_apply_result['excerpt_after'] : '',
-                        'excerpt_changed' => !empty($local_apply_result['excerpt_changed']) ? '1' : '0',
-                        'h1_before' => isset($local_apply_result['h1_before']) ? (string) $local_apply_result['h1_before'] : '',
-                        'h1_after' => isset($local_apply_result['h1_after']) ? (string) $local_apply_result['h1_after'] : '',
-                        'h1_changed' => !empty($local_apply_result['h1_changed']) ? '1' : '0',
-                        'images_alt_before' => isset($local_apply_result['images_alt_before']) ? (string) $local_apply_result['images_alt_before'] : '',
-                        'images_alt_after' => isset($local_apply_result['images_alt_after']) ? (string) $local_apply_result['images_alt_after'] : '',
-                        'images_alt_changed' => !empty($local_apply_result['images_alt_changed']) ? '1' : '0',
-                        'images_alt_updated_count' => isset($local_apply_result['images_alt_updated_count']) ? (string) $local_apply_result['images_alt_updated_count'] : '0',
-                        'images_dimensions_before' => isset($local_apply_result['images_dimensions_before']) ? (string) $local_apply_result['images_dimensions_before'] : '',
-                        'images_dimensions_after' => isset($local_apply_result['images_dimensions_after']) ? (string) $local_apply_result['images_dimensions_after'] : '',
-                        'images_dimensions_changed' => !empty($local_apply_result['images_dimensions_changed']) ? '1' : '0',
-                        'images_dimensions_updated_count' => isset($local_apply_result['images_dimensions_updated_count']) ? (string) $local_apply_result['images_dimensions_updated_count'] : '0',
-                        'images_lazy_before' => isset($local_apply_result['images_lazy_before']) ? (string) $local_apply_result['images_lazy_before'] : '',
-                        'images_lazy_after' => isset($local_apply_result['images_lazy_after']) ? (string) $local_apply_result['images_lazy_after'] : '',
-                        'images_lazy_changed' => !empty($local_apply_result['images_lazy_changed']) ? '1' : '0',
-                        'images_lazy_updated_count' => isset($local_apply_result['images_lazy_updated_count']) ? (string) $local_apply_result['images_lazy_updated_count'] : '0',
-                        'canonical_before' => isset($local_apply_result['canonical_before']) ? (string) $local_apply_result['canonical_before'] : '',
-                        'canonical_after' => isset($local_apply_result['canonical_after']) ? (string) $local_apply_result['canonical_after'] : '',
-                        'canonical_changed' => !empty($local_apply_result['canonical_changed']) ? '1' : '0',
-                        'jsonld_schema_before' => isset($local_apply_result['jsonld_schema_before']) ? (string) $local_apply_result['jsonld_schema_before'] : '',
-                        'jsonld_schema_after' => isset($local_apply_result['jsonld_schema_after']) ? (string) $local_apply_result['jsonld_schema_after'] : '',
-                        'jsonld_schema_changed' => !empty($local_apply_result['jsonld_schema_changed']) ? '1' : '0',
-                        'heading_structure_before' => isset($local_apply_result['heading_structure_before']) ? (string) $local_apply_result['heading_structure_before'] : '',
-                        'heading_structure_after' => isset($local_apply_result['heading_structure_after']) ? (string) $local_apply_result['heading_structure_after'] : '',
-                        'heading_structure_changed' => !empty($local_apply_result['heading_structure_changed']) ? '1' : '0',
-                        'headings_added_count' => isset($local_apply_result['headings_added_count']) ? (string) $local_apply_result['headings_added_count'] : '0',
-                        'internal_links_before' => isset($local_apply_result['internal_links_before']) ? (string) $local_apply_result['internal_links_before'] : '',
-                        'internal_links_after' => isset($local_apply_result['internal_links_after']) ? (string) $local_apply_result['internal_links_after'] : '',
-                        'internal_linking_changed' => !empty($local_apply_result['internal_linking_changed']) ? '1' : '0',
-                        'internal_links_added_count' => isset($local_apply_result['internal_links_added_count']) ? (string) $local_apply_result['internal_links_added_count'] : '0',
-                        'paragraph_structure_before' => isset($local_apply_result['paragraph_structure_before']) ? (string) $local_apply_result['paragraph_structure_before'] : '',
-                        'paragraph_structure_after' => isset($local_apply_result['paragraph_structure_after']) ? (string) $local_apply_result['paragraph_structure_after'] : '',
-                        'paragraph_structure_changed' => !empty($local_apply_result['paragraph_structure_changed']) ? '1' : '0',
-                        'paragraphs_added_count' => isset($local_apply_result['paragraphs_added_count']) ? (string) $local_apply_result['paragraphs_added_count'] : '0',
-                        'regenerated' => $force_regenerate ? '1' : '0',
-                    ]
-                );
-                return;
-            }
-            if ($status === 'failed') {
-                $this->redirect_with_notice('remediation_apply_title_update_failed', 'content-scores', ['content_key' => $content_key]);
-                return;
-            }
-            if ($status === 'no_op') {
-                $this->redirect_with_notice(
-                    'remediation_apply_noop',
-                    'content-scores',
-                    [
-                        'content_key' => $content_key,
-                        'noop_reason' => isset($local_apply_result['reason']) ? (string) $local_apply_result['reason'] : '',
-                    ]
-                );
-                return;
-            }
-            $this->redirect_with_notice('remediation_apply_queued', 'content-scores', ['content_key' => $content_key]);
             return;
         }
-
-        $error_code = $this->extract_error_code($result);
-        if ($error_code === 'validation_error') {
-            $this->redirect_with_notice('remediation_validation_error', 'content-scores', ['content_key' => $content_key]);
+        if ($status === 'failed') {
+            $this->redirect_with_notice('remediation_apply_title_update_failed', 'content-scores', ['content_key' => $content_key]);
             return;
         }
-        if ($error_code === 'invalid_token' || $error_code === 'forbidden') {
-            $this->redirect_with_notice('remediation_auth_error', 'content-scores', ['content_key' => $content_key]);
+        if ($status === 'no_op') {
+            $this->redirect_with_notice(
+                'remediation_apply_noop',
+                'content-scores',
+                [
+                    'content_key' => $content_key,
+                    'noop_reason' => isset($local_apply_result['reason']) ? (string) $local_apply_result['reason'] : '',
+                ]
+            );
             return;
         }
-        if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
-            $this->redirect_with_notice('remediation_apply_unavailable', 'content-scores', ['content_key' => $content_key]);
-            return;
-        }
-
-        $this->redirect_with_notice('remediation_apply_failed', 'content-scores', ['content_key' => $content_key]);
+        $this->redirect_with_notice('remediation_apply_noop', 'content-scores', ['content_key' => $content_key]);
     }
 
     public function handle_preview_content_depth(): void
@@ -4869,15 +4909,15 @@ class ICap_SEO_Admin
             ['issue_code' => 'insufficient_content_depth', 'label' => __('Content depth meets baseline (300+ words)', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content']],
             ['issue_code' => 'content_depth_improvement', 'label' => __('Content depth is competitive (600+ words)', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             ['issue_code' => 'limited_heading_structure', 'label' => __('Page has enough secondary headings (H2/H3)', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
-            ['issue_code' => 'limited_paragraph_structure', 'label' => __('Page has enough paragraph structure', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'auto'],
+            ['issue_code' => 'limited_paragraph_structure', 'label' => __('Page has enough paragraph structure', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
             ['issue_code' => 'readability_score_low', 'label' => __('Content is written in plain, easy-to-read language', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             ['issue_code' => 'readability_long_sentences_high', 'label' => __('Sentences are not too long to read easily', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             ['issue_code' => 'readability_low_transition_word_usage', 'label' => __('Sentences use transition words to connect ideas', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             ['issue_code' => 'readability_passive_voice_high', 'label' => __('Sentences favor active voice over passive voice', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             // Structured data (seo-schema) — premium
             ['issue_code' => 'missing_jsonld_schema', 'label' => __('Page has JSON-LD structured data', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
-            ['issue_code' => 'schema_type_missing', 'label' => __('Structured data includes a valid @type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'auto', 'preempted_by' => ['missing_jsonld_schema']],
-            ['issue_code' => 'schema_missing_required_properties', 'label' => __('Structured data includes required properties for its type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'auto', 'preempted_by' => ['missing_jsonld_schema', 'schema_type_missing']],
+            ['issue_code' => 'schema_type_missing', 'label' => __('Structured data includes a valid @type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['missing_jsonld_schema']],
+            ['issue_code' => 'schema_missing_required_properties', 'label' => __('Structured data includes required properties for its type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['missing_jsonld_schema', 'schema_type_missing']],
             // Images (seo-images) — premium
             ['issue_code' => 'no_images_detected', 'label' => __('Page includes relevant images', 'icap-seo'), 'layer' => __('Image optimization', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance'],
             ['issue_code' => 'images_missing_alt', 'label' => __('Images have descriptive alt text', 'icap-seo'), 'layer' => __('Image optimization', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['no_images_detected']],
@@ -4891,20 +4931,6 @@ class ICap_SEO_Admin
             ['issue_code' => 'broken_external_link_detected', 'label' => __('External references resolve without errors', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
             ['issue_code' => 'nofollow_on_internal_link', 'label' => __('Internal links don\'t use rel="nofollow"', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
         ];
-    }
-
-    private function wrap_content_with_seo_change_comments(string $content): string
-    {
-        if (strpos($content, self::SEO_CHANGE_COMMENT_START) !== false) {
-            return $content;
-        }
-
-        $normalized_content = trim($content);
-        if ($normalized_content === '') {
-            return self::SEO_CHANGE_COMMENT_START . "\n" . self::SEO_CHANGE_COMMENT_END;
-        }
-
-        return self::SEO_CHANGE_COMMENT_START . "\n" . $content . "\n" . self::SEO_CHANGE_COMMENT_END;
     }
 
     private function extract_post_id_from_content_key(string $content_key): int
@@ -5725,4 +5751,3 @@ class ICap_SEO_Admin
     }
 }
 
-// phpcs:enable WordPress.Security.NonceVerification.Recommended

@@ -1,6 +1,7 @@
 # Getting started with iCap SEO
 
-This guide walks through installing iCap SEO, connecting it to your account, and running your first scan.
+This guide walks through installing iCap SEO, using the free checks, and optionally connecting the site to the
+iCap SEO service for full scans and Premium checks.
 
 ## Prerequisites
 
@@ -11,6 +12,13 @@ This guide walks through installing iCap SEO, connecting it to your account, and
 
 Download the latest release ZIP from [Releases](https://github.com/iCapSolutions/iCap-SEO/releases), then in
 your WordPress admin go to **Plugins → Add New → Upload Plugin** and activate **iCap SEO**.
+
+## Use the free checks (no account needed)
+
+Open **iCap SEO → Content Scores** and pick a page. The 16 free checks run on your own site, and **Apply this
+recommendation** (or **Apply all open recommendations**) fixes them there. Nothing is sent to any service.
+**Redirects**, **Local SEO**, social sharing tags, `/llms.txt`, and the editor panel also work without an
+account. The rest of this guide is only needed for the iCap SEO service.
 
 ## 2. Request a registration token
 
@@ -34,13 +42,12 @@ already used to connect a different site, won't work.
 ## 3. Connect your site
 
 1. Open **iCap SEO → Settings**.
-2. Confirm the **API Base URL** — pre-filled by default; only change it if instructed by iCapSolutions.
-3. Enter your **Registration Token** (from the email in step 2), either in **Settings** or as a
+2. Enter your **Registration Token** (from the email in step 2), either in **Settings** or as a
    `wp-config.php` constant:
    ```php
    define('ICAP_SEO_REGISTRATION_TOKEN', 'your-registration-token');
    ```
-4. Save settings.
+3. Save settings.
 
 ## 4. Verify the connection
 
@@ -54,8 +61,8 @@ credentials automatically — no manual key management needed.
 
 ## 6. Run your first scan
 
-In **Overview**, click **Trigger Full Scan**. Non-premium accounts run the free baseline audit; active
-premium subscriptions run the full 38-check catalog. Scan status updates in place.
+In **Overview**, click **Trigger Full Scan**. Every account gets site-wide scores; active Premium
+subscriptions also get the 22 Premium checks. Scan status updates in place.
 
 ## 7. Review your results
 
@@ -65,20 +72,20 @@ premium subscriptions run the full 38-check catalog. Scan status updates in plac
 Outside of scanning, a few more tabs work immediately and don't require registration: **Redirects** (set up
 redirects and see a log of 404s visitors hit) and **Local SEO** (enter your business info once to output
 LocalBusiness structured data site-wide). Social sharing previews and `/llms.txt` are on automatically, no
-setup needed.
+setup needed. IndexNow pings are off until you turn them on in **Settings**.
 
 ## Activating premium
 
 From **iCap SEO → Settings**, click **Start Billing Checkout** to subscribe. Once active, **Check Billing
-Status** confirms your entitlement, and your next scan automatically includes the full premium check set
-(crawlability, security headers, content quality, structured data, image optimization, and link health).
+Status** confirms your entitlement, and your next scan includes the Premium checks (crawlability, security
+headers, readability, structured data validation, and external and broken link checks).
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
 | No verification or token email arrives | Check spam/junk. Confirm the email address you entered is correct. Premium/AI Scanning requests wait on a review step before the token email sends. |
-| Registration fails | Double-check the API Base URL and registration token. |
+| Registration fails | Double-check the registration token. Each token works once, for one site. |
 | Scan won't start | Confirm registration completed and credentials are saved in **Settings**. |
 | Only baseline checks appear | Run **Check Billing Status** to confirm your premium subscription is active. |
 | No scores yet | Wait for the scan to finish, then refresh **Content Scores**. |

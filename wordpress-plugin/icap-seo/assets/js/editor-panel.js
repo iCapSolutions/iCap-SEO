@@ -198,31 +198,6 @@
 		return ! a || ! b || a.title !== b.title || a.content !== b.content || a.excerpt !== b.excerpt;
 	}
 
-	/**
-	 * Phase 3 (schema-only v1): maps the cloud quick-scan endpoint's issues
-	 * (same shape as the full-scan catalog) into one checklist row, the same
-	 * way the other quick checks read. Doesn't factor into the score badge -
-	 * that stays purely the client-computable checks quick-check already
-	 * scores, avoiding two independent async responses fighting over one
-	 * number.
-	 */
-	function issuesToStructuredDataCheck( issues ) {
-		if ( ! issues || ! issues.length ) {
-			return {
-				code: 'structured_data',
-				label: __( 'Structured data', 'icap-seo' ),
-				status: 'pass',
-				detail: __( 'No structured-data issues found for this draft.', 'icap-seo' ),
-			};
-		}
-		return {
-			code: 'structured_data',
-			label: __( 'Structured data', 'icap-seo' ),
-			status: issues[ 0 ].severity === 'high' ? 'fail' : 'warn',
-			detail: issues[ 0 ].description || __( 'Structured data issue detected.', 'icap-seo' ),
-		};
-	}
-
 	function PanelContent() {
 		var initialScore = parseScore( initialData.score );
 		var initialState = {
@@ -231,7 +206,6 @@
 			title: initialData.title || '',
 			description: initialData.description || '',
 			isLive: false,
-			schemaCheck: null,
 		};
 
 		var stateHook = useState( initialState );
@@ -245,7 +219,6 @@
 
 			var debounceTimer = null;
 			var lastRequested = null;
-			var lastRequestedSchema = null;
 			var lastSent = readDraftFields();
 			var unsubscribed = false;
 
@@ -267,10 +240,6 @@
 						if ( fields !== lastRequested ) {
 							return;
 						}
-						// Merge via the previous-state updater, not a full replace -
-						// schemaCheck is set independently by requestQuickScan below,
-						// and a full-object setState here would wipe it out whenever
-						// this (usually faster, local-only) response lands after it.
 						setState( function ( prev ) {
 							return Object.assign( {}, prev, {
 								score: parseScore( response.score ),
@@ -284,33 +253,6 @@
 					.catch( function () {
 						// Live refresh is a nice-to-have; keep showing the last
 						// good state (or the Phase 1 static snapshot) on error.
-					} );
-			}
-
-			function requestQuickScan( fields ) {
-				lastRequestedSchema = fields;
-				wp.apiFetch( {
-					path: '/icap-seo/v1/editor-panel/quick-scan',
-					method: 'POST',
-					data: {
-						post_id: postId,
-						title: fields.title,
-						content: fields.content,
-						excerpt: fields.excerpt,
-					},
-				} )
-					.then( function ( response ) {
-						if ( fields !== lastRequestedSchema ) {
-							return;
-						}
-						setState( function ( prev ) {
-							return Object.assign( {}, prev, {
-								schemaCheck: issuesToStructuredDataCheck( response.issues || [] ),
-							} );
-						} );
-					} )
-					.catch( function () {
-						// Same nice-to-have posture as quick-check above.
 					} );
 			}
 
@@ -328,7 +270,6 @@
 				}
 				debounceTimer = setTimeout( function () {
 					requestQuickCheck( current );
-					requestQuickScan( current );
 				}, LIVE_DEBOUNCE_MS );
 			} );
 
@@ -341,7 +282,7 @@
 			};
 		}, [] );
 
-		var allChecks = state.schemaCheck ? state.checks.concat( [ state.schemaCheck ] ) : state.checks;
+		var allChecks = state.checks;
 
 		return el(
 			'div',
