@@ -5,7 +5,7 @@ mirrors what you'll see in the plugin's **Content Scores** tab.
 
 ## How to read this
 
-- **Plan** — **Free** checks run in every scan. **Premium** checks require an active subscription; on a free-tier scan they still appear in the catalog but are marked as requiring an upgrade rather than showing a pass/fail result.
+- **Plan** — checks marked **(Free)** run on your own WordPress site, with or without registering, and their fixes are applied there too. All other checks are **Premium**: they run in the iCap SEO scan service, which crawls your pages from outside your site the way a search engine does, and need an active subscription.
 - **Fix** — how the issue gets resolved once found:
   - **Automatic fix** — iCap SEO writes the fix directly (title, meta description, alt text, schema markup, etc.) the moment you approve it. No manual editing required.
   - **Preview & publish** — iCap SEO drafts the fix and shows it to you first; nothing is saved or published until you explicitly approve it. Used only where auto-writing risky content (like new paragraphs) without review isn't safe.
@@ -14,20 +14,20 @@ mirrors what you'll see in the plugin's **Content Scores** tab.
 
 ---
 
-## Baseline on-page audit — Free
+## Baseline on-page audit
 
-The foundational checks every scan runs, free or paid.
+The foundational checks. All of them run on your own site.
 
 | Check | Why it matters | Fix |
 |---|---|---|
-| Page has a title tag | Your page's `<title>` is the headline search engines and browsers use to identify it — pages without one are effectively unlabeled. | Automatic fix |
-| Title length is optimized (20–65 characters) | Titles that are too short waste the space search engines give you; titles that are too long get cut off with "…" in search results. | Automatic fix |
-| Page has a meta description | This is the summary text shown under your title in search results. Without one, search engines write their own — usually a rough excerpt that doesn't sell the page. | Automatic fix |
-| Meta description length is optimized (120–170 characters) | Same trade-off as title length: too short leaves value on the table, too long gets truncated. | Automatic fix |
-| Page has an H1 heading | The H1 tells readers and search engines the main topic of the page at a glance. | Automatic fix |
-| Page has enough visible content (250+ words) | Very thin pages give search engines little to understand or rank the page for. | Preview & publish |
+| Page has a title tag **(Free)** | Your page's `<title>` is the headline search engines and browsers use to identify it — pages without one are effectively unlabeled. | Automatic fix |
+| Title length is optimized (20–65 characters) **(Free)** | Titles that are too short waste the space search engines give you; titles that are too long get cut off with "…" in search results. | Automatic fix |
+| Page has a meta description **(Free)** | This is the summary text shown under your title in search results. Without one, search engines write their own — usually a rough excerpt that doesn't sell the page. | Automatic fix |
+| Meta description length is optimized (120–170 characters) **(Free)** | Same trade-off as title length: too short leaves value on the table, too long gets truncated. | Automatic fix |
+| Page has an H1 heading **(Free)** | The H1 tells readers and search engines the main topic of the page at a glance. | Automatic fix |
+| Page has enough visible content (250+ words) **(Free)** | Very thin pages give search engines little to understand or rank the page for. | Preview & publish |
 
-## Robots and crawler policy / security headers — Premium
+## Robots and crawler policy / security headers
 
 Technical trust and crawlability signals — whether search engines and AI crawlers can reach your pages, and whether your server sends the security signals modern browsers expect.
 
@@ -35,7 +35,7 @@ Technical trust and crawlability signals — whether search engines and AI crawl
 |---|---|---|
 | Page is served over HTTPS | Non-HTTPS pages are flagged "Not secure" by browsers and are disadvantaged in search rankings. | Guidance only |
 | Page is reachable for scanning | If iCap SEO can't fetch the page, search engines most likely can't either. | Guidance only |
-| Page has a canonical URL | Canonical tags tell search engines which URL is the "official" version of a page, avoiding duplicate-content confusion when the same content is reachable multiple ways. | Automatic fix |
+| Page has a canonical URL **(Free)** | Canonical tags tell search engines which URL is the "official" version of a page, avoiding duplicate-content confusion when the same content is reachable multiple ways. | Automatic fix |
 | Page is not accidentally excluded from search (noindex) | A stray `noindex` tag hides a page from search results entirely — often without anyone noticing until traffic drops. | Guidance only |
 | Server sends recommended security headers | Headers like HSTS and X-Frame-Options protect visitors from common attacks and are a baseline trust signal. | Guidance only |
 | Site has a robots.txt file | robots.txt tells search engines — and AI crawlers — which parts of your site they're allowed to visit. Without one, crawler behavior is left to whatever each crawler assumes by default. | Guidance only |
@@ -44,7 +44,7 @@ Technical trust and crawlability signals — whether search engines and AI crawl
 | Page images are not excluded from image search (noimageindex) | A stray `noimageindex` directive hides this page's images from image search results. | Guidance only |
 | Page allows a search snippet (nosnippet) | A `nosnippet` directive blocks search engines from showing a text preview for this page, which usually hurts click-through. | Guidance only |
 
-## Content quality and readability — Premium
+## Content quality and readability
 
 Whether a page has enough substance, structure, and clarity to genuinely serve a reader (and rank on the strength of that).
 
@@ -53,42 +53,42 @@ Whether a page has enough substance, structure, and clarity to genuinely serve a
 | Page has visible content | A page that renders empty offers search engines nothing to evaluate or rank. | Preview & publish |
 | Content depth meets baseline (300+ words) | Pages with very little substance rarely compete well against more thorough pages on the same topic. | Preview & publish |
 | Content depth is competitive (600+ words) | For competitive topics, deeper and more complete pages tend to outperform shallow ones. | Preview & publish |
-| Page has enough secondary headings (H2/H3) | Subheadings break content into scannable sections for readers and give search engines a clear outline of what the page covers. | Automatic fix |
-| Page has enough paragraph structure | Long, unbroken blocks of text are harder to read and more likely to make visitors leave before finishing. | Automatic fix |
+| Page has enough secondary headings (H2/H3) **(Free)** | Subheadings break content into scannable sections for readers and give search engines a clear outline of what the page covers. | Automatic fix |
+| Page has enough paragraph structure **(Free)** | Long, unbroken blocks of text are harder to read and more likely to make visitors leave before finishing. | Automatic fix |
 | Content is written in plain, easy-to-read language | Dense, jargon-heavy writing is harder for visitors to act on — readability affects how usable a page feels to real readers. | Preview & publish |
 | Sentences are not too long to read easily | A page full of long, run-on sentences is harder to skim and more likely to lose a reader partway through. | Preview & publish |
 | Sentences use transition words to connect ideas | Words like "however" or "for example" help readers follow how ideas relate to each other; without them, writing can feel choppy. | Preview & publish |
 | Sentences favor active voice over passive voice | Active voice is usually more direct and easier to follow, making it clearer who is doing what. | Preview & publish |
 
-## Structured data schema — Premium
+## Structured data schema
 
 Whether search engines can understand exactly what a page represents — which unlocks richer search results (star ratings, article previews, and similar).
 
 | Check | Why it matters | Fix |
 |---|---|---|
-| Page has JSON-LD structured data | Structured data explicitly tells search engines what kind of content a page is, instead of leaving them to guess. | Automatic fix |
-| Structured data includes a valid @type | A schema block with no recognized type gives search engines nothing they can actually use. | Automatic fix |
-| Structured data includes required properties for its type | An incomplete schema block — missing a headline, author, or date, for example — may be ignored by search engines entirely rather than partially credited. | Automatic fix |
+| Page has JSON-LD structured data **(Free)** | Structured data explicitly tells search engines what kind of content a page is, instead of leaving them to guess. | Automatic fix |
+| Structured data includes a valid @type | A schema block with no recognized type gives search engines nothing they can actually use. | Guidance only |
+| Structured data includes required properties for its type | An incomplete schema block — missing a headline, author, or date, for example — may be ignored by search engines entirely rather than partially credited. | Guidance only |
 
-## Image optimization — Premium
+## Image optimization
 
 Whether images help or hurt page experience, accessibility, and search visibility.
 
 | Check | Why it matters | Fix |
 |---|---|---|
-| Page includes relevant images | Pages with no supporting imagery tend to engage visitors less and miss out on image-search traffic entirely. | Guidance only |
-| Images have descriptive alt text | Alt text is what search engines — and screen readers — use to understand an image. Without it, the image is effectively invisible to both. | Automatic fix |
-| Images have explicit width/height attributes | Missing dimensions cause the page to visibly shift as images load in, hurting the page-experience metrics search engines use to judge quality. | Automatic fix |
-| Below-the-fold images use lazy loading | Loading every image immediately slows down the initial page load, which affects both visitor experience and search ranking. | Automatic fix |
+| Page includes relevant images **(Free)** | Pages with no supporting imagery tend to engage visitors less and miss out on image-search traffic entirely. | Guidance only |
+| Images have descriptive alt text **(Free)** | Alt text is what search engines — and screen readers — use to understand an image. Without it, the image is effectively invisible to both. | Automatic fix |
+| Images have explicit width/height attributes **(Free)** | Missing dimensions cause the page to visibly shift as images load in, hurting the page-experience metrics search engines use to judge quality. | Automatic fix |
+| Below-the-fold images use lazy loading **(Free)** | Loading every image immediately slows down the initial page load, which affects both visitor experience and search ranking. | Automatic fix |
 
-## Internal and broken links — Premium
+## Internal and broken links
 
 Whether a page's links help visitors and search engines navigate your site — and whether any of them are dead ends.
 
 | Check | Why it matters | Fix |
 |---|---|---|
-| Page includes crawlable links | Links are how search engines discover the rest of your site. A page with none is a dead end for crawlers. | Automatic fix |
-| Page links to enough related content | Internal links help visitors — and search engines — find more of your relevant content instead of leaving after one page. | Automatic fix |
+| Page includes crawlable links **(Free)** | Links are how search engines discover the rest of your site. A page with none is a dead end for crawlers. | Automatic fix |
+| Page links to enough related content **(Free)** | Internal links help visitors — and search engines — find more of your relevant content instead of leaving after one page. | Automatic fix |
 | Page cites at least one external source | Linking to credible outside sources is a trust signal that supports the page's claims. | Guidance only |
 | Internal links resolve without errors | A broken link to your own content wastes the click and signals a poorly maintained site to visitors and search engines alike. | Guidance only |
 | External references resolve without errors | A dead external link undermines the credibility of whatever you were citing and creates a poor visitor experience. | Guidance only |
@@ -98,11 +98,11 @@ Whether a page's links help visitors and search engines navigate your site — a
 
 ## Free vs. Premium at a glance
 
-- **Free tier**: the 6 baseline on-page checks above — title, meta description, H1, and basic content-depth.
-- **Premium tier**: everything else — 32 additional checks across technical crawlability, content quality, structured data, images, and links.
+- **Free (16 checks)**: title, meta description, H1, content depth, heading and paragraph structure, canonical URL, JSON-LD presence, images, and internal links. They run on your own site and need no account.
+- **Premium (22 checks)**: technical crawlability and security headers, readability, structured data validation, deeper content-depth analysis, and external and broken link checks, run by the iCap SEO scan service.
 
 ## Fix-type summary
 
-- **16 checks** get an automatic fix on approval.
+- **14 checks** get an automatic fix on approval, applied on your own site.
 - **8 checks** (the content-depth family, plus the readability score and its three sub-checks) use preview & publish — a draft is generated and shown before anything is saved.
-- **14 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, removing a noindex tag without human confirmation).
+- **16 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, removing a noindex tag without human confirmation, or editing someone's structured data by guesswork).

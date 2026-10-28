@@ -1,8 +1,9 @@
 <?php
 /**
- * Local (on-site) detection for the free checks: image optimization, heading
- * structure, canonical URL, JSON-LD presence, and internal links. Page-level
- * checks run against the page fetched from this site; link checks run against
+ * Local (on-site) detection for every free check: title and meta description,
+ * H1, content depth, image optimization, heading and paragraph structure,
+ * canonical URL, JSON-LD presence, and internal links. Page-level checks run
+ * against the page fetched from this site; link and paragraph checks run against
  * the post body. The rules mirror the scan service's checks, so a page gets the
  * same result either way.
  */
@@ -15,6 +16,13 @@ class ICap_SEO_Local_Checks
 {
     /** Issue codes this class can detect locally. */
     public const CHECKED_CODES = [
+        'missing_title_tag',
+        'title_length_out_of_range',
+        'missing_meta_description',
+        'meta_description_length_out_of_range',
+        'missing_h1',
+        'thin_content',
+        'limited_paragraph_structure',
         'no_images_detected',
         'images_missing_alt',
         'images_missing_dimensions',
@@ -44,21 +52,24 @@ class ICap_SEO_Local_Checks
         if ($page_html !== null) {
             $issues = array_merge(
                 $issues,
+                self::page_basics_issues($page_html),
                 self::image_issues($page_html),
                 self::heading_issues($page_html),
                 self::canonical_issues($page_html),
                 self::jsonld_issues($page_html)
             );
             $ran = array_merge($ran, [
+                'missing_title_tag', 'title_length_out_of_range', 'missing_meta_description',
+                'meta_description_length_out_of_range', 'missing_h1', 'thin_content',
                 'no_images_detected', 'images_missing_alt', 'images_missing_dimensions', 'images_not_lazy_loaded',
                 'limited_heading_structure', 'missing_canonical', 'missing_jsonld_schema',
             ]);
         }
 
-        // Link checks read the post body, so they run even when the page fetch fails.
+        // Link and paragraph checks read the post body, so they run even when the page fetch fails.
         $link_base = $permalink !== '' ? $permalink : home_url();
-        $issues = array_merge($issues, self::link_issues($body_html, $link_base));
-        $ran = array_merge($ran, ['no_links_detected', 'low_internal_linking']);
+        $issues = array_merge($issues, self::link_issues($body_html, $link_base), self::paragraph_issues($body_html));
+        $ran = array_merge($ran, ['no_links_detected', 'low_internal_linking', 'limited_paragraph_structure']);
 
         return ['issues' => $issues, 'ran' => $ran];
     }
@@ -98,6 +109,13 @@ class ICap_SEO_Local_Checks
     public static function labels(): array
     {
         return [
+            'missing_title_tag' => __('Page has a title tag', 'icap-seo'),
+            'title_length_out_of_range' => __('Title length is optimized (20–65 characters)', 'icap-seo'),
+            'missing_meta_description' => __('Page has a meta description', 'icap-seo'),
+            'meta_description_length_out_of_range' => __('Meta description length is optimized (120–170 characters)', 'icap-seo'),
+            'missing_h1' => __('Page has an H1 heading', 'icap-seo'),
+            'thin_content' => __('Page has enough visible content (250+ words)', 'icap-seo'),
+            'limited_paragraph_structure' => __('Content is split into enough paragraphs', 'icap-seo'),
             'images_missing_alt' => __('Images have descriptive alt text', 'icap-seo'),
             'images_missing_dimensions' => __('Images have explicit width/height attributes', 'icap-seo'),
             'images_not_lazy_loaded' => __('Below-the-fold images use lazy loading', 'icap-seo'),
@@ -108,6 +126,18 @@ class ICap_SEO_Local_Checks
             'no_links_detected' => __('Page includes crawlable links', 'icap-seo'),
             'low_internal_linking' => __('Page links to enough related content', 'icap-seo'),
         ];
+    }
+
+    /**
+     * Drop a post's cached page HTML so the next check sees its current content.
+     * Runs on save_post and after a fix is applied.
+     */
+    public static function clear_cache_for_post(int $post_id): void
+    {
+        $permalink = get_permalink($post_id);
+        if (is_string($permalink) && $permalink !== '') {
+            delete_transient('icap_seo_local_html_' . md5($permalink));
+        }
     }
 
     /**
@@ -143,6 +173,102 @@ class ICap_SEO_Local_Checks
         set_transient($cache_key, $html, self::CACHE_SECONDS);
 
         return $html;
+    }
+
+    /**
+     * Title, meta description, H1, and visible word count checks.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function page_basics_issues(string $html): array
+    {
+        $issues = [];
+
+        $title = '';
+        if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $title_match) === 1) {
+            $title = self::normalize_text($title_match[1]);
+        }
+        $title_length = self::text_length($title);
+        if ($title === '') {
+            $issues[] = self::issue(
+                'missing_title_tag',
+                'high',
+                'Title tag is missing.',
+                'Set a unique <title> tag for this page.'
+            );
+        } elseif ($title_length < 20 || $title_length > 65) {
+            $issues[] = self::issue(
+                'title_length_out_of_range',
+                'medium',
+                'Title length is outside recommended range (20-65 characters).',
+                'Adjust title text to stay within recommended SEO range.'
+            );
+        }
+
+        $description = '';
+        if (preg_match('/<meta[^>]+name=["\']description["\'][^>]+content=["\'](.*?)["\'][^>]*>/is', $html, $description_match) === 1
+            || preg_match('/<meta[^>]+content=["\'](.*?)["\'][^>]+name=["\']description["\'][^>]*>/is', $html, $description_match) === 1) {
+            $description = self::normalize_text($description_match[1]);
+        }
+        $description_length = self::text_length($description);
+        if ($description === '') {
+            $issues[] = self::issue(
+                'missing_meta_description',
+                'medium',
+                'Meta description is missing.',
+                'Add a 120-170 character meta description summarizing page intent.'
+            );
+        } elseif ($description_length < 120 || $description_length > 170) {
+            $issues[] = self::issue(
+                'meta_description_length_out_of_range',
+                'low',
+                'Meta description length is outside recommended range (120-170).',
+                'Adjust meta description length for better search snippets.'
+            );
+        }
+
+        if (preg_match('/<h1\b/i', $html) !== 1) {
+            $issues[] = self::issue(
+                'missing_h1',
+                'medium',
+                'No H1 heading detected.',
+                'Add one clear H1 heading aligned with page topic.'
+            );
+        }
+
+        $visible_text = (string) preg_replace('/<(script|style)\b[^>]*>.*?<\/\1>/is', ' ', $html);
+        $visible_text = self::normalize_text((string) preg_replace('/<[^>]+>/s', ' ', $visible_text));
+        $word_count = preg_match_all("/[A-Za-z0-9']+/", $visible_text);
+        if ($word_count < 250) {
+            $issues[] = self::issue(
+                'thin_content',
+                'medium',
+                'Visible content appears thin (<250 words).',
+                'Expand page content depth with useful topic-specific detail.'
+            );
+        }
+
+        return $issues;
+    }
+
+    /**
+     * Paragraph structure check, run against the post body. Flags content with
+     * fewer than three paragraph blocks.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function paragraph_issues(string $body_html): array
+    {
+        if (preg_match_all('/<p\b/i', $body_html) >= 3) {
+            return [];
+        }
+
+        return [self::issue(
+            'limited_paragraph_structure',
+            'low',
+            'Page has very few paragraph blocks.',
+            'Increase paragraph segmentation for readability.'
+        )];
     }
 
     /**
@@ -336,6 +462,16 @@ class ICap_SEO_Local_Checks
         }
 
         return [];
+    }
+
+    private static function normalize_text(string $text): string
+    {
+        return trim((string) preg_replace('/\s+/u', ' ', html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    }
+
+    private static function text_length(string $text): int
+    {
+        return function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
     }
 
     /**

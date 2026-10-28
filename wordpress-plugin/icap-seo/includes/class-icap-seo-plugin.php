@@ -20,7 +20,7 @@ class ICap_SEO_Plugin
     {
         $this->admin = new ICap_SEO_Admin(new ICap_SEO_Service_Client());
         $this->output = new ICap_SEO_Output();
-        $this->editor_panel = new ICap_SEO_Editor_Panel($this->output, new ICap_SEO_Service_Client());
+        $this->editor_panel = new ICap_SEO_Editor_Panel($this->output);
     }
     public function run(): void
     {
@@ -34,6 +34,7 @@ class ICap_SEO_Plugin
         add_action('template_redirect', [$this, 'serve_llms_txt'], 1);
         add_action('template_redirect', [$this, 'maybe_log_404'], 5);
         add_action('save_post', [$this, 'ping_indexnow_on_publish'], 20, 3);
+        add_action('save_post', ['ICap_SEO_Local_Checks', 'clear_cache_for_post']);
         add_action('before_delete_post', [$this, 'ping_indexnow_on_delete']);
         add_action('wp_trash_post', [$this, 'ping_indexnow_on_delete']);
         $this->admin->register_admin_actions();
@@ -126,6 +127,10 @@ class ICap_SEO_Plugin
 
     public function serve_indexnow_key_file(): void
     {
+        if (get_option('icap_seo_indexnow_enabled', '0') !== '1') {
+            return;
+        }
+
         $key = $this->get_or_create_indexnow_key();
 
         if ($this->get_current_request_path() !== '/' . $key . '.txt') {

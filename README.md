@@ -1,8 +1,9 @@
 # iCap SEO
 
-iCap SEO is a WordPress plugin that runs a real, cloud-connected SEO scan of your site — 38 checks across
-6 categories — explains what it finds in plain language, and fixes most of it for you, automatically or
-with a preview you approve first.
+iCap SEO is a WordPress plugin that checks your pages for common SEO problems, explains what it finds in plain
+language, and fixes most of it for you, with one click or with a preview you approve first. Its 16 free checks
+and their fixes run on your own site with no account. An optional cloud service adds site-wide scans, 22 Premium
+checks, AI-assisted drafts, and Google Search Console and Analytics reports.
 
 Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
 
@@ -20,11 +21,11 @@ Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
   model looking at the image itself.
 - **A Setup Wizard and dashboard** for connection setup, site health scoring, and a full recommendation
   catalog per page.
-- **Social sharing previews, a redirect manager with a 404 log, automatic search-engine indexing pings, an
+- **Social sharing previews, a redirect manager with a 404 log, optional search-engine indexing pings, an
   llms.txt file, and Local SEO** — always free, no registration required: Open Graph and X Card tags for link
   previews, a simple old-URL-to-new-URL redirect tool that also tracks broken links visitors hit, IndexNow
-  pings to Bing/Yandex on publish/update/delete, a generated `/llms.txt` for AI assistants, and LocalBusiness
-  structured data for businesses with a physical location.
+  pings to Bing/Yandex on publish/update/delete (off by default), a generated `/llms.txt` for AI assistants,
+  and LocalBusiness structured data for businesses with a physical location.
 
 See [`docs/seo-checks-catalog.md`](docs/seo-checks-catalog.md) for the full list of checks and how each one
 gets fixed.
@@ -37,21 +38,21 @@ gets fixed.
 
 ## Getting started
 
-1. Open **iCap SEO → Settings** and set your **API Base URL**.
-2. Enter the **Registration Token** provided by iCapSolutions.
-3. Go to **Setup Wizard** and click **Test Connection**, then **Request Credentials & Register Site**.
-4. Click **Trigger Full Scan** to run your first scan.
-5. Review results in **Overview** and **Content Scores**.
+1. Open **iCap SEO → Content Scores** and pick a page to see the free checks and apply fixes. No account needed.
+2. Optional, for the cloud service: in **Setup Wizard**, request a registration token by email, enter it in
+   **Settings**, then click **Test Connection** and **Request Credentials & Register Site**.
+3. Click **Trigger Full Scan** to run your first site-wide scan, then review **Overview** and **Content Scores**.
 
 See [`docs/getting-started.md`](docs/getting-started.md) for a full walkthrough, including premium
 activation and troubleshooting.
 
 ## Free vs. Premium
 
-- **Free**: baseline on-page audit (title tags, meta descriptions, headings, content depth), plus social
-  sharing previews, redirects with a 404 log, IndexNow pings, llms.txt, and Local SEO.
-- **Premium**: the full 38-check catalog — technical crawlability, security headers, content quality and
-  readability, structured data, image optimization, and link health.
+- **Free**: 16 checks that run on your own site (title, meta description, H1, content depth, heading and
+  paragraph structure, canonical URL, JSON-LD presence, images, and internal links) with one-click fixes, plus
+  social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt, and Local SEO.
+- **Premium**: 22 more checks run by the iCap SEO scan service — technical crawlability, security headers,
+  readability, structured data validation, and external and broken link checks.
 
 ## Support
 
