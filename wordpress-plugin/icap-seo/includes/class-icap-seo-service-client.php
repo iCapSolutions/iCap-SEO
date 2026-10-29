@@ -12,6 +12,12 @@ class ICap_SEO_Service_Client
     // reporting lag - a longer TTL than content scores avoids hitting the API on every
     // dashboard page load without making the tab noticeably stale.
     private const SEO_PERFORMANCE_CACHE_TTL_SECONDS = 1800;
+    // How long a cached billing state is trusted on dashboard loads before it's re-read, so an
+    // upgrade or a lapse shows up without anyone clicking Check Billing Status.
+    private const BILLING_STATE_MAX_AGE_SECONDS = 900;
+    // Billing states that include Premium: an active subscription, or one whose renewal payment
+    // is still being retried.
+    private const PREMIUM_BILLING_STATES = ['active', 'past_due'];
 
     private ?array $content_scores_index_cache = null;
     private array $latest_content_scores_meta = [
@@ -110,6 +116,55 @@ class ICap_SEO_Service_Client
         return $this->is_api_connection_configured();
     }
 
+    /**
+     * Whether this site has Premium: full-site scans, Google Search Console and Analytics
+     * reports, the outside-in checks, and AI credits. Read from the cached billing state; the
+     * service enforces the same rule on its side.
+     */
+    public function is_premium(): bool
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return false;
+        }
+
+        return in_array((string) $settings['last_billing_state'], self::PREMIUM_BILLING_STATES, true);
+    }
+
+    private function premium_required_result(): array
+    {
+        return [
+            'success' => false,
+            'error' => [
+                'code' => 'premium_required',
+                'message' => 'This feature needs an active Premium subscription.',
+            ],
+        ];
+    }
+
+    public function refresh_billing_state_if_stale(): void
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+            return;
+        }
+
+        $now = strtotime(current_time('mysql'));
+        $checked_at = $settings['last_billing_checked_at'] !== '' ? strtotime((string) $settings['last_billing_checked_at']) : false;
+        if ($checked_at !== false && ($now - $checked_at) < self::BILLING_STATE_MAX_AGE_SECONDS) {
+            return;
+        }
+
+        $result = $this->get_subscription_status(true);
+        if (!$result['success']) {
+            // Keep the last known state, but don't retry on every page load while the service
+            // is unreachable.
+            $this->update_connection_settings([
+                'last_billing_checked_at' => current_time('mysql'),
+            ]);
+        }
+    }
+
     public function get_content_score_for_post(int $post_id): array
     {
         $scores_index = $this->get_content_scores_index();
@@ -173,6 +228,10 @@ class ICap_SEO_Service_Client
                 }
 
                 return $api_rows;
+            }
+            if (($this->latest_content_scores_meta['source'] ?? '') === 'premium_required' && $cache_key !== '') {
+                // Scan results are a Premium feature, so don't keep showing old ones.
+                delete_transient($cache_key);
             }
         }
         if ($cache_key !== '' && $allow_live_fetch) {
@@ -264,6 +323,10 @@ class ICap_SEO_Service_Client
                     'message' => 'Site registration credentials are not configured.',
                 ],
             ];
+        }
+
+        if (!$this->is_premium()) {
+            return $this->premium_required_result();
         }
 
         $resolved_content_key = sanitize_text_field(trim($content_key));
@@ -1204,7 +1267,7 @@ class ICap_SEO_Service_Client
             return is_array($cached) ? $cached : $this->empty_seo_performance_payload();
         }
 
-        if (empty($settings['site_id']) || empty($settings['site_token'])) {
+        if (empty($settings['site_id']) || empty($settings['site_token']) || !$this->is_premium()) {
             return $this->empty_seo_performance_payload();
         }
 
@@ -1219,6 +1282,12 @@ class ICap_SEO_Service_Client
         );
 
         if (!$result['success']) {
+            if ($this->extract_error_code($result) === 'premium_required') {
+                if ($cache_key !== '') {
+                    delete_transient($cache_key);
+                }
+                return $this->empty_seo_performance_payload();
+            }
             return is_array($cached) ? $cached : $this->empty_seo_performance_payload();
         }
 
@@ -1572,6 +1641,17 @@ class ICap_SEO_Service_Client
             return [];
         }
 
+        if (!$this->is_premium()) {
+            $this->latest_content_scores_meta = $this->build_content_scores_meta(
+                '',
+                '',
+                [],
+                0,
+                'premium_required'
+            );
+            return [];
+        }
+
         $result = $this->api_request(
             'GET',
             sprintf('/v1/sites/%s/content-scores', rawurlencode($settings['site_id'])),
@@ -1588,7 +1668,7 @@ class ICap_SEO_Service_Client
                 '',
                 [],
                 0,
-                'api_error'
+                $this->extract_error_code($result) === 'premium_required' ? 'premium_required' : 'api_error'
             );
             return [];
         }
@@ -1858,6 +1938,13 @@ class ICap_SEO_Service_Client
 
         if ($status_code >= 400) {
             $error_payload = is_array($decoded_body) ? ($decoded_body['error'] ?? []) : [];
+            if (($error_payload['code'] ?? '') === 'premium_required' && $this->is_premium()) {
+                // The service says this site isn't Premium but the cached billing state says it
+                // is, so the cache is out of date. Re-read it on the next dashboard load.
+                $this->update_connection_settings([
+                    'last_billing_checked_at' => '',
+                ]);
+            }
             return [
                 'success' => false,
                 'error' => [
