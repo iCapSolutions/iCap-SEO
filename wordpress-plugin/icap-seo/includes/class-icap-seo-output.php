@@ -191,13 +191,30 @@ if (!class_exists('ICap_SEO_Output')) {
                 return;
             }
 
-            // esc_html() would corrupt valid JSON (it HTML-entity-encodes quotes, which
-            // browsers don't decode inside <script> content). A stored value containing
-            // "<" or ">" could break out of the tag, so replace both with their JSON
-            // unicode escapes. Those characters only occur inside JSON strings, where the
-            // escapes decode to the same value, so the JSON stays valid and unchanged.
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD body must stay raw JSON; esc_html() would corrupt it. "<" and ">" are neutralized above.
-            echo '<script type="application/ld+json">' . str_replace(['<', '>'], ['\u003C', '\u003E'], $schema_json) . "</script>\n";
+            // Never print the stored string itself: decode it, drop anything that isn't a
+            // JSON object or list, and re-encode it for output.
+            $schema = json_decode($schema_json, true);
+            if (!is_array($schema)) {
+                return;
+            }
+
+            $this->print_jsonld($schema);
+        }
+
+        /**
+         * Print a JSON-LD block. JSON_HEX_TAG and JSON_HEX_AMP encode "<", ">", and "&"
+         * as unicode escapes, so no value can close the script tag. esc_html() can't be
+         * used here: browsers don't decode entities inside <script>, so it would corrupt
+         * the JSON.
+         */
+        private function print_jsonld(array $data): void
+        {
+            $json = wp_json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
+            if (!is_string($json)) {
+                return;
+            }
+
+            wp_print_inline_script_tag($json, ['type' => 'application/ld+json']);
         }
 
         /**
@@ -328,13 +345,7 @@ if (!class_exists('ICap_SEO_Output')) {
                 $schema['openingHoursSpecification'] = $hours_spec;
             }
 
-            $json = wp_json_encode($schema);
-            if (!is_string($json)) {
-                return;
-            }
-
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-LD body must stay raw JSON; esc_html() would corrupt it. "<" and ">" are neutralized above.
-            echo '<script type="application/ld+json">' . str_replace(['<', '>'], ['\u003C', '\u003E'], $json) . "</script>\n";
+            $this->print_jsonld($schema);
         }
     }
 }

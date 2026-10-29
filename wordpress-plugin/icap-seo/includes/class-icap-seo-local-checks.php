@@ -1,11 +1,11 @@
 <?php
 /**
  * Local (on-site) detection for every free check: title and meta description,
- * H1, content depth, image optimization, heading and paragraph structure,
- * canonical URL, JSON-LD presence, and internal links. Page-level checks run
- * against the page fetched from this site; link and paragraph checks run against
- * the post body. The rules mirror the scan service's checks, so a page gets the
- * same result either way.
+ * H1, HTTPS, robots meta and robots.txt rules, content depth and readability,
+ * image optimization, heading and paragraph structure, canonical URL, structured
+ * data, and links. Page-level checks run against the page fetched from this site;
+ * link and paragraph checks run against the post body. The rules mirror the scan
+ * service's checks, so a page gets the same result either way.
  */
 
 if (!defined('ABSPATH')) {
@@ -32,9 +32,62 @@ class ICap_SEO_Local_Checks
         'missing_jsonld_schema',
         'no_links_detected',
         'low_internal_linking',
+        'non_https_url',
+        'noindex_detected',
+        'page_level_nofollow_detected',
+        'noimageindex_detected',
+        'nosnippet_detected',
+        'robots_txt_missing',
+        'robots_txt_blocks_page',
+        'no_visible_content',
+        'insufficient_content_depth',
+        'content_depth_improvement',
+        'readability_score_low',
+        'readability_long_sentences_high',
+        'readability_low_transition_word_usage',
+        'readability_passive_voice_high',
+        'schema_type_missing',
+        'schema_missing_required_properties',
+        'no_external_references',
+        'nofollow_on_internal_link',
     ];
 
     private const CACHE_SECONDS = 600;
+
+    /** Kept in sync with the JSON-LD generator, so a flagged missing property is one the generator fills. */
+    private const SCHEMA_REQUIRED_PROPERTIES = [
+        'Article' => ['headline', 'datePublished', 'author'],
+        'WebPage' => ['name', 'description'],
+        'FAQPage' => ['mainEntity'],
+        'HowTo' => ['name', 'step'],
+    ];
+
+    /** A sentence counts as connected when it starts with one of these. */
+    private const TRANSITION_WORDS = [
+        'however', 'therefore', 'moreover', 'furthermore', 'additionally',
+        'in addition', 'consequently', 'meanwhile', 'nevertheless', 'nonetheless',
+        'thus', 'hence', 'similarly', 'likewise', 'in contrast', 'on the other hand',
+        'for example', 'for instance', 'as a result', 'in conclusion', 'in summary',
+        'subsequently', 'accordingly', 'indeed', 'specifically', 'notably',
+        'first', 'second', 'third', 'finally', 'next', 'then', 'also', 'because',
+        'since', 'although', 'though', 'while', 'unlike', 'whereas', 'in fact',
+        'overall', 'importantly', 'in other words', 'as well',
+    ];
+
+    private const LONG_SENTENCE_WORDS = 25;
+    private const LONG_SENTENCE_RATIO = 0.25;
+    private const LOW_TRANSITION_RATIO = 0.10;
+    private const PASSIVE_VOICE_RATIO = 0.25;
+    private const PASSIVE_AUX_WORDS = ['am', 'is', 'are', 'was', 'were', 'be', 'been', 'being'];
+    private const PASSIVE_MAX_GAP_WORDS = 2;
+    private const IRREGULAR_PARTICIPLES = [
+        'written', 'done', 'made', 'given', 'taken', 'known', 'shown', 'seen',
+        'found', 'sent', 'built', 'chosen', 'spoken', 'broken', 'driven', 'eaten',
+        'forgotten', 'gone', 'grown', 'hidden', 'held', 'kept', 'left', 'lost',
+        'meant', 'paid', 'read', 'run', 'said', 'sold', 'sought', 'stolen',
+        'taught', 'thought', 'told', 'understood', 'worn', 'won', 'brought',
+        'bought', 'caught', 'put', 'set', 'spent', 'stood',
+    ];
 
     /**
      * Run every local check for a post.
@@ -48,11 +101,19 @@ class ICap_SEO_Local_Checks
         $issues = [];
         $ran = [];
 
+        if ($permalink !== '') {
+            $issues = array_merge($issues, self::https_issues($permalink));
+            $ran[] = 'non_https_url';
+        }
+
         $page_html = self::fetch_rendered_html($permalink);
         if ($page_html !== null) {
             $issues = array_merge(
                 $issues,
                 self::page_basics_issues($page_html),
+                self::robots_meta_issues($page_html),
+                self::content_depth_issues($page_html),
+                self::readability_issues($page_html),
                 self::image_issues($page_html),
                 self::heading_issues($page_html),
                 self::canonical_issues($page_html),
@@ -61,15 +122,30 @@ class ICap_SEO_Local_Checks
             $ran = array_merge($ran, [
                 'missing_title_tag', 'title_length_out_of_range', 'missing_meta_description',
                 'meta_description_length_out_of_range', 'missing_h1', 'thin_content',
+                'noindex_detected', 'page_level_nofollow_detected', 'noimageindex_detected', 'nosnippet_detected',
+                'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement',
+                'readability_score_low', 'readability_long_sentences_high',
+                'readability_low_transition_word_usage', 'readability_passive_voice_high',
                 'no_images_detected', 'images_missing_alt', 'images_missing_dimensions', 'images_not_lazy_loaded',
                 'limited_heading_structure', 'missing_canonical', 'missing_jsonld_schema',
+                'schema_type_missing', 'schema_missing_required_properties',
             ]);
+        }
+
+        // Only a robots.txt this site actually answered for counts; a failed loopback request leaves both codes unscanned.
+        $robots_txt = self::fetch_robots_txt();
+        if ($robots_txt !== null) {
+            $issues = array_merge($issues, self::robots_txt_issues($robots_txt, $permalink));
+            $ran = array_merge($ran, ['robots_txt_missing', 'robots_txt_blocks_page']);
         }
 
         // Link and paragraph checks read the post body, so they run even when the page fetch fails.
         $link_base = $permalink !== '' ? $permalink : home_url();
         $issues = array_merge($issues, self::link_issues($body_html, $link_base), self::paragraph_issues($body_html));
-        $ran = array_merge($ran, ['no_links_detected', 'low_internal_linking', 'limited_paragraph_structure']);
+        $ran = array_merge($ran, [
+            'no_links_detected', 'low_internal_linking', 'no_external_references', 'nofollow_on_internal_link',
+            'limited_paragraph_structure',
+        ]);
 
         return ['issues' => $issues, 'ran' => $ran];
     }
@@ -125,6 +201,24 @@ class ICap_SEO_Local_Checks
             'missing_jsonld_schema' => __('Page has JSON-LD structured data', 'icap-seo'),
             'no_links_detected' => __('Page includes crawlable links', 'icap-seo'),
             'low_internal_linking' => __('Page links to enough related content', 'icap-seo'),
+            'non_https_url' => __('Page is served over HTTPS', 'icap-seo'),
+            'noindex_detected' => __('Page is not accidentally excluded from search (noindex)', 'icap-seo'),
+            'page_level_nofollow_detected' => __('Page does not use a page-level nofollow directive', 'icap-seo'),
+            'noimageindex_detected' => __('Page images are not excluded from image search (noimageindex)', 'icap-seo'),
+            'nosnippet_detected' => __('Page allows a search snippet (nosnippet)', 'icap-seo'),
+            'robots_txt_missing' => __('Site has a robots.txt file', 'icap-seo'),
+            'robots_txt_blocks_page' => __('robots.txt does not block this page', 'icap-seo'),
+            'no_visible_content' => __('Page has visible content', 'icap-seo'),
+            'insufficient_content_depth' => __('Content depth meets baseline (300+ words)', 'icap-seo'),
+            'content_depth_improvement' => __('Content depth is competitive (600+ words)', 'icap-seo'),
+            'readability_score_low' => __('Content is written in plain, easy-to-read language', 'icap-seo'),
+            'readability_long_sentences_high' => __('Sentences are not too long to read easily', 'icap-seo'),
+            'readability_low_transition_word_usage' => __('Sentences use transition words to connect ideas', 'icap-seo'),
+            'readability_passive_voice_high' => __('Sentences favor active voice over passive voice', 'icap-seo'),
+            'schema_type_missing' => __('Structured data includes a valid @type', 'icap-seo'),
+            'schema_missing_required_properties' => __('Structured data includes required properties for its type', 'icap-seo'),
+            'no_external_references' => __('Page cites at least one external source', 'icap-seo'),
+            'nofollow_on_internal_link' => __('Internal links don\'t use rel="nofollow"', 'icap-seo'),
         ];
     }
 
@@ -173,6 +267,274 @@ class ICap_SEO_Local_Checks
         set_transient($cache_key, $html, self::CACHE_SECONDS);
 
         return $html;
+    }
+
+    /**
+     * Fetch this site's robots.txt. Returns '' when the site says there is none
+     * (404 or 410), and null for any other failure, so a blocked loopback request
+     * or a momentary server error isn't reported as a missing file. Cached briefly.
+     */
+    public static function fetch_robots_txt(): ?string
+    {
+        $cache_key = 'icap_seo_local_robots_txt';
+        $cached = get_transient($cache_key);
+        if (is_string($cached)) {
+            return $cached;
+        }
+
+        $response = wp_remote_get(home_url('/robots.txt'), [
+            'timeout' => 10,
+            'redirection' => 3,
+            'limit_response_size' => 512 * KB_IN_BYTES,
+        ]);
+        if (is_wp_error($response)) {
+            return null;
+        }
+
+        $status = (int) wp_remote_retrieve_response_code($response);
+        if ($status === 200) {
+            $body = (string) wp_remote_retrieve_body($response);
+        } elseif ($status === 404 || $status === 410) {
+            $body = '';
+        } else {
+            return null;
+        }
+        set_transient($cache_key, $body, self::CACHE_SECONDS);
+
+        return $body;
+    }
+
+    /**
+     * HTTPS check on the page's own URL.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function https_issues(string $permalink): array
+    {
+        if (strpos($permalink, 'https://') === 0) {
+            return [];
+        }
+
+        return [self::issue(
+            'non_https_url',
+            'high',
+            'Page URL is not HTTPS.',
+            'Serve canonical content over HTTPS only.'
+        )];
+    }
+
+    /**
+     * Robots meta directives: noindex, nofollow, noimageindex, nosnippet.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function robots_meta_issues(string $html): array
+    {
+        $content = null;
+        if (preg_match('/<meta[^>]+name=["\']robots["\'][^>]+content=["\']([^"\']*)["\']/i', $html, $match) === 1
+            || preg_match('/<meta[^>]+content=["\']([^"\']*)["\'][^>]+name=["\']robots["\']/i', $html, $match) === 1) {
+            $content = $match[1];
+        }
+        if ($content === null) {
+            return [];
+        }
+
+        $directives = array_filter(array_map(static fn(string $part): string => strtolower(trim($part)), explode(',', $content)));
+        $checks = [
+            'noindex' => ['noindex_detected', 'high', 'A noindex directive is present.', 'Remove noindex unless this page should remain out of search results.'],
+            'nofollow' => ['page_level_nofollow_detected', 'medium', 'A page-level nofollow directive is present.', 'Remove nofollow unless this page\'s outbound links should not pass link equity.'],
+            'noimageindex' => ['noimageindex_detected', 'low', 'A noimageindex directive is present.', 'Remove noimageindex unless this page\'s images should be excluded from image search.'],
+            'nosnippet' => ['nosnippet_detected', 'low', 'A nosnippet directive is present.', 'Remove nosnippet unless this page should not show a text/preview snippet in search results.'],
+        ];
+
+        $issues = [];
+        foreach ($checks as $directive => $row) {
+            if (in_array($directive, $directives, true)) {
+                $issues[] = self::issue($row[0], $row[1], $row[2], $row[3]);
+            }
+        }
+
+        return $issues;
+    }
+
+    /**
+     * robots.txt checks: the file exists, and its "User-agent: *" Disallow rules
+     * don't cover this page's path. Simple prefix matching, like the scan service.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function robots_txt_issues(string $robots_txt, string $permalink): array
+    {
+        if (trim($robots_txt) === '') {
+            return [self::issue(
+                'robots_txt_missing',
+                'low',
+                'No robots.txt was found at the site root.',
+                'Add a robots.txt file to explicitly define crawler access policy, including AI crawlers.'
+            )];
+        }
+        if ($permalink === '') {
+            return [];
+        }
+
+        $disallow_rules = [];
+        $applies = false;
+        foreach (preg_split('/\r\n|\r|\n/', $robots_txt) as $raw_line) {
+            $line = trim(explode('#', $raw_line, 2)[0]);
+            if ($line === '' || strpos($line, ':') === false) {
+                continue;
+            }
+            [$directive, $value] = array_map('trim', explode(':', $line, 2));
+            $directive = strtolower($directive);
+            if ($directive === 'user-agent') {
+                $applies = $value === '*';
+            } elseif ($directive === 'disallow' && $applies && $value !== '') {
+                $disallow_rules[] = $value;
+            }
+        }
+
+        $path = (string) wp_parse_url($permalink, PHP_URL_PATH);
+        $path = $path !== '' ? $path : '/';
+        foreach ($disallow_rules as $rule) {
+            if (strpos($path, $rule) === 0) {
+                return [self::issue(
+                    'robots_txt_blocks_page',
+                    'high',
+                    sprintf('robots.txt disallows crawling of this page\'s path (%s).', $path),
+                    'Update robots.txt so this page\'s path is not disallowed, unless it should stay out of search results.'
+                )];
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Content depth tiers on the page's visible text: none, under 300 words, under 600.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function content_depth_issues(string $html): array
+    {
+        $word_count = self::count_words(self::visible_text($html));
+
+        if ($word_count === 0) {
+            return [self::issue(
+                'no_visible_content',
+                'high',
+                'No visible content could be extracted from page HTML.',
+                'Ensure renderable body content is present.'
+            )];
+        }
+        if ($word_count < 300) {
+            return [self::issue(
+                'insufficient_content_depth',
+                'medium',
+                'Content depth is below baseline (<300 words).',
+                'Expand content coverage for user intent and topical completeness.'
+            )];
+        }
+        if ($word_count < 600) {
+            return [self::issue(
+                'content_depth_improvement',
+                'low',
+                'Content depth is moderate; additional detail may improve competitiveness.',
+                'Add examples, FAQs, and deeper explanations where relevant.',
+                'medium'
+            )];
+        }
+
+        return [];
+    }
+
+    /**
+     * Readability: Flesch reading ease, long sentences, transition words, and
+     * passive voice. Only measured from 300 words up, where the ratios mean something.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function readability_issues(string $html): array
+    {
+        $text = self::visible_text($html);
+        if (self::count_words($text) < 300) {
+            return [];
+        }
+
+        $issues = [];
+
+        preg_match_all("/[A-Za-z']+/", $text, $word_matches);
+        $words = $word_matches[0];
+        $sentence_count = preg_match_all('/[.!?]+/', $text);
+        $sentence_count = $sentence_count > 0 ? $sentence_count : 1;
+        $syllables = 0;
+        foreach ($words as $word) {
+            $syllables += self::count_syllables($word);
+        }
+        $word_total = count($words);
+        if ($word_total > 0) {
+            $reading_ease = 206.835 - 1.015 * ($word_total / $sentence_count) - 84.6 * ($syllables / $word_total);
+            $reading_ease = max(0.0, min(100.0, $reading_ease));
+            if ($reading_ease < 50) {
+                $issues[] = self::issue(
+                    'readability_score_low',
+                    'medium',
+                    sprintf('Content reading ease score is %d/100 (fairly difficult or harder).', (int) round($reading_ease)),
+                    'Shorten sentences and simplify word choice for a broader audience.',
+                    'medium'
+                );
+            }
+        }
+
+        $sentences = array_values(array_filter(array_map('trim', (array) preg_split('/(?<=[.!?])\s+/', $text)), static fn(string $s): bool => $s !== ''));
+        if (empty($sentences)) {
+            return $issues;
+        }
+        $total = count($sentences);
+
+        $long = 0;
+        $connected = 0;
+        $passive = 0;
+        foreach ($sentences as $sentence) {
+            if (self::count_words($sentence) > self::LONG_SENTENCE_WORDS) {
+                $long++;
+            }
+            if (self::starts_with_transition($sentence)) {
+                $connected++;
+            }
+            if (self::is_passive_voice($sentence)) {
+                $passive++;
+            }
+        }
+
+        if ($long / $total > self::LONG_SENTENCE_RATIO) {
+            $issues[] = self::issue(
+                'readability_long_sentences_high',
+                'medium',
+                sprintf('%d%% of sentences exceed %d words.', (int) round(100 * $long / $total), self::LONG_SENTENCE_WORDS),
+                'Break long sentences into shorter ones.',
+                'medium'
+            );
+        }
+        if ($connected / $total < self::LOW_TRANSITION_RATIO) {
+            $issues[] = self::issue(
+                'readability_low_transition_word_usage',
+                'low',
+                sprintf('Only %d%% of sentences use a transition word (however, therefore, for example, etc.) to connect ideas.', (int) round(100 * $connected / $total)),
+                'Add transition words to improve flow between sentences.',
+                'medium'
+            );
+        }
+        if ($passive / $total > self::PASSIVE_VOICE_RATIO) {
+            $issues[] = self::issue(
+                'readability_passive_voice_high',
+                'low',
+                sprintf('%d%% of sentences appear to use passive voice.', (int) round(100 * $passive / $total)),
+                'Rewrite sentences in active voice where possible.',
+                'medium'
+            );
+        }
+
+        return $issues;
     }
 
     /**
@@ -236,9 +598,7 @@ class ICap_SEO_Local_Checks
             );
         }
 
-        $visible_text = (string) preg_replace('/<(script|style)\b[^>]*>.*?<\/\1>/is', ' ', $html);
-        $visible_text = self::normalize_text((string) preg_replace('/<[^>]+>/s', ' ', $visible_text));
-        $word_count = preg_match_all("/[A-Za-z0-9']+/", $visible_text);
+        $word_count = self::count_words(self::visible_text($html));
         if ($word_count < 250) {
             $issues[] = self::issue(
                 'thin_content',
@@ -388,31 +748,90 @@ class ICap_SEO_Local_Checks
     }
 
     /**
-     * JSON-LD presence check. Flags pages with no application/ld+json block. Checking
-     * required properties and types stays with the scan service.
+     * Structured data checks: a JSON-LD block exists, it declares an @type, and
+     * each known type carries its required properties. Only the first failing
+     * step is reported, since each one depends on the step before it.
      *
      * @return array<int, array<string, string>>
      */
     public static function jsonld_issues(string $html): array
     {
-        $count = preg_match_all('/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>/i', $html);
+        preg_match_all('/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $html, $blocks);
 
-        if ($count > 0) {
+        if (count($blocks[0]) === 0) {
+            return [self::issue(
+                'missing_jsonld_schema',
+                'medium',
+                'No JSON-LD schema block detected.',
+                'Add relevant JSON-LD schema markup for page/entity type.'
+            )];
+        }
+
+        if (preg_match('/"@type"\s*:/i', $html) !== 1) {
+            return [self::issue(
+                'schema_type_missing',
+                'low',
+                'Schema block detected but @type marker was not found.',
+                'Ensure schema blocks include valid @type values.'
+            )];
+        }
+
+        $missing_by_type = [];
+        foreach ($blocks[1] as $raw_block) {
+            $decoded = json_decode(trim(html_entity_decode($raw_block, ENT_QUOTES | ENT_HTML5, 'UTF-8')), true);
+            if (!is_array($decoded)) {
+                continue;
+            }
+            if (isset($decoded['@graph']) && is_array($decoded['@graph'])) {
+                $objects = $decoded['@graph'];
+            } elseif (array_keys($decoded) === range(0, count($decoded) - 1)) {
+                $objects = $decoded;
+            } else {
+                $objects = [$decoded];
+            }
+            foreach ($objects as $object) {
+                if (!is_array($object)) {
+                    continue;
+                }
+                $types = isset($object['@type']) ? (array) $object['@type'] : [];
+                foreach ($types as $type) {
+                    if (!is_string($type) || !isset(self::SCHEMA_REQUIRED_PROPERTIES[$type])) {
+                        continue;
+                    }
+                    foreach (self::SCHEMA_REQUIRED_PROPERTIES[$type] as $property) {
+                        if (!isset($object[$property]) || (is_scalar($object[$property]) && trim((string) $object[$property]) === '')) {
+                            $missing_by_type[$type][$property] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (empty($missing_by_type)) {
             return [];
         }
 
+        ksort($missing_by_type);
+        $details = [];
+        foreach ($missing_by_type as $type => $properties) {
+            $names = array_keys($properties);
+            sort($names);
+            $details[] = $type . ': missing ' . implode(', ', $names);
+        }
+
         return [self::issue(
-            'missing_jsonld_schema',
-            'medium',
-            'No JSON-LD schema block detected.',
-            'Add relevant JSON-LD schema markup for page/entity type.'
+            'schema_missing_required_properties',
+            'low',
+            'Schema block(s) missing required properties for their declared type. ' . implode('; ', $details) . '.',
+            'Regenerate JSON-LD schema so required properties for the declared type are present.'
         )];
     }
 
     /**
-     * Internal link checks, run against the post body. Mirrors the scan service:
-     * a page with no crawlable links gets only no_links_detected; otherwise fewer
-     * than two internal links gets low_internal_linking.
+     * Link checks, run against the post body. Mirrors the scan service: a page
+     * with no crawlable links gets only no_links_detected; otherwise it checks for
+     * fewer than two internal links, no external references, and internal links
+     * marked rel="nofollow".
      *
      * @return array<int, array<string, string>>
      */
@@ -420,7 +839,7 @@ class ICap_SEO_Local_Checks
     {
         $site_netloc = strtolower((string) wp_parse_url($permalink, PHP_URL_HOST));
 
-        $hrefs = [];
+        $links = [];
         preg_match_all('/<a\b[^>]*>/i', $body_html, $anchor_tags);
         foreach ($anchor_tags[0] as $tag) {
             if (!preg_match('/href=["\']([^"\']+)["\']/i', $tag, $href_match)) {
@@ -432,10 +851,11 @@ class ICap_SEO_Local_Checks
                 || preg_match('/^(javascript|mailto|tel):/i', $href) === 1) {
                 continue;
             }
-            $hrefs[] = $href;
+            $rel = preg_match('/rel=["\']([^"\']*)["\']/i', $tag, $rel_match) === 1 ? strtolower($rel_match[1]) : '';
+            $links[] = ['href' => $href, 'rel' => $rel];
         }
 
-        if (count($hrefs) === 0) {
+        if (count($links) === 0) {
             return [self::issue(
                 'no_links_detected',
                 'medium',
@@ -445,23 +865,48 @@ class ICap_SEO_Local_Checks
         }
 
         $internal_count = 0;
-        foreach ($hrefs as $href) {
-            $href_netloc = strtolower((string) wp_parse_url($href, PHP_URL_HOST));
-            if (strpos($href, '/') === 0 || $href_netloc === '' || $href_netloc === $site_netloc) {
+        $external_count = 0;
+        $internal_nofollow = [];
+        foreach ($links as $link) {
+            $href_netloc = strtolower((string) wp_parse_url($link['href'], PHP_URL_HOST));
+            if (strpos($link['href'], '/') === 0 || $href_netloc === '' || $href_netloc === $site_netloc) {
                 $internal_count++;
+                if (in_array('nofollow', preg_split('/\s+/', $link['rel']), true)) {
+                    $internal_nofollow[$link['href']] = true;
+                }
+            } else {
+                $external_count++;
             }
         }
 
+        $issues = [];
         if ($internal_count < 2) {
-            return [self::issue(
+            $issues[] = self::issue(
                 'low_internal_linking',
                 'low',
                 'Internal linking density is low.',
                 'Add more relevant internal links to related content.'
-            )];
+            );
+        }
+        if ($external_count === 0) {
+            $issues[] = self::issue(
+                'no_external_references',
+                'low',
+                'No external references were detected.',
+                'Consider citing authoritative external sources when appropriate.',
+                'medium'
+            );
+        }
+        if (!empty($internal_nofollow)) {
+            $issues[] = self::issue(
+                'nofollow_on_internal_link',
+                'low',
+                sprintf('%d internal link(s) use rel="nofollow", which is unusual within your own site.', count($internal_nofollow)),
+                'Remove rel="nofollow" from internal links unless intentionally blocking crawl of the target page.'
+            );
         }
 
-        return [];
+        return $issues;
     }
 
     private static function normalize_text(string $text): string
@@ -474,17 +919,79 @@ class ICap_SEO_Local_Checks
         return function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
     }
 
+    /** Page text with scripts, styles, and tags removed. */
+    private static function visible_text(string $html): string
+    {
+        $text = (string) preg_replace('/<(script|style)\b[^>]*>.*?<\/\1>/is', ' ', $html);
+
+        return self::normalize_text((string) preg_replace('/<[^>]+>/s', ' ', $text));
+    }
+
+    private static function count_words(string $text): int
+    {
+        return $text === '' ? 0 : (int) preg_match_all("/[A-Za-z0-9']+/", $text);
+    }
+
+    /** Vowel-group syllable estimate, with a silent trailing "e" dropped. */
+    private static function count_syllables(string $word): int
+    {
+        $normalized = (string) preg_replace('/[^a-z]/', '', strtolower($word));
+        if ($normalized === '') {
+            return 0;
+        }
+        $count = (int) preg_match_all('/[aeiouy]+/', $normalized);
+        if (substr($normalized, -1) === 'e' && $count > 1) {
+            $count--;
+        }
+
+        return max(1, $count);
+    }
+
+    private static function starts_with_transition(string $sentence): bool
+    {
+        $normalized = strtolower(trim($sentence));
+        foreach (self::TRANSITION_WORDS as $phrase) {
+            if ($normalized === $phrase
+                || strpos($normalized, $phrase . ' ') === 0
+                || strpos($normalized, $phrase . ',') === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** A "be" auxiliary followed within a short window by a past participle. */
+    private static function is_passive_voice(string $sentence): bool
+    {
+        preg_match_all("/[a-z']+/", strtolower($sentence), $matches);
+        $words = $matches[0];
+        foreach ($words as $index => $word) {
+            if (!in_array($word, self::PASSIVE_AUX_WORDS, true)) {
+                continue;
+            }
+            foreach (array_slice($words, $index + 1, self::PASSIVE_MAX_GAP_WORDS + 1) as $candidate) {
+                if (in_array($candidate, self::IRREGULAR_PARTICIPLES, true)
+                    || (substr($candidate, -2) === 'ed' && strlen($candidate) > 3)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @return array<string, string>
      */
-    private static function issue(string $code, string $severity, string $description, string $fix): array
+    private static function issue(string $code, string $severity, string $description, string $fix, string $effort = 'low'): array
     {
         return [
             'issue_code' => $code,
             'severity' => $severity,
             'description' => $description,
             'recommended_fix' => $fix,
-            'estimated_effort' => 'low',
+            'estimated_effort' => $effort,
         ];
     }
 }

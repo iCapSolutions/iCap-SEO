@@ -2341,8 +2341,11 @@ class ICap_SEO_Admin
         $apply_images_dimensions_recommendation = in_array('images_missing_dimensions', $normalized_codes, true);
         $apply_images_lazy_loading_recommendation = in_array('images_not_lazy_loaded', $normalized_codes, true);
         $apply_canonical_recommendation = in_array('missing_canonical', $normalized_codes, true);
-        // Only the free presence check applies locally. Type and required-property fixes are premium and stay with the scan service.
-        $apply_jsonld_schema_recommendation = in_array('missing_jsonld_schema', $normalized_codes, true);
+        // The generated block declares a known @type with its required properties, so it answers all three schema checks.
+        $apply_jsonld_schema_recommendation =
+            in_array('missing_jsonld_schema', $normalized_codes, true)
+            || in_array('schema_type_missing', $normalized_codes, true)
+            || in_array('schema_missing_required_properties', $normalized_codes, true);
         $apply_heading_structure_recommendation = in_array('limited_heading_structure', $normalized_codes, true);
         $apply_internal_linking_recommendation =
             in_array('low_internal_linking', $normalized_codes, true)
@@ -4880,8 +4883,8 @@ class ICap_SEO_Admin
 
     /**
      * Canonical catalog of every issue_code the backend can emit, kept in sync with
-     * docs/seo-checks-catalog.md. `premium` mirrors the backend's tier gating: only the
-     * on-page audit runs on the basic tier, so every other layer is premium-only as a whole.
+     * docs/seo-checks-catalog.md. `premium` marks the checks that only the scan service can run:
+     * security headers as visitors receive them, and broken-link crawling. Every other check runs on this site.
      */
     private function get_seo_recommendation_catalog(): array
     {
@@ -4893,43 +4896,43 @@ class ICap_SEO_Admin
             ['issue_code' => 'meta_description_length_out_of_range', 'label' => __('Meta description length is optimized (120–170 characters)', 'icap-seo'), 'layer' => __('Baseline on-page audit', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['missing_meta_description']],
             ['issue_code' => 'missing_h1', 'label' => __('Page has an H1 heading', 'icap-seo'), 'layer' => __('Baseline on-page audit', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
             ['issue_code' => 'thin_content', 'label' => __('Page has enough visible content (250+ words)', 'icap-seo'), 'layer' => __('Baseline on-page audit', 'icap-seo'), 'premium' => false, 'apply_type' => 'preview'],
-            // Technical (seo-technical) — premium
-            ['issue_code' => 'non_https_url', 'label' => __('Page is served over HTTPS', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance'],
+            // Technical (seo-technical) — free on-site, except security headers and service reachability
+            ['issue_code' => 'non_https_url', 'label' => __('Page is served over HTTPS', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance'],
             ['issue_code' => 'content_fetch_unavailable', 'label' => __('Page is reachable for scanning', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance'],
             ['issue_code' => 'missing_canonical', 'label' => __('Page has a canonical URL', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['content_fetch_unavailable']],
-            ['issue_code' => 'noindex_detected', 'label' => __('Page is not accidentally excluded from search (noindex)', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
+            ['issue_code' => 'noindex_detected', 'label' => __('Page is not accidentally excluded from search (noindex)', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
             ['issue_code' => 'missing_security_headers', 'label' => __('Server sends recommended security headers', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
-            ['issue_code' => 'robots_txt_missing', 'label' => __('Site has a robots.txt file', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance'],
-            ['issue_code' => 'robots_txt_blocks_page', 'label' => __('robots.txt does not block this page', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['robots_txt_missing']],
-            ['issue_code' => 'page_level_nofollow_detected', 'label' => __('Page does not use a page-level nofollow directive', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
-            ['issue_code' => 'noimageindex_detected', 'label' => __('Page images are not excluded from image search (noimageindex)', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
-            ['issue_code' => 'nosnippet_detected', 'label' => __('Page allows a search snippet (nosnippet)', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
-            // Content quality (seo-content) — premium
-            ['issue_code' => 'no_visible_content', 'label' => __('Page has visible content', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview'],
-            ['issue_code' => 'insufficient_content_depth', 'label' => __('Content depth meets baseline (300+ words)', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content']],
-            ['issue_code' => 'content_depth_improvement', 'label' => __('Content depth is competitive (600+ words)', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
+            ['issue_code' => 'robots_txt_missing', 'label' => __('Site has a robots.txt file', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance'],
+            ['issue_code' => 'robots_txt_blocks_page', 'label' => __('robots.txt does not block this page', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['robots_txt_missing']],
+            ['issue_code' => 'page_level_nofollow_detected', 'label' => __('Page does not use a page-level nofollow directive', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
+            ['issue_code' => 'noimageindex_detected', 'label' => __('Page images are not excluded from image search (noimageindex)', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
+            ['issue_code' => 'nosnippet_detected', 'label' => __('Page allows a search snippet (nosnippet)', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
+            // Content quality (seo-content) — free on-site
+            ['issue_code' => 'no_visible_content', 'label' => __('Page has visible content', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'preview'],
+            ['issue_code' => 'insufficient_content_depth', 'label' => __('Content depth meets baseline (300+ words)', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content']],
+            ['issue_code' => 'content_depth_improvement', 'label' => __('Content depth is competitive (600+ words)', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
             ['issue_code' => 'limited_heading_structure', 'label' => __('Page has enough secondary headings (H2/H3)', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
             ['issue_code' => 'limited_paragraph_structure', 'label' => __('Page has enough paragraph structure', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
-            ['issue_code' => 'readability_score_low', 'label' => __('Content is written in plain, easy-to-read language', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
-            ['issue_code' => 'readability_long_sentences_high', 'label' => __('Sentences are not too long to read easily', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
-            ['issue_code' => 'readability_low_transition_word_usage', 'label' => __('Sentences use transition words to connect ideas', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
-            ['issue_code' => 'readability_passive_voice_high', 'label' => __('Sentences favor active voice over passive voice', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
-            // Structured data (seo-schema) — premium
+            ['issue_code' => 'readability_score_low', 'label' => __('Content is written in plain, easy-to-read language', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
+            ['issue_code' => 'readability_long_sentences_high', 'label' => __('Sentences are not too long to read easily', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
+            ['issue_code' => 'readability_low_transition_word_usage', 'label' => __('Sentences use transition words to connect ideas', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
+            ['issue_code' => 'readability_passive_voice_high', 'label' => __('Sentences favor active voice over passive voice', 'icap-seo'), 'layer' => __('Content quality and readability', 'icap-seo'), 'premium' => false, 'apply_type' => 'preview', 'preempted_by' => ['no_visible_content', 'insufficient_content_depth']],
+            // Structured data (seo-schema) — free on-site
             ['issue_code' => 'missing_jsonld_schema', 'label' => __('Page has JSON-LD structured data', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
-            ['issue_code' => 'schema_type_missing', 'label' => __('Structured data includes a valid @type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['missing_jsonld_schema']],
-            ['issue_code' => 'schema_missing_required_properties', 'label' => __('Structured data includes required properties for its type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['missing_jsonld_schema', 'schema_type_missing']],
-            // Images (seo-images) — premium
+            ['issue_code' => 'schema_type_missing', 'label' => __('Structured data includes a valid @type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['missing_jsonld_schema']],
+            ['issue_code' => 'schema_missing_required_properties', 'label' => __('Structured data includes required properties for its type', 'icap-seo'), 'layer' => __('Structured data schema', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['missing_jsonld_schema', 'schema_type_missing']],
+            // Images (seo-images) — free on-site
             ['issue_code' => 'no_images_detected', 'label' => __('Page includes relevant images', 'icap-seo'), 'layer' => __('Image optimization', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance'],
             ['issue_code' => 'images_missing_alt', 'label' => __('Images have descriptive alt text', 'icap-seo'), 'layer' => __('Image optimization', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['no_images_detected']],
             ['issue_code' => 'images_missing_dimensions', 'label' => __('Images have explicit width/height attributes', 'icap-seo'), 'layer' => __('Image optimization', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['no_images_detected']],
             ['issue_code' => 'images_not_lazy_loaded', 'label' => __('Below-the-fold images use lazy loading', 'icap-seo'), 'layer' => __('Image optimization', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['no_images_detected']],
-            // Links (seo-links) — premium
+            // Links (seo-links) — free on-site, except broken-link crawling
             ['issue_code' => 'no_links_detected', 'label' => __('Page includes crawlable links', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
             ['issue_code' => 'low_internal_linking', 'label' => __('Page links to enough related content', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['no_links_detected']],
-            ['issue_code' => 'no_external_references', 'label' => __('Page cites at least one external source', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
+            ['issue_code' => 'no_external_references', 'label' => __('Page cites at least one external source', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
             ['issue_code' => 'broken_internal_link_detected', 'label' => __('Internal links resolve without errors', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_links_detected']],
             ['issue_code' => 'broken_external_link_detected', 'label' => __('External references resolve without errors', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
-            ['issue_code' => 'nofollow_on_internal_link', 'label' => __('Internal links don\'t use rel="nofollow"', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
+            ['issue_code' => 'nofollow_on_internal_link', 'label' => __('Internal links don\'t use rel="nofollow"', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
         ];
     }
 
