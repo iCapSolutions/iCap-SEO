@@ -22,7 +22,7 @@ active, registered site. For step-by-step technical instructions, see [Getting s
 
 Everything that runs on your own site works without an account:
 
-- The 34 free checks on every page in **Content Scores**, with their one-click fixes.
+- The 35 free checks on every page in **Content Scores**, with their one-click fixes.
 - On-page output (meta description, canonical URL, JSON-LD schema, social sharing tags) generated from your
   existing content.
 - The editor panel's quick checks and search and social previews.
