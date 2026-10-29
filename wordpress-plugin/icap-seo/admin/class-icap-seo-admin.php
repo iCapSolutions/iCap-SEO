@@ -163,6 +163,18 @@ class ICap_SEO_Admin
     {
         $band_text_colors = self::score_band_text_colors();
 
+        // Site-wide scores come from Premium scans. Without them the widget just points at
+        // Content Scores, where the free checks run page by page.
+        if (!$this->service_client->is_premium()) {
+            $content_scores_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'content-scores'], admin_url('admin.php')));
+            echo '<div class="icap-seo-dashboard-widget">';
+            echo '<p>' . esc_html__('Open any page in Content Scores to run its SEO checks and apply fixes.', 'icap-seo') . '</p>';
+            echo '<p><a href="' . esc_url($content_scores_url) . '" class="button button-primary">'
+                . esc_html__('Open Content Scores', 'icap-seo') . '</a></p>';
+            echo '</div>';
+            return;
+        }
+
         try {
             $configured = $this->service_client->is_api_connection_configured_public();
             $score_snapshot = $this->service_client->get_site_score_snapshot($configured);
@@ -355,12 +367,15 @@ class ICap_SEO_Admin
                 $notice_code = 'google_connect_failed';
             }
         }
-        if ($billing_state === 'ai_credit_success' && $this->service_client->is_api_connection_configured_public()) {
-            // Refresh the cached AI credit balance immediately on return from a
-            // completed purchase, so the Overview tile reflects the new total right
-            // away instead of waiting for the next unrelated billing-status check.
+        if (in_array($billing_state, ['success', 'ai_credit_success'], true) && $this->service_client->is_api_connection_configured_public()) {
+            // Refresh the cached billing state and AI credit balance immediately on return
+            // from a completed purchase, so a new Premium subscription or credit total shows
+            // right away instead of waiting for the next billing-status check.
             $this->service_client->get_subscription_status(true);
+        } else {
+            $this->service_client->refresh_billing_state_if_stale();
         }
+        $service_is_premium = $this->service_client->is_premium();
         $connection_settings = $this->service_client->get_connection_settings();
         $google_connection_status = ['status' => 'not_connected'];
         if ($this->service_client->is_api_connection_configured_public()) {
@@ -395,6 +410,7 @@ class ICap_SEO_Admin
         $refresh_analytics_property = isset($_GET['refresh_analytics_property']) && sanitize_key(wp_unslash($_GET['refresh_analytics_property'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (
             $active_tab === 'settings'
+            && $service_is_premium
             && $analytics_scope_granted
             && (empty($google_connection_status['analytics_property_id']) || $refresh_analytics_property)
         ) {
@@ -414,6 +430,7 @@ class ICap_SEO_Admin
         $refresh_search_console_property = isset($_GET['refresh_search_console_property']) && sanitize_key(wp_unslash($_GET['refresh_search_console_property'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (
             $active_tab === 'settings'
+            && $service_is_premium
             && ($google_connection_status['status'] ?? '') === 'connected'
             && (empty($google_connection_status['search_console_property_url']) || $refresh_search_console_property)
         ) {
@@ -518,7 +535,8 @@ class ICap_SEO_Admin
                 $score_snapshot = $this->service_client->get_site_score_snapshot($allow_live_fetch);
             }
 
-            if (in_array($active_tab, ['seo-performance', 'site-analytics', 'keywords'], true)) {
+            // Google reports are a Premium feature; free sites see an upgrade panel instead.
+            if ($service_is_premium && in_array($active_tab, ['seo-performance', 'site-analytics', 'keywords'], true)) {
                 $seo_performance = $this->service_client->get_seo_performance($allow_live_fetch);
 
                 // Each block below re-sorts the already-fetched (server-capped top-20) rows
@@ -669,7 +687,7 @@ class ICap_SEO_Admin
                                 : '';
                             $local_post_id = $this->extract_post_id_from_content_key($selected_content_key);
                             $local_only_detail = null;
-                            if (in_array($detail_error_code, ['live_fetch_disabled', 'site_not_configured'], true) && $local_post_id > 0) {
+                            if (in_array($detail_error_code, ['live_fetch_disabled', 'site_not_configured', 'premium_required'], true) && $local_post_id > 0) {
                                 $local_only_detail = ICap_SEO_Local_Checks::detail_for_post($local_post_id);
                             }
                             if (!empty($local_only_detail)) {
@@ -1045,21 +1063,21 @@ class ICap_SEO_Admin
         }
 
         $billing_state = is_string($connection_settings['last_billing_state'] ?? '') ? $connection_settings['last_billing_state'] : '';
-        if ($billing_state === 'attention') {
+        if (in_array($billing_state, ['past_due', 'grace_period'], true)) {
             $items[] = [
                 'id' => 'billing_attention',
                 'fingerprint' => '1',
                 'severity' => 'warning',
-                'message' => __('This site\'s billing needs attention (past due or in a grace period). Resolve it to avoid a scan interruption.', 'icap-seo'),
+                'message' => __('This site\'s billing needs attention (past due or in a grace period). Resolve it to keep Premium.', 'icap-seo'),
                 'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')),
                 'action_label' => __('Review billing', 'icap-seo'),
             ];
-        } elseif ($billing_state === 'blocked') {
+        } elseif ($billing_state === 'suspended') {
             $items[] = [
                 'id' => 'billing_blocked',
                 'fingerprint' => '1',
                 'severity' => 'error',
-                'message' => __('This site\'s subscription is blocked (canceled or suspended). Scans and content-score updates are paused until it\'s resolved.', 'icap-seo'),
+                'message' => __('This site\'s account is suspended. Premium features are paused until it\'s resolved.', 'icap-seo'),
                 'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')),
                 'action_label' => __('Review billing', 'icap-seo'),
             ];
@@ -1344,6 +1362,10 @@ class ICap_SEO_Admin
         }
 
         $error_code = $this->extract_error_code($result);
+        if ($error_code === 'premium_required') {
+            $this->redirect_with_notice('scan_premium_required', 'overview');
+            return;
+        }
         if ($error_code === 'payment_required') {
             $this->redirect_with_notice('payment_required', 'overview');
             return;
@@ -1410,7 +1432,9 @@ class ICap_SEO_Admin
 
         $error_code = $this->extract_error_code($result);
         $notice = 'content_rescan_failed';
-        if ($error_code === 'payment_required') {
+        if ($error_code === 'premium_required') {
+            $notice = 'scan_premium_required';
+        } elseif ($error_code === 'payment_required') {
             $notice = 'payment_required';
         } elseif ($error_code === 'subscription_required') {
             $notice = 'subscription_required';
@@ -1592,6 +1616,10 @@ class ICap_SEO_Admin
             }
             if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
                 $this->redirect_with_notice('google_connect_not_configured', 'settings');
+                return;
+            }
+            if ($error_code === 'premium_required') {
+                $this->redirect_with_notice('google_connect_premium_required', 'settings');
                 return;
             }
             if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {

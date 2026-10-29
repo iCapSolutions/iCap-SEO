@@ -14,9 +14,9 @@ active, registered site. For step-by-step technical instructions, see [Getting s
 4. **Connect & register** — the customer enters the registration token in **Settings**, then
    completes registration from **Setup Wizard**. Site credentials are provisioned automatically at this step —
    no manual key management.
-5. **First scan** — the customer triggers a scan from **Overview** and reviews results in **Content Scores**.
-6. **Grow into Premium** — the customer can start billing checkout at any time from **Settings** to add the
-   Premium checks run by the scan service.
+5. **Upgrade to Premium** — the customer starts billing checkout from **Settings → Billing**.
+6. **First scan** — with Premium active, the customer triggers a scan from **Overview**, connects Google in
+   **Settings**, and reviews results in **Content Scores** and the report tabs.
 
 ## What works before you register
 
@@ -28,12 +28,12 @@ Everything that runs on your own site works without an account:
 - The editor panel's quick checks and search and social previews.
 - The redirect manager and 404 log, `/llms.txt`, Local SEO, and optional IndexNow pings (off by default).
 
-## What requires registration
+## What requires Premium
 
-Features provided by the iCap SEO service need a completed registration (a valid site ID and site token):
-site-wide scans and scores, Premium checks, AI-assisted drafts, Google Search Console and Analytics reports, and
-billing. Until registration completes, these show a "site not configured" state, and nothing is sent to the
-service.
+Features provided by the iCap SEO service need a registered site with an active Premium subscription:
+site-wide scans and scores, Google Search Console and Analytics reports, the 3 checks run from outside your
+site, and AI-assisted drafts. Registration itself is free and is the first step toward Premium. Until the site
+has Premium, these show an upgrade panel, and nothing is sent to the service before you register.
 
 ## Requesting a registration token
 

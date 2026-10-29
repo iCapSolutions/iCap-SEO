@@ -1,7 +1,7 @@
 # Getting started with iCap SEO
 
 This guide walks through installing iCap SEO, using the free checks, and optionally connecting the site to the
-iCap SEO service for full scans and Premium checks.
+iCap SEO service for Premium.
 
 ## Prerequisites
 
@@ -59,26 +59,28 @@ before you register.
 In **Setup Wizard**, click **Request Credentials & Register Site**. This provisions your site's connection
 credentials automatically — no manual key management needed.
 
-## 6. Run your first scan
+## 6. Activate Premium
 
-In **Overview**, click **Trigger Full Scan**. Every account gets site-wide scores; active Premium
-subscriptions also get the 3 Premium checks. Scan status updates in place.
+From **iCap SEO → Settings → Billing**, click **Start Billing Checkout** to subscribe. When you return,
+the plugin refreshes your billing status; **Check Billing Status** confirms it any time.
 
-## 7. Review your results
+## 7. Run your first scan and connect Google
+
+In **Overview**, click **Trigger Full Scan**. Scans score every page and include the 3 checks run from
+outside your site (page reachability, and broken internal and external links). Scan status updates in place.
+Then connect Google Search Console and Google Analytics in **Settings** to fill the **SEO Performance**,
+**Site Analytics**, and **Keywords** tabs.
+
+## 8. Review your results
 
 - **Overview** shows your site-wide score, scan summary, and what's included in your plan.
 - **Content Scores** shows a per-page checklist — what's passing, what needs attention, and one-click fixes.
 
-Outside of scanning, a few more tabs work immediately and don't require registration: **Redirects** (set up
+Without Premium, the free checks still run on any page you open in **Content Scores**, and a few more tabs
+work immediately without registration: **Redirects** (set up
 redirects and see a log of 404s visitors hit) and **Local SEO** (enter your business info once to output
 LocalBusiness structured data site-wide). Social sharing previews and `/llms.txt` are on automatically, no
 setup needed. IndexNow pings are off until you turn them on in **Settings**.
-
-## Activating premium
-
-From **iCap SEO → Settings**, click **Start Billing Checkout** to subscribe. Once active, **Check Billing
-Status** confirms your entitlement, and your next scan includes the Premium checks (page reachability, and
-broken internal and external links).
 
 ## Troubleshooting
 
@@ -86,8 +88,7 @@ broken internal and external links).
 |---|---|
 | No verification or token email arrives | Check spam/junk. Confirm the email address you entered is correct. Premium/AI Scanning requests wait on a review step before the token email sends. |
 | Registration fails | Double-check the registration token. Each token works once, for one site. |
-| Scan won't start | Confirm registration completed and credentials are saved in **Settings**. |
-| Only baseline checks appear | Run **Check Billing Status** to confirm your premium subscription is active. |
+| Scan won't start, or the report tabs show an upgrade panel | Run **Check Billing Status** in **Settings** to confirm your Premium subscription is active. |
 | No scores yet | Wait for the scan to finish, then refresh **Content Scores**. |
 
 For further help, contact [iCapSolutions](https://www.icapsolutions.com).
