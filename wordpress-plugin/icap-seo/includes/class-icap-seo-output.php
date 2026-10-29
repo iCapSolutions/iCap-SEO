@@ -91,10 +91,13 @@ if (!class_exists('ICap_SEO_Output')) {
             if (is_string($stored) && trim($stored) !== '') {
                 $description = $stored;
             }
-            if ($description === '' && has_excerpt($post)) {
+            // A password-protected post's excerpt and content stay private, as in core:
+            // only a meta description someone set on purpose is used.
+            $is_protected = $post->post_password !== '';
+            if ($description === '' && !$is_protected && has_excerpt($post)) {
                 $description = (string) $post->post_excerpt;
             }
-            if ($description === '') {
+            if ($description === '' && !$is_protected) {
                 $content = (string) $post->post_content;
                 $content = str_replace(
                     [
@@ -182,7 +185,8 @@ if (!class_exists('ICap_SEO_Output')) {
             }
 
             $post = get_queried_object();
-            if (!$post instanceof WP_Post) {
+            // Generated schema can quote the post body (FAQ answers, HowTo steps), so it stays off locked pages.
+            if (!$post instanceof WP_Post || post_password_required($post)) {
                 return;
             }
 

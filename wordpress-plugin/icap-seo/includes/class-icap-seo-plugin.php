@@ -242,6 +242,7 @@ class ICap_SEO_Plugin
         $posts = get_posts([
             'post_type' => ['page', 'post'],
             'post_status' => 'publish',
+            'has_password' => false,
             'posts_per_page' => 50,
             'orderby' => 'modified',
             'order' => 'DESC',
@@ -292,6 +293,15 @@ class ICap_SEO_Plugin
             return;
         }
 
+        // Any visitor can trigger a 404, so cap log writes per minute; a bot probing
+        // random URLs otherwise turns into one options-table write per request.
+        $window = (int) floor(time() / 60);
+        $rate = get_option('icap_seo_404_log_rate', []);
+        $writes = is_array($rate) && (int) ($rate['window'] ?? 0) === $window ? (int) ($rate['writes'] ?? 0) : 0;
+        if ($writes >= 30) {
+            return;
+        }
+
         $log = get_option('icap_seo_404_log', []);
         if (!is_array($log)) {
             $log = [];
@@ -325,5 +335,6 @@ class ICap_SEO_Plugin
         }
 
         update_option('icap_seo_404_log', $log, false);
+        update_option('icap_seo_404_log_rate', ['window' => $window, 'writes' => $writes + 1], false);
     }
 }
