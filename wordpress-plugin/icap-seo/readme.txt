@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.141
+Stable tag: 0.1.142
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -118,6 +118,10 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings does the
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.142 =
+* Password-protected posts keep their content private: no description is generated from their excerpt or content, generated structured data isn't printed on them, and they're left out of llms.txt.
+* The 404 log records at most 30 new hits per minute, so a burst of bad URLs can't turn into a database write per request.
 
 = 0.1.141 =
 * HTTPS, robots meta, robots.txt, content depth, readability, structured data @type and required properties, external references, and internal nofollow checks now run on your own site, free. 34 of the 38 checks run on your site.
