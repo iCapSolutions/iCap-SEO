@@ -660,7 +660,7 @@ class ICap_SEO_Service_Client
                 'success' => false,
                 'error' => [
                     'code' => 'api_base_url_missing',
-                    'message' => 'API Base URL is required before requesting registration credentials.',
+                    'message' => 'The iCap SEO service address is not configured, so registration credentials cannot be requested.',
                 ],
             ];
         }
@@ -714,7 +714,7 @@ class ICap_SEO_Service_Client
                 'success' => false,
                 'error' => [
                     'code' => 'api_base_url_missing',
-                    'message' => 'API Base URL is required before requesting registration.',
+                    'message' => 'The iCap SEO service address is not configured, so registration cannot be requested.',
                 ],
             ];
         }
@@ -736,7 +736,7 @@ class ICap_SEO_Service_Client
                 'success' => false,
                 'error' => [
                     'code' => 'api_base_url_missing',
-                    'message' => 'API Base URL is required before requesting a captcha challenge.',
+                    'message' => 'The iCap SEO service address is not configured, so a captcha challenge cannot be requested.',
                 ],
             ];
         }
@@ -1411,7 +1411,7 @@ class ICap_SEO_Service_Client
                 'success' => false,
                 'error' => [
                     'code' => 'api_base_url_missing',
-                    'message' => 'API Base URL is required before testing the connection.',
+                    'message' => 'The iCap SEO service address is not configured, so the connection cannot be tested.',
                 ],
             ];
         }
@@ -1450,7 +1450,7 @@ class ICap_SEO_Service_Client
                     'success' => false,
                     'error' => [
                         'code' => 'endpoint_not_found',
-                        'message' => 'API endpoint path was not found. Check API Base URL.',
+                        'message' => 'API endpoint path was not found. The service may be temporarily unavailable.',
                     ],
                 ];
             }
@@ -1482,7 +1482,7 @@ class ICap_SEO_Service_Client
                 'success' => false,
                 'error' => [
                     'code' => 'endpoint_not_found',
-                    'message' => 'API endpoint path was not found. Check API Base URL.',
+                    'message' => 'API endpoint path was not found. The service may be temporarily unavailable.',
                 ],
             ];
         }
@@ -1799,7 +1799,7 @@ class ICap_SEO_Service_Client
                 'success' => false,
                 'error' => [
                     'code' => 'api_base_url_missing',
-                    'message' => 'API Base URL is not configured.',
+                    'message' => 'The iCap SEO service address is not configured.',
                 ],
             ];
         }

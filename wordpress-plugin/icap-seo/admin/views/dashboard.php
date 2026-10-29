@@ -241,21 +241,21 @@ $notice_map = [
     'settings_saved' => ['type' => 'updated', 'message' => __('Connection settings saved.', 'icap-seo')],
     'register_success' => ['type' => 'updated', 'message' => __('Site registration request succeeded.', 'icap-seo')],
     'registration_token_missing' => ['type' => 'error', 'message' => __('Site registration failed. Set Registration Token in Settings or define ICAP_SEO_REGISTRATION_TOKEN in wp-config.php.', 'icap-seo')],
-    'api_base_url_missing' => ['type' => 'error', 'message' => __('Site registration failed. API Base URL is required.', 'icap-seo')],
-    'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Confirm API Base URL and Registration Token, then retry.', 'icap-seo')],
+    'api_base_url_missing' => ['type' => 'error', 'message' => __('Site registration failed. The iCap SEO service address is not configured.', 'icap-seo')],
+    'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Confirm the Registration Token, then retry.', 'icap-seo')],
     'register_failed_already_connected' => ['type' => 'error', 'message' => __('Re-registration failed. Registration tokens are single-use, so this usually means the saved token was already used to connect this site. Request a new token below, save it in Settings, then try again - your existing connection is untouched in the meantime.', 'icap-seo')],
     'registration_request_submitted' => ['type' => 'updated', 'message' => __('Registration request submitted. Check your email to verify and complete registration.', 'icap-seo')],
     'registration_request_invalid_email' => ['type' => 'error', 'message' => __('Enter a valid email address to request registration.', 'icap-seo')],
     'registration_request_invalid_tier' => ['type' => 'error', 'message' => __('Select a plan to request registration.', 'icap-seo')],
-    'registration_request_failed' => ['type' => 'error', 'message' => __('Registration request failed. Confirm API Base URL and retry.', 'icap-seo')],
+    'registration_request_failed' => ['type' => 'error', 'message' => __('Registration request failed. Check that this site can reach the iCap SEO service, then retry.', 'icap-seo')],
     'registration_request_captcha_failed' => ['type' => 'error', 'message' => __('Registration request could not be verified. Reload the page and try again.', 'icap-seo')],
     'registration_request_already_pending' => ['type' => 'error', 'message' => __('A registration request for this email is already pending. Check your inbox (including spam), or try again in a few minutes.', 'icap-seo')],
     'registration_request_disposable_email' => ['type' => 'error', 'message' => __('Please use a permanent email address to register.', 'icap-seo')],
     'connection_ok_authenticated' => ['type' => 'updated', 'message' => __('Connection test succeeded. API and saved site credentials are valid.', 'icap-seo')],
     'connection_ok_reachable' => ['type' => 'updated', 'message' => __('Connection test reached the API. Next step: register this site to provision credentials.', 'icap-seo')],
-    'connection_api_base_url_missing' => ['type' => 'error', 'message' => __('Connection test failed. API Base URL is required before testing.', 'icap-seo')],
+    'connection_api_base_url_missing' => ['type' => 'error', 'message' => __('Connection test failed. The iCap SEO service address is not configured.', 'icap-seo')],
     'connection_invalid_token' => ['type' => 'error', 'message' => __('Connection test reached the API, but Site ID/Site Token were rejected. Re-run registration in Setup Wizard.', 'icap-seo')],
-    'connection_endpoint_not_found' => ['type' => 'error', 'message' => __('Connection test reached the host but API route was not found. Confirm API Base URL points to the iCap SEO API root.', 'icap-seo')],
+    'connection_endpoint_not_found' => ['type' => 'error', 'message' => __('Connection test reached the service host, but the API route was not found. The service may be temporarily unavailable; retry later.', 'icap-seo')],
     'connection_unreachable' => ['type' => 'error', 'message' => __('Connection test could not reach the API. Verify network access and API availability.', 'icap-seo')],
     'connection_failed' => ['type' => 'error', 'message' => __('Connection test failed with an unexpected API response. Check logs and retry.', 'icap-seo')],
     'scan_queued' => ['type' => 'updated', 'message' => __('Scan request queued.', 'icap-seo')],
@@ -674,7 +674,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 <p><?php esc_html_e('Run scans and review results from the Overview and Content Scores tabs.', 'icap-seo'); ?></p>
             <?php else : ?>
                 <ol>
-                    <li><?php esc_html_e('Enter your API Base URL and Registration Token in Settings.', 'icap-seo'); ?></li>
+                    <li><?php esc_html_e('Enter your Registration Token in Settings.', 'icap-seo'); ?></li>
                     <li><?php esc_html_e('Test the connection to confirm the API is reachable.', 'icap-seo'); ?></li>
                     <li><?php esc_html_e('Register this site to provision your scan credentials.', 'icap-seo'); ?></li>
                     <li><?php esc_html_e('Head to the Overview tab to run your first scan.', 'icap-seo'); ?></li>
@@ -725,7 +725,7 @@ if ($notice_code === 'remediation_apply_noop') {
             </form>
             <p class="description">
                 <?php esc_html_e('Connection profile:', 'icap-seo'); ?>
-                <?php esc_html_e('API Base URL', 'icap-seo'); ?>
+                <?php esc_html_e('Service address', 'icap-seo'); ?>
                 <code><?php echo esc_html($connection_settings['api_base_url'] !== '' ? 'configured' : 'missing'); ?></code>
                 |
                 <?php esc_html_e('Site credentials', 'icap-seo'); ?>
