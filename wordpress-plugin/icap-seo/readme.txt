@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.142
+Stable tag: 0.1.143
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -118,6 +118,9 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings does the
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.143 =
+* Setup and settings messages now refer to the fixed iCap SEO service address instead of an editable API Base URL field, matching the read-only Connection settings.
 
 = 0.1.142 =
 * Password-protected posts keep their content private: no description is generated from their excerpt or content, generated structured data isn't printed on them, and they're left out of llms.txt.
