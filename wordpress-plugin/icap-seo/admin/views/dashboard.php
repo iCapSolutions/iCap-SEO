@@ -1232,7 +1232,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     </div>
                     <?php if (!empty($content_detail_is_local)) : ?>
                     <div class="notice notice-info inline" style="margin:12px 0;">
-                        <p><?php esc_html_e('These free checks ran on this site, and their fixes apply here without any connection. Registering adds the Premium checks, full-site scans, and AI drafts from the iCap SEO service.', 'icap-seo'); ?></p>
+                        <p><?php esc_html_e('These free checks ran on this site, and their fixes apply here without any connection. Registering with the iCap SEO service adds full-site scans and AI drafts; a Premium subscription adds security-header and broken-link checks run from outside your site.', 'icap-seo'); ?></p>
                     </div>
                     <?php else : ?>
                     <div class="icap-seo-actions" style="margin:12px 0;">
@@ -3059,7 +3059,7 @@ if ($notice_code === 'remediation_apply_noop') {
 
             <hr>
             <h3><?php esc_html_e('Billing', 'icap-seo'); ?></h3>
-            <p class="description"><?php esc_html_e('Manage your iCap SEO subscription. Premium adds 22 checks run by the iCap SEO scan service to the 16 free checks.', 'icap-seo'); ?></p>
+            <p class="description"><?php esc_html_e('Manage your iCap SEO subscription. Premium adds security-header and broken-link checks that the iCap SEO scan service runs from outside your site, on top of the 34 checks that run on this site.', 'icap-seo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
                 <input type="hidden" name="action" value="icap_seo_check_billing_status">
                 <?php wp_nonce_field('icap_seo_check_billing_status'); ?>
@@ -3097,23 +3097,6 @@ if ($notice_code === 'remediation_apply_noop') {
             }
             if ($overview_scan_tier_value === '' && $latest_scores_scan_tier !== '') {
                 $overview_scan_tier_value = $latest_scores_scan_tier;
-            }
-            $overview_scan_layers_data = [];
-            if (isset($scan_status_data['scan_layers']) && is_array($scan_status_data['scan_layers'])) {
-                $overview_scan_layers_data = $scan_status_data['scan_layers'];
-            }
-            if (empty($overview_scan_layers_data) && !empty($latest_scores_scan_layers)) {
-                $overview_scan_layers_data = $latest_scores_scan_layers;
-            }
-            $overview_premium_locked_layer_names = [];
-            if (isset($overview_scan_layers_data['premium_locked']) && is_array($overview_scan_layers_data['premium_locked'])) {
-                foreach ($overview_scan_layers_data['premium_locked'] as $layer_row) {
-                    if (is_array($layer_row) && isset($layer_row['name']) && is_string($layer_row['name'])) {
-                        $overview_premium_locked_layer_names[] = sanitize_text_field($layer_row['name']);
-                    } elseif (is_string($layer_row)) {
-                        $overview_premium_locked_layer_names[] = sanitize_text_field($layer_row);
-                    }
-                }
             }
             $overview_latest_scan_id_display = $connection_settings['last_scan_id'];
             if (isset($scan_status_data['scan_id']) && is_string($scan_status_data['scan_id'])) {
@@ -3387,15 +3370,15 @@ if ($notice_code === 'remediation_apply_noop') {
             </div>
 
             <div class="icap-seo-feature-summary">
-                <p><?php esc_html_e('iCap SEO checks your pages — 16 checks run on this site, plus 22 Premium checks in the iCap SEO scan service — and fixes most of what it finds, with one click or with a preview you approve first.', 'icap-seo'); ?></p>
+                <p><?php esc_html_e('iCap SEO checks your pages — 34 checks run on this site, plus 4 that only the iCap SEO scan service can run from outside it — and fixes most of what it finds, with one click or with a preview you approve first.', 'icap-seo'); ?></p>
                 <ul>
                     <li><?php esc_html_e('Baseline on-page audit — title tags, meta descriptions, headings, paragraphs, content depth', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Image checks — alt text, dimensions, lazy loading', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Canonical URLs, JSON-LD presence, and basic internal links', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Crawlability & security — HTTPS, robots.txt, noindex, security headers', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Content quality & readability — depth and plain-language clarity', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Structured data validation — required properties and types for richer search results', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('External and broken link checks', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Crawlability — HTTPS, robots.txt, noindex and other robots meta rules, canonical URLs', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Content quality & readability — depth, reading ease, long sentences, transitions, passive voice', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Structured data — JSON-LD presence, @type, and required properties', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Links — internal links, external references, internal nofollow', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Security headers as visitors receive them, and broken internal and external links, checked by crawling from outside your site', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium scan service', 'icap-seo'); ?>)</em></li>
                 </ul>
                 <p><?php esc_html_e('Also included, free, outside the 38-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, optional IndexNow pings (off by default), an llms.txt file for AI assistants, and LocalBusiness structured data for businesses with a physical location.', 'icap-seo'); ?></p>
             </div>
@@ -3453,13 +3436,6 @@ if ($notice_code === 'remediation_apply_noop') {
                         ['a' => ['href' => []]]
                     );
                     ?>
-                </p>
-            <?php endif; ?>
-
-            <?php if (!empty($overview_premium_locked_layer_names)) : ?>
-                <p class="description">
-                    <?php esc_html_e('Premium-only layers not included in this scan:', 'icap-seo'); ?>
-                    <code><?php echo esc_html(implode(', ', $overview_premium_locked_layer_names)); ?></code>
                 </p>
             <?php endif; ?>
         <?php endif; ?>

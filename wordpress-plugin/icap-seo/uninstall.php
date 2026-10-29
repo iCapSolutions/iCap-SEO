@@ -31,6 +31,7 @@ if ($icap_seo_site_id !== '') {
     delete_transient(sprintf('icap_seo_performance_%s', md5($icap_seo_site_id)));
 }
 
+delete_transient('icap_seo_local_robots_txt');
 delete_option('icap_seo_settings');
 delete_option('icap_seo_indexnow_key');
 delete_option('icap_seo_indexnow_enabled');

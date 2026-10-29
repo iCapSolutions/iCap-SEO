@@ -5,7 +5,7 @@ mirrors what you'll see in the plugin's **Content Scores** tab.
 
 ## How to read this
 
-- **Plan** — checks marked **(Free)** run on your own WordPress site, with or without registering, and their fixes are applied there too. All other checks are **Premium**: they run in the iCap SEO scan service, which crawls your pages from outside your site the way a search engine does, and need an active subscription.
+- **Plan** — checks marked **(Free)** run on your own WordPress site, with or without registering, and their fixes are applied there too. 34 of the 38 checks are Free. The other 4 are **Premium**: they need an outside view of your site, so the iCap SEO scan service runs them from its own servers, and they need an active subscription.
 - **Fix** — how the issue gets resolved once found:
   - **Automatic fix** — iCap SEO writes the fix directly (title, meta description, alt text, schema markup, etc.) the moment you approve it. No manual editing required.
   - **Preview & publish** — iCap SEO drafts the fix and shows it to you first; nothing is saved or published until you explicitly approve it. Used only where auto-writing risky content (like new paragraphs) without review isn't safe.
@@ -33,16 +33,16 @@ Technical trust and crawlability signals — whether search engines and AI crawl
 
 | Check | Why it matters | Fix |
 |---|---|---|
-| Page is served over HTTPS | Non-HTTPS pages are flagged "Not secure" by browsers and are disadvantaged in search rankings. | Guidance only |
-| Page is reachable for scanning | If iCap SEO can't fetch the page, search engines most likely can't either. | Guidance only |
+| Page is served over HTTPS **(Free)** | Non-HTTPS pages are flagged "Not secure" by browsers and are disadvantaged in search rankings. | Guidance only |
+| Page is reachable for scanning **(Premium)** | If iCap SEO can't fetch the page, search engines most likely can't either. | Guidance only |
 | Page has a canonical URL **(Free)** | Canonical tags tell search engines which URL is the "official" version of a page, avoiding duplicate-content confusion when the same content is reachable multiple ways. | Automatic fix |
-| Page is not accidentally excluded from search (noindex) | A stray `noindex` tag hides a page from search results entirely — often without anyone noticing until traffic drops. | Guidance only |
-| Server sends recommended security headers | Headers like HSTS and X-Frame-Options protect visitors from common attacks and are a baseline trust signal. | Guidance only |
-| Site has a robots.txt file | robots.txt tells search engines — and AI crawlers — which parts of your site they're allowed to visit. Without one, crawler behavior is left to whatever each crawler assumes by default. | Guidance only |
-| robots.txt does not block this page | A robots.txt rule can accidentally hide an otherwise-fine page from search engines entirely. | Guidance only |
-| Page does not use a page-level nofollow directive | A page-wide `nofollow` meta directive stops link equity from passing through any of this page's outbound links — often set by mistake. | Guidance only |
-| Page images are not excluded from image search (noimageindex) | A stray `noimageindex` directive hides this page's images from image search results. | Guidance only |
-| Page allows a search snippet (nosnippet) | A `nosnippet` directive blocks search engines from showing a text preview for this page, which usually hurts click-through. | Guidance only |
+| Page is not accidentally excluded from search (noindex) **(Free)** | A stray `noindex` tag hides a page from search results entirely — often without anyone noticing until traffic drops. | Guidance only |
+| Server sends recommended security headers **(Premium)** | Headers like HSTS and X-Frame-Options protect visitors from common attacks and are a baseline trust signal. | Guidance only |
+| Site has a robots.txt file **(Free)** | robots.txt tells search engines — and AI crawlers — which parts of your site they're allowed to visit. Without one, crawler behavior is left to whatever each crawler assumes by default. | Guidance only |
+| robots.txt does not block this page **(Free)** | A robots.txt rule can accidentally hide an otherwise-fine page from search engines entirely. | Guidance only |
+| Page does not use a page-level nofollow directive **(Free)** | A page-wide `nofollow` meta directive stops link equity from passing through any of this page's outbound links — often set by mistake. | Guidance only |
+| Page images are not excluded from image search (noimageindex) **(Free)** | A stray `noimageindex` directive hides this page's images from image search results. | Guidance only |
+| Page allows a search snippet (nosnippet) **(Free)** | A `nosnippet` directive blocks search engines from showing a text preview for this page, which usually hurts click-through. | Guidance only |
 
 ## Content quality and readability
 
@@ -50,15 +50,15 @@ Whether a page has enough substance, structure, and clarity to genuinely serve a
 
 | Check | Why it matters | Fix |
 |---|---|---|
-| Page has visible content | A page that renders empty offers search engines nothing to evaluate or rank. | Preview & publish |
-| Content depth meets baseline (300+ words) | Pages with very little substance rarely compete well against more thorough pages on the same topic. | Preview & publish |
-| Content depth is competitive (600+ words) | For competitive topics, deeper and more complete pages tend to outperform shallow ones. | Preview & publish |
+| Page has visible content **(Free)** | A page that renders empty offers search engines nothing to evaluate or rank. | Preview & publish |
+| Content depth meets baseline (300+ words) **(Free)** | Pages with very little substance rarely compete well against more thorough pages on the same topic. | Preview & publish |
+| Content depth is competitive (600+ words) **(Free)** | For competitive topics, deeper and more complete pages tend to outperform shallow ones. | Preview & publish |
 | Page has enough secondary headings (H2/H3) **(Free)** | Subheadings break content into scannable sections for readers and give search engines a clear outline of what the page covers. | Automatic fix |
 | Page has enough paragraph structure **(Free)** | Long, unbroken blocks of text are harder to read and more likely to make visitors leave before finishing. | Automatic fix |
-| Content is written in plain, easy-to-read language | Dense, jargon-heavy writing is harder for visitors to act on — readability affects how usable a page feels to real readers. | Preview & publish |
-| Sentences are not too long to read easily | A page full of long, run-on sentences is harder to skim and more likely to lose a reader partway through. | Preview & publish |
-| Sentences use transition words to connect ideas | Words like "however" or "for example" help readers follow how ideas relate to each other; without them, writing can feel choppy. | Preview & publish |
-| Sentences favor active voice over passive voice | Active voice is usually more direct and easier to follow, making it clearer who is doing what. | Preview & publish |
+| Content is written in plain, easy-to-read language **(Free)** | Dense, jargon-heavy writing is harder for visitors to act on — readability affects how usable a page feels to real readers. | Preview & publish |
+| Sentences are not too long to read easily **(Free)** | A page full of long, run-on sentences is harder to skim and more likely to lose a reader partway through. | Preview & publish |
+| Sentences use transition words to connect ideas **(Free)** | Words like "however" or "for example" help readers follow how ideas relate to each other; without them, writing can feel choppy. | Preview & publish |
+| Sentences favor active voice over passive voice **(Free)** | Active voice is usually more direct and easier to follow, making it clearer who is doing what. | Preview & publish |
 
 ## Structured data schema
 
@@ -67,8 +67,8 @@ Whether search engines can understand exactly what a page represents — which u
 | Check | Why it matters | Fix |
 |---|---|---|
 | Page has JSON-LD structured data **(Free)** | Structured data explicitly tells search engines what kind of content a page is, instead of leaving them to guess. | Automatic fix |
-| Structured data includes a valid @type | A schema block with no recognized type gives search engines nothing they can actually use. | Guidance only |
-| Structured data includes required properties for its type | An incomplete schema block — missing a headline, author, or date, for example — may be ignored by search engines entirely rather than partially credited. | Guidance only |
+| Structured data includes a valid @type **(Free)** | A schema block with no recognized type gives search engines nothing they can actually use. | Automatic fix |
+| Structured data includes required properties for its type **(Free)** | An incomplete schema block — missing a headline, author, or date, for example — may be ignored by search engines entirely rather than partially credited. | Automatic fix |
 
 ## Image optimization
 
@@ -89,20 +89,20 @@ Whether a page's links help visitors and search engines navigate your site — a
 |---|---|---|
 | Page includes crawlable links **(Free)** | Links are how search engines discover the rest of your site. A page with none is a dead end for crawlers. | Automatic fix |
 | Page links to enough related content **(Free)** | Internal links help visitors — and search engines — find more of your relevant content instead of leaving after one page. | Automatic fix |
-| Page cites at least one external source | Linking to credible outside sources is a trust signal that supports the page's claims. | Guidance only |
-| Internal links resolve without errors | A broken link to your own content wastes the click and signals a poorly maintained site to visitors and search engines alike. | Guidance only |
-| External references resolve without errors | A dead external link undermines the credibility of whatever you were citing and creates a poor visitor experience. | Guidance only |
-| Internal links don't use rel="nofollow" | Marking your own internal links `nofollow` is usually accidental and stops link equity from flowing to that page. | Guidance only |
+| Page cites at least one external source **(Free)** | Linking to credible outside sources is a trust signal that supports the page's claims. | Guidance only |
+| Internal links resolve without errors **(Premium)** | A broken link to your own content wastes the click and signals a poorly maintained site to visitors and search engines alike. | Guidance only |
+| External references resolve without errors **(Premium)** | A dead external link undermines the credibility of whatever you were citing and creates a poor visitor experience. | Guidance only |
+| Internal links don't use rel="nofollow" **(Free)** | Marking your own internal links `nofollow` is usually accidental and stops link equity from flowing to that page. | Guidance only |
 
 ---
 
 ## Free vs. Premium at a glance
 
-- **Free (16 checks)**: title, meta description, H1, content depth, heading and paragraph structure, canonical URL, JSON-LD presence, images, and internal links. They run on your own site and need no account.
-- **Premium (22 checks)**: technical crawlability and security headers, readability, structured data validation, deeper content-depth analysis, and external and broken link checks, run by the iCap SEO scan service.
+- **Free (34 checks)**: title, meta description, H1, HTTPS, robots meta rules and robots.txt, content depth, readability, heading and paragraph structure, canonical URL, structured data (presence, @type, and required properties), images, internal links, external references, and internal nofollow links. They run on your own site and need no account.
+- **Premium (4 checks)**: whether the scan service can reach the page, the security headers visitors actually receive (often set by a CDN or host rather than WordPress), and broken internal and external links, found by requesting every linked URL. These run from the iCap SEO scan service's servers.
 
 ## Fix-type summary
 
-- **14 checks** get an automatic fix on approval, applied on your own site.
+- **16 checks** get an automatic fix on approval, applied on your own site.
 - **8 checks** (the content-depth family, plus the readability score and its three sub-checks) use preview & publish — a draft is generated and shown before anything is saved.
-- **16 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, removing a noindex tag without human confirmation, or editing someone's structured data by guesswork).
+- **14 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, or removing a noindex tag without human confirmation).

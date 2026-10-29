@@ -1,9 +1,9 @@
 # iCap SEO
 
 iCap SEO is a WordPress plugin that checks your pages for common SEO problems, explains what it finds in plain
-language, and fixes most of it for you, with one click or with a preview you approve first. Its 16 free checks
-and their fixes run on your own site with no account. An optional cloud service adds site-wide scans, 22 Premium
-checks, AI-assisted drafts, and Google Search Console and Analytics reports.
+language, and fixes most of it for you, with one click or with a preview you approve first. 34 of its 38 checks
+and their fixes run on your own site with no account. An optional cloud service adds site-wide scans, 4 Premium
+checks that need an outside view of your site, AI-assisted drafts, and Google Search Console and Analytics reports.
 
 Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
 
@@ -48,11 +48,12 @@ activation and troubleshooting.
 
 ## Free vs. Premium
 
-- **Free**: 16 checks that run on your own site (title, meta description, H1, content depth, heading and
-  paragraph structure, canonical URL, JSON-LD presence, images, and internal links) with one-click fixes, plus
-  social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt, and Local SEO.
-- **Premium**: 22 more checks run by the iCap SEO scan service — technical crawlability, security headers,
-  readability, structured data validation, and external and broken link checks.
+- **Free**: 34 checks that run on your own site (title, meta description, H1, HTTPS, robots meta rules and
+  robots.txt, content depth, readability, heading and paragraph structure, canonical URL, structured data,
+  images, internal links, external references, and internal nofollow links) with one-click fixes or guidance,
+  plus social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt, and Local SEO.
+- **Premium**: 4 checks run by the iCap SEO scan service from outside your site — page reachability, the
+  security headers visitors actually receive, and broken internal and external links.
 
 ## Support
 
