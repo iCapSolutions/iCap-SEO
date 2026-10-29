@@ -5,7 +5,7 @@ mirrors what you'll see in the plugin's **Content Scores** tab.
 
 ## How to read this
 
-- **Plan** — checks marked **(Free)** run on your own WordPress site, with or without registering, and their fixes are applied there too. 34 of the 38 checks are Free. The other 4 are **Premium**: they need an outside view of your site, so the iCap SEO scan service runs them from its own servers, and they need an active subscription.
+- **Plan** — checks marked **(Free)** run on your own WordPress site, with or without registering, and their fixes are applied there too. 35 of the 38 checks are Free. The other 3 are **Premium**: they need an outside view of your site, so the iCap SEO scan service runs them from its own servers, and they need an active subscription.
 - **Fix** — how the issue gets resolved once found:
   - **Automatic fix** — iCap SEO writes the fix directly (title, meta description, alt text, schema markup, etc.) the moment you approve it. No manual editing required.
   - **Preview & publish** — iCap SEO drafts the fix and shows it to you first; nothing is saved or published until you explicitly approve it. Used only where auto-writing risky content (like new paragraphs) without review isn't safe.
@@ -37,7 +37,7 @@ Technical trust and crawlability signals — whether search engines and AI crawl
 | Page is reachable for scanning **(Premium)** | If iCap SEO can't fetch the page, search engines most likely can't either. | Guidance only |
 | Page has a canonical URL **(Free)** | Canonical tags tell search engines which URL is the "official" version of a page, avoiding duplicate-content confusion when the same content is reachable multiple ways. | Automatic fix |
 | Page is not accidentally excluded from search (noindex) **(Free)** | A stray `noindex` tag hides a page from search results entirely — often without anyone noticing until traffic drops. | Guidance only |
-| Server sends recommended security headers **(Premium)** | Headers like HSTS and X-Frame-Options protect visitors from common attacks and are a baseline trust signal. | Guidance only |
+| Server sends recommended security headers **(Free)** | Headers like HSTS and X-Frame-Options protect visitors from common attacks and are a baseline trust signal. | Guidance only |
 | Site has a robots.txt file **(Free)** | robots.txt tells search engines — and AI crawlers — which parts of your site they're allowed to visit. Without one, crawler behavior is left to whatever each crawler assumes by default. | Guidance only |
 | robots.txt does not block this page **(Free)** | A robots.txt rule can accidentally hide an otherwise-fine page from search engines entirely. | Guidance only |
 | Page does not use a page-level nofollow directive **(Free)** | A page-wide `nofollow` meta directive stops link equity from passing through any of this page's outbound links — often set by mistake. | Guidance only |
@@ -98,8 +98,8 @@ Whether a page's links help visitors and search engines navigate your site — a
 
 ## Free vs. Premium at a glance
 
-- **Free (34 checks)**: title, meta description, H1, HTTPS, robots meta rules and robots.txt, content depth, readability, heading and paragraph structure, canonical URL, structured data (presence, @type, and required properties), images, internal links, external references, and internal nofollow links. They run on your own site and need no account.
-- **Premium (4 checks)**: whether the scan service can reach the page, the security headers visitors actually receive (often set by a CDN or host rather than WordPress), and broken internal and external links, found by requesting every linked URL. These run from the iCap SEO scan service's servers.
+- **Free (35 checks)**: title, meta description, H1, HTTPS, robots meta rules and robots.txt, security headers, content depth, readability, heading and paragraph structure, canonical URL, structured data (presence, @type, and required properties), images, internal links, external references, and internal nofollow links. They run on your own site and need no account.
+- **Premium (3 checks)**: whether the scan service can reach the page, and broken internal and external links, found by requesting every linked URL. These run from the iCap SEO scan service's servers.
 
 ## Fix-type summary
 

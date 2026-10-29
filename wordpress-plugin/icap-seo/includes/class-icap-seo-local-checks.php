@@ -1,11 +1,11 @@
 <?php
 /**
  * Local (on-site) detection for every free check: title and meta description,
- * H1, HTTPS, robots meta and robots.txt rules, content depth and readability,
- * image optimization, heading and paragraph structure, canonical URL, structured
- * data, and links. Page-level checks run against the page fetched from this site;
- * link and paragraph checks run against the post body. The rules mirror the scan
- * service's checks, so a page gets the same result either way.
+ * H1, HTTPS, robots meta and robots.txt rules, security headers, content depth
+ * and readability, image optimization, heading and paragraph structure, canonical
+ * URL, structured data, and links. Page-level checks run against the page fetched
+ * from this site; link and paragraph checks run against the post body. The rules
+ * mirror the scan service's checks, so a page gets the same result either way.
  */
 
 if (!defined('ABSPATH')) {
@@ -39,6 +39,7 @@ class ICap_SEO_Local_Checks
         'nosnippet_detected',
         'robots_txt_missing',
         'robots_txt_blocks_page',
+        'missing_security_headers',
         'no_visible_content',
         'insufficient_content_depth',
         'content_depth_improvement',
@@ -53,6 +54,15 @@ class ICap_SEO_Local_Checks
     ];
 
     private const CACHE_SECONDS = 600;
+
+    /** Mirrors the scan service's recommended security-header list (lowercase names, presence only). */
+    private const REQUIRED_SECURITY_HEADERS = [
+        'strict-transport-security',
+        'x-content-type-options',
+        'x-frame-options',
+        'content-security-policy',
+        'referrer-policy',
+    ];
 
     /** Kept in sync with the JSON-LD generator, so a flagged missing property is one the generator fills. */
     private const SCHEMA_REQUIRED_PROPERTIES = [
@@ -106,12 +116,14 @@ class ICap_SEO_Local_Checks
             $ran[] = 'non_https_url';
         }
 
-        $page_html = self::fetch_rendered_html($permalink);
-        if ($page_html !== null) {
+        $page = self::fetch_rendered_page($permalink);
+        if ($page !== null) {
+            $page_html = $page['html'];
             $issues = array_merge(
                 $issues,
                 self::page_basics_issues($page_html),
                 self::robots_meta_issues($page_html),
+                self::security_header_issues($page['headers']),
                 self::content_depth_issues($page_html),
                 self::readability_issues($page_html),
                 self::image_issues($page_html),
@@ -123,6 +135,7 @@ class ICap_SEO_Local_Checks
                 'missing_title_tag', 'title_length_out_of_range', 'missing_meta_description',
                 'meta_description_length_out_of_range', 'missing_h1', 'thin_content',
                 'noindex_detected', 'page_level_nofollow_detected', 'noimageindex_detected', 'nosnippet_detected',
+                'missing_security_headers',
                 'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement',
                 'readability_score_low', 'readability_long_sentences_high',
                 'readability_low_transition_word_usage', 'readability_passive_voice_high',
@@ -208,6 +221,7 @@ class ICap_SEO_Local_Checks
             'nosnippet_detected' => __('Page allows a search snippet (nosnippet)', 'icap-seo'),
             'robots_txt_missing' => __('Site has a robots.txt file', 'icap-seo'),
             'robots_txt_blocks_page' => __('robots.txt does not block this page', 'icap-seo'),
+            'missing_security_headers' => __('Server sends recommended security headers', 'icap-seo'),
             'no_visible_content' => __('Page has visible content', 'icap-seo'),
             'insufficient_content_depth' => __('Content depth meets baseline (300+ words)', 'icap-seo'),
             'content_depth_improvement' => __('Content depth is competitive (600+ words)', 'icap-seo'),
@@ -230,23 +244,36 @@ class ICap_SEO_Local_Checks
     {
         $permalink = get_permalink($post_id);
         if (is_string($permalink) && $permalink !== '') {
-            delete_transient('icap_seo_local_html_' . md5($permalink));
+            delete_transient('icap_seo_local_page_' . md5($permalink));
         }
     }
 
     /**
-     * Fetch a page's rendered HTML from this site. Results are cached briefly so
-     * repeat dashboard loads don't refetch the page.
+     * Fetch a page's rendered HTML from this site.
      */
     public static function fetch_rendered_html(string $permalink): ?string
+    {
+        $page = self::fetch_rendered_page($permalink);
+
+        return $page !== null ? $page['html'] : null;
+    }
+
+    /**
+     * Fetch a page from this site: its rendered HTML plus the response headers it
+     * was served with (lowercase names), for the security-header check. Results
+     * are cached briefly so repeat dashboard loads don't refetch the page.
+     *
+     * @return array{html: string, headers: array<string, string>}|null
+     */
+    public static function fetch_rendered_page(string $permalink): ?array
     {
         if ($permalink === '' || strpos($permalink, home_url()) !== 0) {
             return null;
         }
 
-        $cache_key = 'icap_seo_local_html_' . md5($permalink);
+        $cache_key = 'icap_seo_local_page_' . md5($permalink);
         $cached = get_transient($cache_key);
-        if (is_string($cached)) {
+        if (is_array($cached) && isset($cached['html'], $cached['headers'])) {
             return $cached;
         }
 
@@ -264,9 +291,19 @@ class ICap_SEO_Local_Checks
             return null;
         }
 
-        set_transient($cache_key, $html, self::CACHE_SECONDS);
+        $headers = [];
+        $response_headers = wp_remote_retrieve_headers($response);
+        $header_pairs = is_object($response_headers) && method_exists($response_headers, 'getAll')
+            ? $response_headers->getAll()
+            : (array) $response_headers;
+        foreach ($header_pairs as $name => $value) {
+            $headers[strtolower((string) $name)] = is_array($value) ? implode(', ', $value) : (string) $value;
+        }
 
-        return $html;
+        $page = ['html' => $html, 'headers' => $headers];
+        set_transient($cache_key, $page, self::CACHE_SECONDS);
+
+        return $page;
     }
 
     /**
@@ -407,6 +444,35 @@ class ICap_SEO_Local_Checks
         }
 
         return [];
+    }
+
+    /**
+     * Recommended security headers, read from the response this site served for
+     * the page. Presence-only, matching the scan service's rule; headers added
+     * by a CDN in front of the site are better verified by a Premium scan's
+     * outside view, but the rule itself is the same.
+     *
+     * @param array<string, string> $headers Response headers with lowercase names.
+     * @return array<int, array<string, string>>
+     */
+    public static function security_header_issues(array $headers): array
+    {
+        $missing = [];
+        foreach (self::REQUIRED_SECURITY_HEADERS as $header_name) {
+            if (!array_key_exists($header_name, $headers)) {
+                $missing[] = $header_name;
+            }
+        }
+        if ($missing === []) {
+            return [];
+        }
+
+        return [self::issue(
+            'missing_security_headers',
+            'medium',
+            sprintf('%d recommended security header(s) missing: %s.', count($missing), implode(', ', $missing)),
+            'Add the missing security headers at the server/CDN level (not settable from WordPress content).'
+        )];
     }
 
     /**

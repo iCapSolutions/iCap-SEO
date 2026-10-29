@@ -4884,7 +4884,7 @@ class ICap_SEO_Admin
     /**
      * Canonical catalog of every issue_code the backend can emit, kept in sync with
      * docs/seo-checks-catalog.md. `premium` marks the checks that only the scan service can run:
-     * security headers as visitors receive them, and broken-link crawling. Every other check runs on this site.
+     * reachability and broken-link crawling from outside the site. Every other check runs on this site.
      */
     private function get_seo_recommendation_catalog(): array
     {
@@ -4896,12 +4896,12 @@ class ICap_SEO_Admin
             ['issue_code' => 'meta_description_length_out_of_range', 'label' => __('Meta description length is optimized (120–170 characters)', 'icap-seo'), 'layer' => __('Baseline on-page audit', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['missing_meta_description']],
             ['issue_code' => 'missing_h1', 'label' => __('Page has an H1 heading', 'icap-seo'), 'layer' => __('Baseline on-page audit', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
             ['issue_code' => 'thin_content', 'label' => __('Page has enough visible content (250+ words)', 'icap-seo'), 'layer' => __('Baseline on-page audit', 'icap-seo'), 'premium' => false, 'apply_type' => 'preview'],
-            // Technical (seo-technical) — free on-site, except security headers and service reachability
+            // Technical (seo-technical) — free on-site, except service reachability
             ['issue_code' => 'non_https_url', 'label' => __('Page is served over HTTPS', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance'],
             ['issue_code' => 'content_fetch_unavailable', 'label' => __('Page is reachable for scanning', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance'],
             ['issue_code' => 'missing_canonical', 'label' => __('Page has a canonical URL', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto', 'preempted_by' => ['content_fetch_unavailable']],
             ['issue_code' => 'noindex_detected', 'label' => __('Page is not accidentally excluded from search (noindex)', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
-            ['issue_code' => 'missing_security_headers', 'label' => __('Server sends recommended security headers', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
+            ['issue_code' => 'missing_security_headers', 'label' => __('Server sends recommended security headers', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],
             ['issue_code' => 'robots_txt_missing', 'label' => __('Site has a robots.txt file', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance'],
             ['issue_code' => 'robots_txt_blocks_page', 'label' => __('robots.txt does not block this page', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['robots_txt_missing']],
             ['issue_code' => 'page_level_nofollow_detected', 'label' => __('Page does not use a page-level nofollow directive', 'icap-seo'), 'layer' => __('Robots and crawler policy / security headers', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['content_fetch_unavailable']],

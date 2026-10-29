@@ -15,7 +15,7 @@ your WordPress admin go to **Plugins → Add New → Upload Plugin** and activat
 
 ## Use the free checks (no account needed)
 
-Open **iCap SEO → Content Scores** and pick a page. The 34 free checks run on your own site, and **Apply this
+Open **iCap SEO → Content Scores** and pick a page. The 35 free checks run on your own site, and **Apply this
 recommendation** (or **Apply all open recommendations**) fixes them there. Nothing is sent to any service.
 **Redirects**, **Local SEO**, social sharing tags, `/llms.txt`, and the editor panel also work without an
 account. The rest of this guide is only needed for the iCap SEO service.
@@ -62,7 +62,7 @@ credentials automatically — no manual key management needed.
 ## 6. Run your first scan
 
 In **Overview**, click **Trigger Full Scan**. Every account gets site-wide scores; active Premium
-subscriptions also get the 4 Premium checks. Scan status updates in place.
+subscriptions also get the 3 Premium checks. Scan status updates in place.
 
 ## 7. Review your results
 
@@ -77,8 +77,8 @@ setup needed. IndexNow pings are off until you turn them on in **Settings**.
 ## Activating premium
 
 From **iCap SEO → Settings**, click **Start Billing Checkout** to subscribe. Once active, **Check Billing
-Status** confirms your entitlement, and your next scan includes the Premium checks (page reachability, the
-security headers visitors receive, and broken internal and external links).
+Status** confirms your entitlement, and your next scan includes the Premium checks (page reachability, and
+broken internal and external links).
 
 ## Troubleshooting
 
