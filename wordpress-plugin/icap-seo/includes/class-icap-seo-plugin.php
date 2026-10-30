@@ -203,7 +203,7 @@ class ICap_SEO_Plugin
     public function ping_indexnow_on_delete(int $post_id): void
     {
         $post = get_post($post_id);
-        if (!$post instanceof WP_Post || !in_array($post->post_type, ['post', 'page'], true)) {
+        if (!$post instanceof WP_Post || $post->post_status !== 'publish' || !in_array($post->post_type, ['post', 'page'], true)) {
             return;
         }
 
