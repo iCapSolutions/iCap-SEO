@@ -4,11 +4,11 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.148
+Stable tag: 0.1.149
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Site-wide SEO checks and one-click fixes that run on your site, free Google reports, and an optional service for outside scans and AI drafts.
+Site-wide SEO checks and one-click fixes that run on your site, free Google reports, and an optional service for AI improvements and outside scans.
 
 == Description ==
 
@@ -18,7 +18,8 @@ iCap SEO checks your pages for common SEO problems, explains what it finds in pl
 
 * **35 on-page checks** for every post and page: title tag and length, meta description and length, H1, HTTPS, robots meta rules (noindex, nofollow, noimageindex, nosnippet), robots.txt, security headers, content depth, readability (reading ease, long sentences, transition words, passive voice), heading and paragraph structure, image alt text, width/height and lazy loading, canonical URL, structured data (JSON-LD presence, @type, and required properties), internal links, external references, and internal nofollow links. They read the page from your own site; nothing is sent anywhere.
 * **Check all pages**: run those checks across your published pages at once and see a site-wide score, with results and fixes for each page.
-* **One-click fixes** for those checks: titles, meta descriptions, H1, alt text, image dimensions, lazy loading, canonical URL, JSON-LD structured data, headings, paragraphs, and internal links. Checks that need a judgment call, such as readability or robots rules, explain what to change. They are applied directly on your site. On a registered site with AI credits, some of these fixes use AI-drafted text instead of the built-in templates.
+* **Link check**: find broken links on any page when you click Check links.
+* **One-click fixes** for those checks: titles, meta descriptions, H1, alt text, image dimensions, lazy loading, canonical URL, JSON-LD structured data, headings, paragraphs, and internal links. Checks that need a judgment call, such as readability or robots rules, explain what to change. They are applied directly on your site. With AI Improvements, some of these fixes use AI-drafted text instead of the built-in templates.
 * **Editor panel**: a quick-check score, search result preview, and social preview in the block editor (updated as you type) and in a classic editor meta box.
 * **Social sharing tags, a redirect manager with a 404 log, an llms.txt file, Local SEO, and optional IndexNow pings**: Open Graph and X Card tags, old-URL-to-new-URL redirects, a log of pages visitors hit that don't exist, a generated `/llms.txt`, LocalBusiness structured data (address, phone, hours), and IndexNow notifications on publish, update, or delete (off by default).
 
@@ -33,12 +34,10 @@ Registering the site (free) connects it to the iCap SEO service, which runs on o
 A Premium subscription adds, on top of that:
 
 * **Scans from outside your site**: up to 100 pages per scan, requested from our servers.
-* **3 checks that need an outside view of your site**: whether each page is reachable by a crawler at all, and broken internal and external links, found by requesting linked URLs from our servers, within a limit per scan.
-* **AI-assisted drafts** (meta descriptions, titles, alt text, expanded content, readability rewrites, spelling and grammar), paid for with AI credits.
+* **3 checks that need an outside view of your site**: whether each page is reachable by a crawler, and broken links across your pages, requested from our servers, within a limit per scan.
+* **AI Improvements**: AI-drafted titles, descriptions, headings, alt text, internal links, expanded content, rewrites, and grammar fixes. 25 AI credits are included each Premium year, and you can buy more.
 
 Everything in the "Runs on your site" list above works the same with or without Premium, and without registering.
-
-Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
 
 == Installation ==
 
@@ -51,7 +50,7 @@ Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
 
 = Do I need an account to use this plugin? =
 
-No. The 35 on-page checks, their fixes, the editor panel, redirects, social tags, llms.txt, and Local SEO all work without an account. An account (free) is only needed for the Google reports and for Premium: outside scans and checks, and AI-assisted drafts.
+No. The 35 on-page checks, their fixes, the editor panel, redirects, social tags, llms.txt, and Local SEO all work without an account. An account (free) is only needed for the Google reports and for Premium: AI Improvements, and outside scans and checks.
 
 = Will this plugin change my content without asking? =
 
@@ -63,20 +62,18 @@ Nothing, until you start registration in the Setup Wizard. Registering sends bas
 
 = How do I report a bug, request a feature, or report a security issue? =
 
-General bugs, feature requests, and support questions: email support@icapsolutions.com. Security
-vulnerabilities should go to security@icapsolutions.com instead of a public report — see
-https://www.icapsolutions.com/.well-known/security.txt for our disclosure policy.
+Email support@icapsolutions.com. Report security vulnerabilities to security@icapsolutions.com, not publicly.
 
 == External services ==
 
-The plugin works without contacting any external service. It connects to the services below only after you start registration or test the connection in the Setup Wizard, connect a Google account, start a checkout, request an AI draft, or turn on IndexNow pings.
+The plugin works without contacting any external service. It connects to the services below only after you start registration or test the connection in the Setup Wizard, connect a Google account, start a checkout, request an AI draft, click Check links, or turn on IndexNow pings.
 
 = iCap SEO service (iCapSolutions) =
 
-Used for site registration, subscription status, the free Google reports, and the Premium features: scans and checks from outside your site, AI-assisted drafts, and AI credit balance.
+Used for site registration, subscription status, the free Google reports, and the Premium features: scans and checks from outside your site, AI Improvements, and AI credit balance.
 
 * Service host: api.icapsolutions.com (API only, no web page)
-* Registration data: the site URL and name, the site's admin email address, the WordPress and plugin versions, and the site's time zone, plus the email address and plan you enter when requesting a token.
+* Registration data: the site URL and name, the site's admin email address, the WordPress and plugin versions, and the site's time zone, plus the email address you enter when requesting a token.
 * Requests after registration: the site ID and access token issued at registration and the plugin version, with the post IDs or page keys involved. Scans fetch your public pages from our servers. Fix previews send the issue codes you select.
 * AI draft requests: the page's title and text, the site name, the post type, the target length, the titles of related posts offered as links, and the page's image URLs.
 * Billing and Google connections: the address of your WordPress dashboard, so you can be sent back to it.
@@ -84,13 +81,17 @@ Used for site registration, subscription status, the free Google reports, and th
 * Privacy policy: https://www.icapsolutions.com/about/privacy-policy.html
 * Terms of service: https://www.icapsolutions.com/about/terms-of-service.html
 
-= Anthropic (AI drafts) =
+= Anthropic (AI Improvements) =
 
-AI-assisted drafts are generated by Anthropic's Claude models. The iCap SEO service sends the page content needed for the draft to Anthropic; your site does not contact Anthropic directly.
+AI Improvements are generated by Anthropic's Claude models. The iCap SEO service sends the page content needed for the draft to Anthropic; your site does not contact Anthropic directly.
 
 * When: only when you request an AI draft.
 * Privacy policy: https://www.anthropic.com/legal/privacy
 * Terms: https://www.anthropic.com/legal/commercial-terms
+
+= Link check =
+
+When you click Check links on a page, your server requests up to 25 URLs that page links to. Those websites receive a normal web request from your server. Nothing else is sent, and nothing goes to us.
 
 = Stripe (payments) =
 
@@ -118,8 +119,7 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings does the
 * Endpoint: https://api.indexnow.org/indexnow
 * Data sent: the URL of the changed page and the site's IndexNow key. No personal data is sent.
 * About IndexNow: https://www.indexnow.org/
-* Bing privacy statement: https://privacy.microsoft.com/privacystatement
-* Yandex privacy policy: https://yandex.com/legal/privacy/
+* Privacy: https://privacy.microsoft.com/privacystatement and https://yandex.com/legal/privacy/
 
 == Screenshots ==
 
@@ -129,6 +129,6 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings does the
 
 == Changelog ==
 
-= 0.1.148 =
-* Check all pages runs the on-site checks across your published pages, with a site-wide score.
-* The Setup Wizard contacts the iCap SEO service only after you choose to continue.
+= 0.1.149 =
+* Check links finds broken links on any page, free.
+* Premium includes AI Improvements, with 25 AI credits each year.

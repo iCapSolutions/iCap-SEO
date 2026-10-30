@@ -66,6 +66,13 @@ class ICap_SEO_Local_Checks
     /** The most recently updated pages listed and checked at once. */
     public const MAX_PAGES = 1000;
 
+    /** Links checked per click, and the time allowed, so one page can't hold a request open. */
+    public const MAX_LINKS_PER_CHECK = 25;
+
+    private const LINK_CHECK_SECONDS = 15;
+
+    private const LINK_TIMEOUT_SECONDS = 4;
+
     /** Mirrors the scan service's recommended security-header list (lowercase names, presence only). */
     private const REQUIRED_SECURITY_HEADERS = [
         'strict-transport-security',
@@ -1079,6 +1086,89 @@ class ICap_SEO_Local_Checks
         }
 
         return $issues;
+    }
+
+    /**
+     * The distinct http(s) links in a post body, as absolute URLs.
+     *
+     * @return string[]
+     */
+    public static function link_urls(string $body_html, string $permalink): array
+    {
+        preg_match_all('/<a\b[^>]*\bhref=["\']([^"\']+)["\']/i', $body_html, $matches);
+
+        $urls = [];
+        foreach ($matches[1] as $href) {
+            $href = trim(html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            if ($href === '' || strpos($href, '#') === 0) {
+                continue;
+            }
+            $url = strtok(WP_Http::make_absolute_url($href, $permalink), '#');
+            if (is_string($url) && preg_match('#^https?://#i', $url) === 1) {
+                $urls[$url] = true;
+            }
+        }
+
+        return array_keys($urls);
+    }
+
+    /**
+     * Request one link: HEAD first, then a one-byte GET if the server rejects HEAD.
+     * Mirrors the scan service's rule, where any status from 400 up, or no response,
+     * counts as broken. The safe request functions refuse private network addresses.
+     *
+     * @return array{broken: bool, status: int}
+     */
+    private static function link_status(string $url): array
+    {
+        $args = ['timeout' => self::LINK_TIMEOUT_SECONDS, 'redirection' => 3];
+        $response = wp_safe_remote_head($url, $args);
+        if (!is_wp_error($response) && in_array((int) wp_remote_retrieve_response_code($response), [405, 501], true)) {
+            $response = wp_safe_remote_get($url, $args + [
+                'headers' => ['Range' => 'bytes=0-0'],
+                'limit_response_size' => KB_IN_BYTES,
+            ]);
+        }
+        if (is_wp_error($response)) {
+            return ['broken' => true, 'status' => 0];
+        }
+
+        $status = (int) wp_remote_retrieve_response_code($response);
+
+        return ['broken' => $status >= 400 || $status === 0, 'status' => $status];
+    }
+
+    /**
+     * Check the links on one post, up to the per-click limit and time budget.
+     *
+     * @return array{total: int, checked: int, broken: array<int, array{url: string, status: int}>}|null
+     */
+    public static function check_links(int $post_id): ?array
+    {
+        $post = get_post($post_id);
+        if (!$post instanceof WP_Post) {
+            return null;
+        }
+
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- the_content is a WordPress core hook, not a plugin hook.
+        $body_html = (string) apply_filters('the_content', $post->post_content);
+        $urls = self::link_urls($body_html, (string) get_permalink($post));
+
+        $deadline = microtime(true) + self::LINK_CHECK_SECONDS;
+        $checked = 0;
+        $broken = [];
+        foreach (array_slice($urls, 0, self::MAX_LINKS_PER_CHECK) as $url) {
+            if (microtime(true) >= $deadline) {
+                break;
+            }
+            $result = self::link_status($url);
+            $checked++;
+            if ($result['broken']) {
+                $broken[] = ['url' => $url, 'status' => $result['status']];
+            }
+        }
+
+        return ['total' => count($urls), 'checked' => $checked, 'broken' => $broken];
     }
 
     private static function normalize_text(string $text): string

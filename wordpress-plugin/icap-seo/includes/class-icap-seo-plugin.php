@@ -70,6 +70,7 @@ class ICap_SEO_Plugin
 
         wp_localize_script('icap-seo-admin', 'icapSeoAdmin', [
             'batchUrl' => esc_url_raw(rest_url('icap-seo/v1/local-checks/batch')),
+            'linksUrl' => esc_url_raw(rest_url('icap-seo/v1/local-checks/links')),
             'restNonce' => wp_create_nonce('wp_rest'),
         ]);
     }
@@ -84,6 +85,21 @@ class ICap_SEO_Plugin
             'permission_callback' => static fn(): bool => current_user_can('manage_options'),
             'args' => [
                 'offset' => ['required' => false, 'type' => 'integer', 'minimum' => 0, 'default' => 0],
+            ],
+        ]);
+
+        register_rest_route('icap-seo/v1', '/local-checks/links', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => static function (WP_REST_Request $request) {
+                $result = ICap_SEO_Local_Checks::check_links((int) $request->get_param('post_id'));
+
+                return $result !== null
+                    ? new WP_REST_Response($result)
+                    : new WP_Error('icap_seo_post_not_found', __('That page no longer exists.', 'icap-seo'), ['status' => 404]);
+            },
+            'permission_callback' => static fn(): bool => current_user_can('manage_options'),
+            'args' => [
+                'post_id' => ['required' => true, 'type' => 'integer', 'minimum' => 1],
             ],
         ]);
     }
