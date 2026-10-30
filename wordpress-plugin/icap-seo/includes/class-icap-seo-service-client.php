@@ -117,9 +117,9 @@ class ICap_SEO_Service_Client
     }
 
     /**
-     * Whether this site has Premium: full-site scans, Google Search Console and Analytics
-     * reports, the outside-in checks, and AI credits. Read from the cached billing state; the
-     * service enforces the same rule on its side.
+     * Whether this site has Premium: full-site scans and scores, the outside-in checks, and
+     * AI credits. (Google Search Console and Analytics reports are free for registered sites.)
+     * Read from the cached billing state; the service enforces the same rule on its side.
      */
     public function is_premium(): bool
     {
@@ -1267,7 +1267,7 @@ class ICap_SEO_Service_Client
             return is_array($cached) ? $cached : $this->empty_seo_performance_payload();
         }
 
-        if (empty($settings['site_id']) || empty($settings['site_token']) || !$this->is_premium()) {
+        if (empty($settings['site_id']) || empty($settings['site_token'])) {
             return $this->empty_seo_performance_payload();
         }
 

@@ -376,6 +376,7 @@ class ICap_SEO_Admin
             $this->service_client->refresh_billing_state_if_stale();
         }
         $service_is_premium = $this->service_client->is_premium();
+        $service_is_registered = $this->service_client->is_api_connection_configured_public();
         $connection_settings = $this->service_client->get_connection_settings();
         $google_connection_status = ['status' => 'not_connected'];
         if ($this->service_client->is_api_connection_configured_public()) {
@@ -410,7 +411,7 @@ class ICap_SEO_Admin
         $refresh_analytics_property = isset($_GET['refresh_analytics_property']) && sanitize_key(wp_unslash($_GET['refresh_analytics_property'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (
             $active_tab === 'settings'
-            && $service_is_premium
+            && $service_is_registered
             && $analytics_scope_granted
             && (empty($google_connection_status['analytics_property_id']) || $refresh_analytics_property)
         ) {
@@ -430,7 +431,7 @@ class ICap_SEO_Admin
         $refresh_search_console_property = isset($_GET['refresh_search_console_property']) && sanitize_key(wp_unslash($_GET['refresh_search_console_property'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (
             $active_tab === 'settings'
-            && $service_is_premium
+            && $service_is_registered
             && ($google_connection_status['status'] ?? '') === 'connected'
             && (empty($google_connection_status['search_console_property_url']) || $refresh_search_console_property)
         ) {
@@ -535,8 +536,9 @@ class ICap_SEO_Admin
                 $score_snapshot = $this->service_client->get_site_score_snapshot($allow_live_fetch);
             }
 
-            // Google reports are a Premium feature; free sites see an upgrade panel instead.
-            if ($service_is_premium && in_array($active_tab, ['seo-performance', 'site-analytics', 'keywords'], true)) {
+            // Google reports are free for registered sites; unregistered sites see a
+            // registration panel instead.
+            if ($service_is_registered && in_array($active_tab, ['seo-performance', 'site-analytics', 'keywords'], true)) {
                 $seo_performance = $this->service_client->get_seo_performance($allow_live_fetch);
 
                 // Each block below re-sorts the already-fetched (server-capped top-20) rows
