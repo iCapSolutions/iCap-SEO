@@ -64,12 +64,12 @@ credentials automatically — no manual key management needed.
 From **iCap SEO → Settings → Billing**, click **Start Billing Checkout** to subscribe. When you return,
 the plugin refreshes your billing status; **Check Billing Status** confirms it any time.
 
-## 7. Run your first scan and connect Google
+## 7. Connect Google and run your first scan
 
-In **Overview**, click **Trigger Full Scan**. Scans score every page and include the 3 checks run from
+Connect Google Search Console and Google Analytics in **Settings** to fill the **SEO Performance**,
+**Site Analytics**, and **Keywords** tabs — free on any registered site. With Premium active, click
+**Trigger Full Scan** in **Overview**. Scans score every page and include the 3 checks run from
 outside your site (page reachability, and broken internal and external links). Scan status updates in place.
-Then connect Google Search Console and Google Analytics in **Settings** to fill the **SEO Performance**,
-**Site Analytics**, and **Keywords** tabs.
 
 ## 8. Review your results
 

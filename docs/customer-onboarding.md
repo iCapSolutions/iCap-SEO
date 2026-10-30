@@ -14,9 +14,11 @@ active, registered site. For step-by-step technical instructions, see [Getting s
 4. **Connect & register** — the customer enters the registration token in **Settings**, then
    completes registration from **Setup Wizard**. Site credentials are provisioned automatically at this step —
    no manual key management.
-5. **Upgrade to Premium** — the customer starts billing checkout from **Settings → Billing**.
-6. **First scan** — with Premium active, the customer triggers a scan from **Overview**, connects Google in
-   **Settings**, and reviews results in **Content Scores** and the report tabs.
+5. **Connect Google** — any registered site can connect Google Search Console and Google Analytics in
+   **Settings**, free, to fill the report tabs.
+6. **Upgrade to Premium** — the customer starts billing checkout from **Settings → Billing**.
+7. **First scan** — with Premium active, the customer triggers a scan from **Overview** and reviews results
+   in **Content Scores** and the report tabs.
 
 ## What works before you register
 
@@ -28,12 +30,17 @@ Everything that runs on your own site works without an account:
 - The editor panel's quick checks and search and social previews.
 - The redirect manager and 404 log, `/llms.txt`, Local SEO, and optional IndexNow pings (off by default).
 
+## What registration adds, free
+
+Registering the site (free) connects it to the iCap SEO service and adds the Google Search Console and
+Google Analytics reports, connected with your own Google account. Nothing is sent to the service before you
+register.
+
 ## What requires Premium
 
-Features provided by the iCap SEO service need a registered site with an active Premium subscription:
-site-wide scans and scores, Google Search Console and Analytics reports, the 3 checks run from outside your
-site, and AI-assisted drafts. Registration itself is free and is the first step toward Premium. Until the site
-has Premium, these show an upgrade panel, and nothing is sent to the service before you register.
+The rest of the service-side features need a registered site with an active Premium subscription:
+site-wide scans and scores, the 3 checks run from outside your site, and AI-assisted drafts. Until the site
+has Premium, these show an upgrade panel.
 
 ## Requesting a registration token
 

@@ -200,7 +200,7 @@ if (!function_exists('icap_seo_render_sortable_th')) {
 }
 
 if (!function_exists('icap_seo_render_premium_panel')) {
-    // Shown where a Premium feature (full-site scans, Google reports) would be. Points a
+    // Shown where a Premium feature (full-site scans and scores) would be. Points a
     // registered site at Billing in Settings, and an unregistered one at the Setup Wizard,
     // since a Premium subscription is attached to a registered site.
     function icap_seo_render_premium_panel(string $message, bool $is_registered): void
@@ -212,6 +212,21 @@ if (!function_exists('icap_seo_render_premium_panel')) {
         <div class="notice notice-info inline icap-seo-premium-panel" style="padding:8px 12px; margin-top:12px;">
             <p><strong><?php esc_html_e('Premium feature', 'icap-seo'); ?></strong> &mdash; <?php echo esc_html($message); ?></p>
             <p><a class="button button-primary" href="<?php echo esc_url($upgrade_url); ?>"><?php echo $is_registered ? esc_html__('Upgrade to Premium', 'icap-seo') : esc_html__('Register this site', 'icap-seo'); ?></a></p>
+        </div>
+        <?php
+    }
+}
+
+if (!function_exists('icap_seo_render_register_panel')) {
+    // Shown where a free-with-registration feature (Google Search Console and Google
+    // Analytics reports) would be, on a site that hasn't registered with the service yet.
+    function icap_seo_render_register_panel(string $message): void
+    {
+        $register_url = add_query_arg(['page' => 'icap-seo', 'tab' => 'setup-wizard'], admin_url('admin.php'));
+        ?>
+        <div class="notice notice-info inline icap-seo-register-panel" style="padding:8px 12px; margin-top:12px;">
+            <p><strong><?php esc_html_e('Free with registration', 'icap-seo'); ?></strong> &mdash; <?php echo esc_html($message); ?></p>
+            <p><a class="button button-primary" href="<?php echo esc_url($register_url); ?>"><?php esc_html_e('Register this site', 'icap-seo'); ?></a></p>
         </div>
         <?php
     }
@@ -314,7 +329,7 @@ $notice_map = [
     'google_connect_unavailable' => ['type' => 'error', 'message' => __('Connecting Google Search Console is temporarily unavailable. Please retry shortly.', 'icap-seo')],
     'google_connect_invalid_state' => ['type' => 'error', 'message' => __('Google connection could not be verified (the request may have expired). Please try connecting again.', 'icap-seo')],
     'google_connect_consent_denied' => ['type' => 'error', 'message' => __('Google Search Console connection was not completed - access was not granted.', 'icap-seo')],
-    'google_connect_premium_required' => ['type' => 'error', 'message' => __('Google Search Console and Google Analytics reports are part of Premium. Upgrade under Billing to connect Google.', 'icap-seo')],
+    'google_connect_premium_required' => ['type' => 'error', 'message' => __('The iCap SEO service declined the Google connection for this site\'s plan. Use Check Billing Status under Settings, then try again.', 'icap-seo')],
     'google_connect_failed' => ['type' => 'error', 'message' => __('Google Search Console connection failed. Please try again.', 'icap-seo')],
     'google_disconnected' => ['type' => 'updated', 'message' => __('Google Search Console disconnected.', 'icap-seo')],
     'google_disconnect_failed' => ['type' => 'error', 'message' => __('Disconnecting Google Search Console failed. Please try again.', 'icap-seo')],
@@ -645,7 +660,7 @@ if ($notice_code === 'remediation_apply_noop') {
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['setup-wizard'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
             <div class="icap-seo-panel">
             <p class="description">
-                <?php esc_html_e('The 35 on-site checks and their fixes work without registering. Registering connects this site to iCapSolutions\' cloud service, which a Premium subscription needs: full-site scans and scores, Google Search Console and Google Analytics reports, outside-in link checks, and AI credits. A scan sends the scanned page\'s public content to that service; nothing is published or changed on your site without your explicit approval.', 'icap-seo'); ?>
+                <?php esc_html_e('The 35 on-site checks and their fixes work without registering. Registering connects this site to iCapSolutions\' cloud service and adds free Google Search Console and Google Analytics reports; a Premium subscription adds full-site scans and scores, outside-in link checks, and AI credits. A scan sends the scanned page\'s public content to that service; nothing is published or changed on your site without your explicit approval.', 'icap-seo'); ?>
             </p>
             <?php if ($is_connected) : ?>
                 <p><?php esc_html_e('This site is connected to iCap SEO.', 'icap-seo'); ?></p>
@@ -1256,7 +1271,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     </div>
                     <?php if (!empty($content_detail_is_local)) : ?>
                     <div class="notice notice-info inline" style="margin:12px 0;">
-                        <p><?php esc_html_e('These free checks ran on this site, and their fixes apply here without any connection. Premium adds full-site scans and scores, Google Search Console and Google Analytics data, reachability and broken-link checks run by crawling from outside your site, and AI drafts.', 'icap-seo'); ?></p>
+                        <p><?php esc_html_e('These free checks ran on this site, and their fixes apply here without any connection. Registering adds free Google Search Console and Google Analytics reports. Premium adds full-site scans and scores, reachability and broken-link checks run by crawling from outside your site, and AI drafts.', 'icap-seo'); ?></p>
                     </div>
                     <?php else : ?>
                     <div class="icap-seo-actions" style="margin:12px 0;">
@@ -2121,8 +2136,8 @@ if ($notice_code === 'remediation_apply_noop') {
             };
             ?>
 
-            <?php if (!$service_is_premium) : ?>
-                <?php icap_seo_render_premium_panel(__('Premium shows Search Console clicks, impressions, CTR and position for the whole site.', 'icap-seo'), $service_is_registered); ?>
+            <?php if (!$service_is_registered) : ?>
+                <?php icap_seo_render_register_panel(__('Register this site to connect Google Search Console and see clicks, impressions, CTR and position for the whole site here, free.', 'icap-seo')); ?>
             <?php elseif (!$performance_gsc_connected) : ?>
                 <p class="description">
                     <?php
@@ -2360,8 +2375,8 @@ if ($notice_code === 'remediation_apply_noop') {
             };
             ?>
 
-            <?php if (!$service_is_premium) : ?>
-                <?php icap_seo_render_premium_panel(__('Premium shows Google Analytics users, sessions, page views, engagement and traffic channels for the whole site.', 'icap-seo'), $service_is_registered); ?>
+            <?php if (!$service_is_registered) : ?>
+                <?php icap_seo_render_register_panel(__('Register this site to connect Google Analytics and see users, sessions, page views, engagement and traffic channels for the whole site here, free.', 'icap-seo')); ?>
             <?php elseif (!$performance_ga4_connected) : ?>
                 <p class="description">
                     <?php
@@ -2511,8 +2526,8 @@ if ($notice_code === 'remediation_apply_noop') {
             };
             ?>
 
-            <?php if (!$service_is_premium) : ?>
-                <?php icap_seo_render_premium_panel(__('Premium shows the search keywords bringing visitors to your site, from Google Search Console.', 'icap-seo'), $service_is_registered); ?>
+            <?php if (!$service_is_registered) : ?>
+                <?php icap_seo_render_register_panel(__('Register this site to see the search keywords bringing visitors to your site, from Google Search Console, free.', 'icap-seo')); ?>
             <?php elseif (!$performance_gsc_keywords_connected) : ?>
                 <p class="description">
                     <?php
@@ -2976,8 +2991,8 @@ if ($notice_code === 'remediation_apply_noop') {
                     ? (string) $google_connection_status['search_console_property_url']
                     : '';
                 ?>
-                <?php if (!$service_is_premium) : ?>
-                    <?php // Property choice only matters for the Premium reports; the panel below explains. ?>
+                <?php if (!$service_is_registered) : ?>
+                    <?php // A connected Google account implies a registered site, so this never renders. ?>
                 <?php elseif (!empty($search_console_property_candidates)) : ?>
                     <p class="description"><?php echo $search_console_property_url_value !== '' ? esc_html__('Choose the Search Console property this site should use:', 'icap-seo') : esc_html__('We couldn\'t confirm which Search Console property matches this site (it may be registered under a different URL, or as a domain property). Select the right one:', 'icap-seo'); ?></p>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
@@ -3019,8 +3034,8 @@ if ($notice_code === 'remediation_apply_noop') {
                     ? (string) $google_connection_status['analytics_property_id']
                     : '';
                 ?>
-                <?php if (!$service_is_premium) : ?>
-                    <?php icap_seo_render_premium_panel(__('Google Search Console and Google Analytics reports are part of Premium. Your Google connection stays saved, and you can disconnect it above at any time.', 'icap-seo'), $service_is_registered); ?>
+                <?php if (!$service_is_registered) : ?>
+                    <?php // A connected Google account implies a registered site, so this never renders. ?>
                 <?php elseif (!$analytics_scope_granted) : ?>
                     <p class="notice notice-info inline" style="padding:8px 12px; margin-top:12px;">
                         <?php esc_html_e('New: iCap SEO can also show real traffic data from Google Analytics. Reconnect Google to add it — your existing Search Console connection won\'t be affected.', 'icap-seo'); ?>
@@ -3082,8 +3097,8 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php else : ?>
                     <p class="description"><?php esc_html_e('Not connected.', 'icap-seo'); ?></p>
                 <?php endif; ?>
-                <?php if (!$service_is_premium) : ?>
-                    <?php icap_seo_render_premium_panel(__('Premium connects your Google Search Console and Google Analytics accounts and shows their reports here.', 'icap-seo'), $service_is_registered); ?>
+                <?php if (!$service_is_registered) : ?>
+                    <?php icap_seo_render_register_panel(__('Register this site to connect your Google Search Console and Google Analytics accounts and see their reports here, free.', 'icap-seo')); ?>
                 <?php else : ?>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
                     <input type="hidden" name="action" value="icap_seo_google_connect_start">
@@ -3097,7 +3112,7 @@ if ($notice_code === 'remediation_apply_noop') {
 
             <hr>
             <h3 id="icap-seo-billing"><?php esc_html_e('Billing', 'icap-seo'); ?></h3>
-            <p class="description"><?php esc_html_e('Manage your iCap SEO subscription. Premium adds full-site scans and scores, Google Search Console and Google Analytics reports, reachability and broken-link checks run by crawling from outside your site, and AI credits. The 35 checks that run on this site are free either way.', 'icap-seo'); ?></p>
+            <p class="description"><?php esc_html_e('Manage your iCap SEO subscription. Premium adds full-site scans and scores, reachability and broken-link checks run by crawling from outside your site, and AI credits. The 35 checks that run on this site and the Google Search Console and Google Analytics reports are free either way.', 'icap-seo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
                 <input type="hidden" name="action" value="icap_seo_check_billing_status">
                 <?php wp_nonce_field('icap_seo_check_billing_status'); ?>
@@ -3420,8 +3435,8 @@ if ($notice_code === 'remediation_apply_noop') {
                     <li><?php esc_html_e('Content quality & readability — depth, reading ease, long sentences, transitions, passive voice', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Structured data — JSON-LD presence, @type, and required properties', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Links — internal links, external references, internal nofollow', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Google Search Console and Google Analytics reports — search performance, traffic, and keywords', 'icap-seo'); ?> <em>(<?php esc_html_e('Free with registration', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Full-site scans and scores, run from the iCap SEO service', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('Google Search Console and Google Analytics reports — search performance, traffic, and keywords', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Page reachability and broken internal and external links, checked by crawling from outside your site', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('AI-drafted titles, descriptions, alt text, and rewrites, paid for with AI credits', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                 </ul>
@@ -3467,7 +3482,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     </form>
                 </div>
             <?php else : ?>
-                <?php icap_seo_render_premium_panel(__('Premium scans every page from the iCap SEO service for a site-wide score, and adds Google reports, outside-in link checks, and AI credits. The 35 on-site checks under Content Scores are free.', 'icap-seo'), $overview_is_connected); ?>
+                <?php icap_seo_render_premium_panel(__('Premium scans every page from the iCap SEO service for a site-wide score, and adds outside-in link checks and AI credits. The 35 on-site checks under Content Scores and the Google reports are free.', 'icap-seo'), $overview_is_connected); ?>
             <?php endif; ?>
         <?php endif; ?>
     </section>

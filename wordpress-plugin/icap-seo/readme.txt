@@ -4,11 +4,11 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.145
+Stable tag: 0.1.146
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-SEO checks and one-click fixes that run on your own site, plus an optional Premium service for site-wide scans, Google reports, link crawling, and AI drafts.
+SEO checks and one-click fixes that run on your own site, free Google Search Console and Analytics reports, plus an optional Premium service for site-wide scans, link crawling, and AI drafts.
 
 == Description ==
 
@@ -21,12 +21,17 @@ iCap SEO checks your pages for common SEO problems, explains what it finds in pl
 * **Editor panel**: a quick-check score, search result preview, and social preview in the block editor (updated as you type) and in a classic editor meta box.
 * **Social sharing tags, a redirect manager with a 404 log, an llms.txt file, Local SEO, and optional IndexNow pings**: Open Graph and X Card tags, old-URL-to-new-URL redirects, a log of pages visitors hit that don't exist, a generated `/llms.txt`, LocalBusiness structured data (address, phone, hours), and IndexNow notifications on publish, update, or delete (off by default).
 
+**Free with registration**
+
+Registering the site (free) connects it to the iCap SEO service, which runs on our servers and adds:
+
+* **Google Search Console and Google Analytics reports**: search performance, traffic, and keywords, from your own Google account.
+
 **Optional Premium service**
 
-A Premium subscription connects the site to the iCap SEO service, which runs on our servers and adds:
+A Premium subscription adds, on top of that:
 
 * **Full-site scans and scores**: every page scanned from our servers, with a site-wide score.
-* **Google Search Console and Google Analytics reports**: search performance, traffic, and keywords, from your own Google account.
 * **3 checks that need an outside view of your site**: whether each page is reachable by a crawler at all, and broken internal and external links, found by requesting every linked URL from our servers.
 * **AI-assisted drafts** (meta descriptions, titles, alt text, expanded content, readability rewrites, spelling and grammar), paid for with AI credits.
 
@@ -39,13 +44,13 @@ Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
 1. Install the plugin from **Plugins → Add New**, or upload the ZIP under **Plugins → Add New → Upload Plugin**.
 2. Activate it.
 3. Open **iCap SEO → Content Scores** and pick a page to see its checks and apply fixes.
-4. Optional: for Premium, open **iCap SEO → Setup Wizard**, enter your email to request a registration token, follow the link in the email to register the site, then start checkout under **Settings → Billing**.
+4. Optional: to add the free Google reports, open **iCap SEO → Setup Wizard**, enter your email to request a registration token, follow the link in the email to register the site, then connect Google under **Settings**. For Premium, start checkout under **Settings → Billing**.
 
 == Frequently Asked Questions ==
 
 = Do I need an account to use this plugin? =
 
-No. The 35 on-page checks, their fixes, the editor panel, redirects, social tags, llms.txt, and Local SEO all work without an account. An account is only needed for Premium: site-wide scans, Google reports, the outside-in checks, and AI-assisted drafts.
+No. The 35 on-page checks, their fixes, the editor panel, redirects, social tags, llms.txt, and Local SEO all work without an account. An account (free) is only needed for the Google reports and for Premium: site-wide scans, the outside-in checks, and AI-assisted drafts.
 
 = Will this plugin change my content without asking? =
 
@@ -71,7 +76,7 @@ The plugin works without contacting any external service. It connects to the ser
 
 = iCap SEO service (iCapSolutions) =
 
-Used for site registration, subscription status, and the Premium features: site-wide scans and scores, Google reports, the outside-in checks, AI-assisted drafts, and AI credit balance.
+Used for site registration, subscription status, the free Google reports, and the Premium features: site-wide scans and scores, the outside-in checks, AI-assisted drafts, and AI credit balance.
 
 * Service host: api.icapsolutions.com (API only, no web page)
 * Data sent: the site URL, the site ID and access token issued at registration, and the email address you enter when requesting registration. Scans fetch your public pages from our servers. AI draft requests send the title and text of the page being drafted.
@@ -97,7 +102,7 @@ Subscriptions and AI credit purchases are handled by Stripe Checkout and the Str
 
 = Google Search Console and Google Analytics =
 
-Optional, Premium. Connected from Settings with your own Google account, using read-only access. Your browser is sent to Google to approve access, and the data is fetched by the iCap SEO service and shown in your WordPress dashboard.
+Optional, free for registered sites. Connected from Settings with your own Google account, using read-only access. Your browser is sent to Google to approve access, and the data is fetched by the iCap SEO service and shown in your WordPress dashboard.
 
 * Data used: Search Console search performance and indexing data for properties you have verified, and Google Analytics (GA4) traffic data for the property you choose. Your Google account name and email are used to show which account is connected.
 * When: when you connect the account, and when the Overview, SEO Performance, Site Analytics, Keywords, or Content Scores tabs request this data.
@@ -123,6 +128,9 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings does the
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.146 =
+* Google Search Console and Google Analytics reports are free for registered sites. Premium is the service-side work: full-site scans and scores, the outside-in reachability and broken-link checks, and AI credits.
 
 = 0.1.145 =
 * Full-site scans and Google Search Console and Google Analytics reports are now part of Premium. The 35 on-site checks and every fix stay free, with or without registering.

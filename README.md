@@ -2,8 +2,9 @@
 
 iCap SEO is a WordPress plugin that checks your pages for common SEO problems, explains what it finds in plain
 language, and fixes most of it for you, with one click or with a preview you approve first. 35 of its 38 checks
-and their fixes run on your own site with no account. Premium adds site-wide scans, Google Search Console and
-Analytics reports, 3 checks that need an outside view of your site, and AI-assisted drafts.
+and their fixes run on your own site with no account. Registering (free) adds Google Search Console and
+Google Analytics reports. Premium adds site-wide scans, 3 checks that need an outside view of your site,
+and AI-assisted drafts.
 
 Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
 
@@ -54,8 +55,9 @@ activation and troubleshooting.
   structured data, images, internal links, external references, and internal nofollow links) with one-click
   fixes or guidance, plus social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt,
   and Local SEO.
-- **Premium** ($59.95/year): full-site scans and scores run by the iCap SEO service; Google Search Console
-  and Google Analytics reports (SEO Performance, Site Analytics, Keywords); 3 checks run from outside your
+- **Free with registration**: Google Search Console and Google Analytics reports (SEO Performance,
+  Site Analytics, Keywords), connected with your own Google account.
+- **Premium** ($59.95/year): full-site scans and scores run by the iCap SEO service; 3 checks run from outside your
   site — page reachability, and broken internal and external links; and AI-assisted drafts, paid for with AI
   credits.
 
