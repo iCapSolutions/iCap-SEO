@@ -480,6 +480,7 @@ class ICap_SEO_Admin
         $seo_recommendation_catalog = $this->get_seo_recommendation_catalog();
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
         $registration_challenge = [];
+        $registration_started = $active_tab === 'setup-wizard' && $this->is_registration_start_confirmed();
         $redirects = $active_tab === 'redirects' ? $this->get_redirects() : [];
         $log_404 = in_array($active_tab, ['redirects', 'notifications'], true) ? $this->get_404_log() : [];
         $redirects_orderby = 'source';
@@ -734,11 +735,10 @@ class ICap_SEO_Admin
                 }
             }
 
-            // The "request a registration token" form now shows on this tab
-            // even for an already-connected site (re-registering needs a fresh
-            // token too, since tokens are single-use), so the challenge is no
-            // longer conditional on being unregistered.
-            if ($active_tab === 'setup-wizard') {
+            // The challenge comes from the iCap SEO service, so it's only requested once the
+            // admin has chosen to continue. Applies to a connected site too: re-registering
+            // needs a fresh token, since tokens are single-use.
+            if ($registration_started) {
                 $challenge_result = $this->service_client->get_registration_challenge();
                 if (!empty($challenge_result['success'])) {
                     $registration_challenge = $challenge_result['data'];
@@ -1190,6 +1190,19 @@ class ICap_SEO_Admin
         update_option('icap_seo_local_business', $local_business, false);
 
         $this->redirect_with_notice('local_business_saved', 'local-seo');
+    }
+
+    /**
+     * Whether this request is the admin's "Continue to registration" click on the Setup
+     * Wizard, which is what allows the tab to contact the iCap SEO service.
+     */
+    private function is_registration_start_confirmed(): bool
+    {
+        if (!isset($_GET['icap_seo_start_registration'], $_GET['_wpnonce']) || !current_user_can('manage_options')) {
+            return false;
+        }
+
+        return wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'icap_seo_start_registration') !== false;
     }
 
     public function handle_register_site(): void

@@ -44,7 +44,7 @@ has Premium, these show an upgrade panel.
 
 ## Requesting a registration token
 
-Request one directly from the plugin: open **iCap SEO → Setup Wizard**, enter your email, choose a plan
+Request one directly from the plugin: open **iCap SEO → Setup Wizard**, click **Continue to registration**, enter your email, choose a plan
 (Baseline, Premium, or AI Scanning), and click **Request Registration**. Verify your email via the link sent
 to you, and your registration token follows by email — instantly for Baseline, after a quick iCapSolutions
 review for Premium and AI Scanning. Then follow [Getting started](getting-started.md) to connect and register

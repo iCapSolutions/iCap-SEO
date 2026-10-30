@@ -339,7 +339,7 @@ $notice_map = [
     'search_console_property_saved' => ['type' => 'updated', 'message' => __('Search Console property saved. Real indexing status and stats will use this property going forward.', 'icap-seo')],
     'search_console_property_invalid' => ['type' => 'error', 'message' => __('Please choose a valid Search Console property.', 'icap-seo')],
     'search_console_property_save_failed' => ['type' => 'error', 'message' => __('Saving the Search Console property failed. Please try again.', 'icap-seo')],
-    'billing_status_free_tier' => ['type' => 'updated', 'message' => __('Billing status check: this site is on the free tier (basic scans only).', 'icap-seo')],
+    'billing_status_free_tier' => ['type' => 'updated', 'message' => __('Billing status check: this site is on the free tier.', 'icap-seo')],
     'ai_credit_checkout_not_configured' => ['type' => 'error', 'message' => __('AI credit checkout requires site registration credentials. Register this site first.', 'icap-seo')],
     'ai_credit_checkout_premium_required' => ['type' => 'error', 'message' => __('AI credits can only be purchased on an active premium subscription. Upgrade to premium first.', 'icap-seo')],
     'ai_credit_checkout_misconfigured' => ['type' => 'error', 'message' => __('AI credit checkout is not fully configured yet. Please try again shortly.', 'icap-seo')],
@@ -718,6 +718,12 @@ if ($notice_code === 'remediation_apply_noop') {
                 </ol>
             <?php endif; ?>
             </div>
+            <p class="description" style="margin-top:16px;">
+                <?php esc_html_e('Registering connects this site to the iCap SEO service at api.icapsolutions.com. The service receives the site URL and name, the site\'s admin email address, the WordPress and plugin versions, and the site\'s time zone. Requesting a token also sends the email address and plan you enter.', 'icap-seo'); ?>
+                <a href="https://www.icapsolutions.com/about/terms-of-service.html" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Terms of Service', 'icap-seo'); ?></a>
+                &middot;
+                <a href="https://www.icapsolutions.com/about/privacy-policy.html" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Privacy Policy', 'icap-seo'); ?></a>
+            </p>
             <div class="icap-seo-actions" style="margin-top:16px;">
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="icap_seo_register_site">
@@ -738,6 +744,12 @@ if ($notice_code === 'remediation_apply_noop') {
                 <h3><?php esc_html_e("Don't have a registration token yet?", 'icap-seo'); ?></h3>
                 <p class="description"><?php esc_html_e('Request one below. We\'ll email you a verification link, then your registration token.', 'icap-seo'); ?></p>
             <?php endif; ?>
+            <?php if (!$registration_started) : ?>
+                <p class="description"><?php esc_html_e('Continuing contacts the iCap SEO service to load the form\'s spam check. Nothing is sent before you click.', 'icap-seo'); ?></p>
+                <p>
+                    <a class="button" href="<?php echo esc_url(wp_nonce_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'setup-wizard', 'icap_seo_start_registration' => '1'], admin_url('admin.php')), 'icap_seo_start_registration')); ?>"><?php esc_html_e('Continue to registration', 'icap-seo'); ?></a>
+                </p>
+            <?php else : ?>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-registration-request-form"<?php echo !empty($registration_challenge) ? ' data-altcha-challenge="' . esc_attr(wp_json_encode($registration_challenge)) . '"' : ''; ?>>
                 <input type="hidden" name="action" value="icap_seo_request_registration">
                 <?php wp_nonce_field('icap_seo_request_registration'); ?>
@@ -760,6 +772,7 @@ if ($notice_code === 'remediation_apply_noop') {
                 </p>
                 <button type="submit" class="button button-primary"><?php esc_html_e('Request Registration', 'icap-seo'); ?></button>
             </form>
+            <?php endif; ?>
             <p class="description">
                 <?php esc_html_e('Connection profile:', 'icap-seo'); ?>
                 <?php esc_html_e('Service address', 'icap-seo'); ?>
@@ -1363,7 +1376,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         'warn' => ['bg' => '#fdf0e0', 'fg' => '#9a5b0a', 'label' => __('Needs attention', 'icap-seo')],
                         'applied' => ['bg' => '#eef3fc', 'fg' => '#2455c7', 'label' => __('Applied — pending rescan', 'icap-seo')],
                         'locked_plan' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Premium service check', 'icap-seo')],
-                        'not_scanned' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Not yet scanned', 'icap-seo')],
+                        'not_scanned' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Couldn\'t check', 'icap-seo')],
                         'not_evaluated' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Not evaluated', 'icap-seo')],
                     ];
                     ?>
@@ -1506,11 +1519,11 @@ if ($notice_code === 'remediation_apply_noop') {
                                                     ));
                                                     ?>
                                                 <?php elseif ($catalog_status_key === 'applied') : ?>
-                                                    <?php esc_html_e('Applied locally — will show Passing after the next rescan confirms it.', 'icap-seo'); ?>
+                                                    <?php esc_html_e('Applied on your site. Reload this page to check it again.', 'icap-seo'); ?>
                                                 <?php elseif ($catalog_status_key === 'locked_plan') : ?>
                                                     <?php esc_html_e('This check runs in the iCap SEO Premium scan service.', 'icap-seo'); ?>
                                                 <?php elseif ($catalog_status_key === 'not_scanned') : ?>
-                                                    <?php esc_html_e('Runs on your next scan.', 'icap-seo'); ?>
+                                                    <?php esc_html_e('This site couldn\'t read its own page. Check that the page is public and that your server or firewall allows the site to request itself, then reload.', 'icap-seo'); ?>
                                                 <?php else : ?>
                                                     <span aria-hidden="true">&mdash;</span>
                                                 <?php endif; ?>
