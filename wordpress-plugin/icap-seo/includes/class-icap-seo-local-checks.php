@@ -55,6 +55,17 @@ class ICap_SEO_Local_Checks
 
     private const CACHE_SECONDS = 600;
 
+    /** Post meta holding a page's latest on-site result: score, failed-check count, and time. */
+    private const SCORE_META_KEY = '_icap_seo_local_score';
+
+    private const LAST_CHECK_OPTION = 'icap_seo_local_last_check';
+
+    /** Pages per request. Each one is a request from the site to itself, so a batch stays well under PHP's time limit. */
+    private const BATCH_SIZE = 3;
+
+    /** The most recently updated pages listed and checked at once. */
+    public const MAX_PAGES = 1000;
+
     /** Mirrors the scan service's recommended security-header list (lowercase names, presence only). */
     private const REQUIRED_SECURITY_HEADERS = [
         'strict-transport-security',
@@ -191,6 +202,100 @@ class ICap_SEO_Local_Checks
     }
 
     /**
+     * Percentage of the checks that ran on this page and passed.
+     */
+    public static function score_for_detail(array $detail): int
+    {
+        $ran_count = count($detail['ran']);
+        $failed_codes = array_unique(array_column($detail['issues'], 'issue_code'));
+
+        return $ran_count > 0 ? (int) round(100 * max(0, $ran_count - count($failed_codes)) / $ran_count) : 0;
+    }
+
+    /**
+     * Save a page's result, unless the page itself couldn't be read: a score from the
+     * body-only checks that still run then wouldn't reflect the page.
+     */
+    public static function store_result(int $post_id, array $detail): bool
+    {
+        if (!in_array('missing_title_tag', $detail['ran'], true)) {
+            return false;
+        }
+
+        update_post_meta($post_id, self::SCORE_META_KEY, [
+            'score' => self::score_for_detail($detail),
+            'failed' => count(array_unique(array_column($detail['issues'], 'issue_code'))),
+            'checked_at' => gmdate('c'),
+        ]);
+        update_option(self::LAST_CHECK_OPTION, current_time('mysql'), false);
+
+        return true;
+    }
+
+    /**
+     * A page's saved score, or null if it hasn't been checked since it last changed.
+     */
+    public static function stored_score(int $post_id): ?int
+    {
+        $stored = get_post_meta($post_id, self::SCORE_META_KEY, true);
+
+        return is_array($stored) && isset($stored['score']) ? (int) $stored['score'] : null;
+    }
+
+    public static function last_check_time(): string
+    {
+        return (string) get_option(self::LAST_CHECK_OPTION, '');
+    }
+
+    /**
+     * Check the next few published pages. The admin's browser calls this repeatedly, so a
+     * site of any size is covered without one long request. Password-protected pages are
+     * skipped, since their content isn't public.
+     *
+     * @return array{total: int, next_offset: int, done: bool, checked: int, failed: int}
+     */
+    public static function run_batch(int $offset): array
+    {
+        $query = new WP_Query([
+            'post_type' => ['post', 'page'],
+            'post_status' => 'publish',
+            'has_password' => false,
+            'fields' => 'ids',
+            'posts_per_page' => self::BATCH_SIZE,
+            'offset' => $offset,
+            'orderby' => 'modified',
+            'order' => 'DESC',
+            'update_post_term_cache' => false,
+        ]);
+        $total = min((int) $query->found_posts, self::MAX_PAGES);
+
+        $checked = 0;
+        $failed = 0;
+        foreach ($query->posts as $index => $post_id) {
+            if ($offset + $index >= $total) {
+                break;
+            }
+            self::clear_cache_for_post((int) $post_id);
+            $detail = self::detail_for_post((int) $post_id);
+            if ($detail !== null && self::store_result((int) $post_id, $detail)) {
+                $checked++;
+            } else {
+                $failed++;
+            }
+        }
+
+        $next_offset = $offset + $checked + $failed;
+
+        return [
+            'total' => $total,
+            'next_offset' => $next_offset,
+            'done' => $checked + $failed === 0 || $next_offset >= $total,
+            'checked' => $checked,
+            'failed' => $failed,
+        ];
+    }
+
+    /**
      * Labels for each locally checked code, in display order.
      *
      * @return array<string, string>
@@ -246,6 +351,7 @@ class ICap_SEO_Local_Checks
         if (is_string($permalink) && $permalink !== '') {
             delete_transient('icap_seo_local_page_' . md5($permalink));
         }
+        delete_post_meta($post_id, self::SCORE_META_KEY);
     }
 
     /**

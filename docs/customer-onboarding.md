@@ -24,7 +24,8 @@ active, registered site. For step-by-step technical instructions, see [Getting s
 
 Everything that runs on your own site works without an account:
 
-- The 35 free checks on every page in **Content Scores**, with their one-click fixes.
+- The 35 free checks across your site with **Check all pages** in **Content Scores**, with a site-wide score
+  and one-click fixes.
 - On-page output (meta description, canonical URL, JSON-LD schema, social sharing tags) generated from your
   existing content.
 - The editor panel's quick checks and search and social previews.
@@ -39,7 +40,7 @@ register.
 ## What requires Premium
 
 The rest of the service-side features need a registered site with an active Premium subscription:
-site-wide scans and scores, the 3 checks run from outside your site, and AI-assisted drafts. Until the site
+scans run from outside your site, the 3 checks that need that outside view, and AI-assisted drafts. Until the site
 has Premium, these show an upgrade panel.
 
 ## Requesting a registration token

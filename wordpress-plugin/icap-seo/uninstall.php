@@ -16,7 +16,8 @@
  * canonical URLs, JSON-LD schema, content/readability drafts, remediation
  * history) - that's user-approved content applied to their pages, not
  * plugin-internal state, and deleting it site-wide on uninstall would be a
- * bigger, less reversible action than removing a settings row.
+ * bigger, less reversible action than removing a settings row. Saved scores
+ * from the on-site checks are removed: they're derived, and can be re-run.
  */
 
 if (!defined('WP_UNINSTALL_PLUGIN')) {
@@ -40,3 +41,5 @@ delete_option('icap_seo_404_log');
 delete_option('icap_seo_404_log_rate');
 delete_option('icap_seo_local_business');
 delete_option('icap_seo_dismissed_notifications');
+delete_option('icap_seo_local_last_check');
+delete_post_meta_by_key('_icap_seo_local_score');

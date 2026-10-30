@@ -4,11 +4,11 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.147
+Stable tag: 0.1.148
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-SEO checks and one-click fixes that run on your site, free Google reports, and an optional service for site-wide scans and AI drafts.
+Site-wide SEO checks and one-click fixes that run on your site, free Google reports, and an optional service for outside scans and AI drafts.
 
 == Description ==
 
@@ -17,6 +17,7 @@ iCap SEO checks your pages for common SEO problems, explains what it finds in pl
 **Runs on your site, no account needed**
 
 * **35 on-page checks** for every post and page: title tag and length, meta description and length, H1, HTTPS, robots meta rules (noindex, nofollow, noimageindex, nosnippet), robots.txt, security headers, content depth, readability (reading ease, long sentences, transition words, passive voice), heading and paragraph structure, image alt text, width/height and lazy loading, canonical URL, structured data (JSON-LD presence, @type, and required properties), internal links, external references, and internal nofollow links. They read the page from your own site; nothing is sent anywhere.
+* **Check all pages**: run those checks across your published pages at once and see a site-wide score, with results and fixes for each page.
 * **One-click fixes** for those checks: titles, meta descriptions, H1, alt text, image dimensions, lazy loading, canonical URL, JSON-LD structured data, headings, paragraphs, and internal links. Checks that need a judgment call, such as readability or robots rules, explain what to change. They are applied directly on your site. On a registered site with AI credits, some of these fixes use AI-drafted text instead of the built-in templates.
 * **Editor panel**: a quick-check score, search result preview, and social preview in the block editor (updated as you type) and in a classic editor meta box.
 * **Social sharing tags, a redirect manager with a 404 log, an llms.txt file, Local SEO, and optional IndexNow pings**: Open Graph and X Card tags, old-URL-to-new-URL redirects, a log of pages visitors hit that don't exist, a generated `/llms.txt`, LocalBusiness structured data (address, phone, hours), and IndexNow notifications on publish, update, or delete (off by default).
@@ -31,8 +32,8 @@ Registering the site (free) connects it to the iCap SEO service, which runs on o
 
 A Premium subscription adds, on top of that:
 
-* **Full-site scans and scores**: every page scanned from our servers, with a site-wide score.
-* **3 checks that need an outside view of your site**: whether each page is reachable by a crawler at all, and broken internal and external links, found by requesting every linked URL from our servers.
+* **Scans from outside your site**: up to 100 pages per scan, requested from our servers.
+* **3 checks that need an outside view of your site**: whether each page is reachable by a crawler at all, and broken internal and external links, found by requesting linked URLs from our servers, within a limit per scan.
 * **AI-assisted drafts** (meta descriptions, titles, alt text, expanded content, readability rewrites, spelling and grammar), paid for with AI credits.
 
 Everything in the "Runs on your site" list above works the same with or without Premium, and without registering.
@@ -43,14 +44,14 @@ Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
 
 1. Install the plugin from **Plugins → Add New**, or upload the ZIP under **Plugins → Add New → Upload Plugin**.
 2. Activate it.
-3. Open **iCap SEO → Content Scores** and pick a page to see its checks and apply fixes.
+3. Open **iCap SEO → Content Scores**, click **Check all pages**, then pick a page to see its results and apply fixes.
 4. Optional: to add the free Google reports, open **iCap SEO → Setup Wizard**, click **Continue to registration**, enter your email to request a registration token, follow the link in the email to register the site, then connect Google under **Settings**. For Premium, start checkout under **Settings → Billing**.
 
 == Frequently Asked Questions ==
 
 = Do I need an account to use this plugin? =
 
-No. The 35 on-page checks, their fixes, the editor panel, redirects, social tags, llms.txt, and Local SEO all work without an account. An account (free) is only needed for the Google reports and for Premium: site-wide scans, the outside-in checks, and AI-assisted drafts.
+No. The 35 on-page checks, their fixes, the editor panel, redirects, social tags, llms.txt, and Local SEO all work without an account. An account (free) is only needed for the Google reports and for Premium: outside scans and checks, and AI-assisted drafts.
 
 = Will this plugin change my content without asking? =
 
@@ -59,10 +60,6 @@ No. Nothing changes until you click Apply. Larger content changes (expanded cont
 = What is sent to the iCap SEO service? =
 
 Nothing, until you start registration in the Setup Wizard. Registering sends basic site details, scans read your public pages, and AI drafts send the relevant page content. See "External services" below for details.
-
-= Where can I see the full list of checks? =
-
-Open any page under **Content Scores**. The table lists every check, whether it runs on your site or in the service, and its current status.
 
 = How do I report a bug, request a feature, or report a security issue? =
 
@@ -76,7 +73,7 @@ The plugin works without contacting any external service. It connects to the ser
 
 = iCap SEO service (iCapSolutions) =
 
-Used for site registration, subscription status, the free Google reports, and the Premium features: site-wide scans and scores, the outside-in checks, AI-assisted drafts, and AI credit balance.
+Used for site registration, subscription status, the free Google reports, and the Premium features: scans and checks from outside your site, AI-assisted drafts, and AI credit balance.
 
 * Service host: api.icapsolutions.com (API only, no web page)
 * Registration data: the site URL and name, the site's admin email address, the WordPress and plugin versions, and the site's time zone, plus the email address and plan you enter when requesting a token.
@@ -132,6 +129,6 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings does the
 
 == Changelog ==
 
-= 0.1.147 =
+= 0.1.148 =
+* Check all pages runs the on-site checks across your published pages, with a site-wide score.
 * The Setup Wizard contacts the iCap SEO service only after you choose to continue.
-* Clearer message when a page can't be checked.

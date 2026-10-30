@@ -68,7 +68,7 @@ the plugin refreshes your billing status; **Check Billing Status** confirms it a
 
 Connect Google Search Console and Google Analytics in **Settings** to fill the **SEO Performance**,
 **Site Analytics**, and **Keywords** tabs — free on any registered site. With Premium active, click
-**Trigger Full Scan** in **Overview**. Scans score every page and include the 3 checks run from
+**Trigger Full Scan** in **Overview**. Scans cover up to 100 pages and include the 3 checks run from
 outside your site (page reachability, and broken internal and external links). Scan status updates in place.
 
 ## 8. Review your results
@@ -76,7 +76,8 @@ outside your site (page reachability, and broken internal and external links). S
 - **Overview** shows your site-wide score, scan summary, and what's included in your plan.
 - **Content Scores** shows a per-page checklist — what's passing, what needs attention, and one-click fixes.
 
-Without Premium, the free checks still run on any page you open in **Content Scores**, and a few more tabs
+Without Premium, click **Check all pages** in **Content Scores** to run the free checks across your site, or open
+any page to check it on its own. A few more tabs
 work immediately without registration: **Redirects** (set up
 redirects and see a log of 404s visitors hit) and **Local SEO** (enter your business info once to output
 LocalBusiness structured data site-wide). Social sharing previews and `/llms.txt` are on automatically, no

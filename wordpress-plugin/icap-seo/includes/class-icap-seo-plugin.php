@@ -26,6 +26,7 @@ class ICap_SEO_Plugin
     {
         add_action('admin_menu', [$this, 'register_admin']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+        add_action('rest_api_init', [$this, 'register_rest_routes']);
         add_action('wp_dashboard_setup', [$this->admin, 'register_dashboard_widget']);
         $this->output->register();
         $this->editor_panel->register();
@@ -66,6 +67,25 @@ class ICap_SEO_Plugin
             ICAP_SEO_VERSION,
             true
         );
+
+        wp_localize_script('icap-seo-admin', 'icapSeoAdmin', [
+            'batchUrl' => esc_url_raw(rest_url('icap-seo/v1/local-checks/batch')),
+            'restNonce' => wp_create_nonce('wp_rest'),
+        ]);
+    }
+
+    public function register_rest_routes(): void
+    {
+        register_rest_route('icap-seo/v1', '/local-checks/batch', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => static function (WP_REST_Request $request): WP_REST_Response {
+                return new WP_REST_Response(ICap_SEO_Local_Checks::run_batch((int) $request->get_param('offset')));
+            },
+            'permission_callback' => static fn(): bool => current_user_can('manage_options'),
+            'args' => [
+                'offset' => ['required' => false, 'type' => 'integer', 'minimum' => 0, 'default' => 0],
+            ],
+        ]);
     }
 
     /**

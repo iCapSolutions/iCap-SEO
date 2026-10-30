@@ -253,4 +253,61 @@
 
         hitRect.addEventListener('mouseleave', hide);
     });
+
+    // Runs the on-site checks across all pages, a few per request, so progress is real and
+    // no single request runs long. Results are saved as it goes, so leaving early keeps them.
+    document.querySelectorAll('.icap-seo-local-batch').forEach(function (panel) {
+        var settings = window.icapSeoAdmin;
+        var button = panel.querySelector('.icap-seo-local-batch-start');
+        var status = panel.querySelector('.icap-seo-local-batch-status');
+        if (!settings || !button || !status) {
+            return;
+        }
+
+        var failedPages = 0;
+
+        function runBatch(offset) {
+            fetch(settings.batchUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': settings.restNonce },
+                body: JSON.stringify({ offset: offset })
+            }).then(function (response) {
+                if (!response.ok) {
+                    throw new Error('batch failed');
+                }
+                return response.json();
+            }).then(function (result) {
+                failedPages += result.failed;
+                if (!result.done) {
+                    status.textContent = button.getAttribute('data-progress')
+                        .replace('%1$d', result.next_offset)
+                        .replace('%2$d', result.total);
+                    runBatch(result.next_offset);
+                } else if (failedPages > 0) {
+                    status.textContent = button.getAttribute('data-partial').replace('%d', failedPages);
+                    button.disabled = false;
+                    button.textContent = button.getAttribute('data-reload');
+                    button.addEventListener('click', function () {
+                        window.location.reload();
+                    });
+                } else {
+                    window.location.reload();
+                }
+            }).catch(function () {
+                status.textContent = button.getAttribute('data-error');
+                button.disabled = false;
+            });
+        }
+
+        button.addEventListener('click', function () {
+            if (button.textContent === button.getAttribute('data-reload')) {
+                return;
+            }
+            button.disabled = true;
+            failedPages = 0;
+            status.textContent = button.getAttribute('data-starting');
+            runBatch(0);
+        });
+    });
 }());
