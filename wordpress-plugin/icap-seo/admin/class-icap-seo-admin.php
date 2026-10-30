@@ -163,12 +163,20 @@ class ICap_SEO_Admin
     {
         $band_text_colors = self::score_band_text_colors();
 
-        // Site-wide scores come from Premium scans. Without them the widget just points at
-        // Content Scores, where the free checks run page by page.
+        // Without Premium scans, the widget shows the on-site checks' score, if they've run.
         if (!$this->service_client->is_premium()) {
             $content_scores_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'content-scores'], admin_url('admin.php')));
+            $local_score = $this->service_client->get_site_score_snapshot(false)['score'];
             echo '<div class="icap-seo-dashboard-widget">';
-            echo '<p>' . esc_html__('Open any page in Content Scores to run its SEO checks and apply fixes.', 'icap-seo') . '</p>';
+            if ($local_score !== null) {
+                printf(
+                    '<p>%s <strong>%s</strong></p>',
+                    esc_html__('Overall SEO score:', 'icap-seo'),
+                    esc_html((string) $local_score)
+                );
+            } else {
+                echo '<p>' . esc_html__('Run Check all pages in Content Scores to see your site-wide SEO score.', 'icap-seo') . '</p>';
+            }
             echo '<p><a href="' . esc_url($content_scores_url) . '" class="button button-primary">'
                 . esc_html__('Open Content Scores', 'icap-seo') . '</a></p>';
             echo '</div>';
@@ -802,19 +810,14 @@ class ICap_SEO_Admin
      */
     private function build_local_content_detail(int $post_id, array $local_detail): array
     {
-        $ran_count = count($local_detail['ran']);
-        $failed_codes = array_unique(array_map(
-            static fn(array $row): string => (string) $row['issue_code'],
-            $local_detail['issues']
-        ));
-        $score = $ran_count > 0 ? (int) round(100 * max(0, $ran_count - count($failed_codes)) / $ran_count) : 0;
+        ICap_SEO_Local_Checks::store_result($post_id, $local_detail);
 
         return [
             'title' => (string) $local_detail['title'],
             'status' => __('Checked on this site', 'icap-seo'),
             'post_type' => (string) get_post_type($post_id),
             'permalink' => (string) $local_detail['permalink'],
-            'overall_score' => $score,
+            'overall_score' => ICap_SEO_Local_Checks::score_for_detail($local_detail),
             'category_scores' => [],
             'issues' => $local_detail['issues'],
         ];

@@ -90,7 +90,7 @@ class ICap_SEO_Service_Client
         if ($count > 0) {
             return [
                 'score' => $count > 0 ? sprintf('%d/100', (int) round($sum / $count)) : null,
-                'last_scan' => $this->get_connection_settings()['last_sync_at'] ?: 'Unknown',
+                'last_scan' => $this->get_connection_settings()['last_sync_at'] ?: (ICap_SEO_Local_Checks::last_check_time() ?: 'Unknown'),
                 'status' => 'Connected',
             ];
         }
@@ -167,11 +167,15 @@ class ICap_SEO_Service_Client
 
     public function get_content_score_for_post(int $post_id): array
     {
+        if (!$this->is_premium()) {
+            return $this->build_local_score_data($post_id);
+        }
+
         $scores_index = $this->get_content_scores_index();
         if (isset($scores_index[$post_id])) {
             return $scores_index[$post_id];
         }
-        return $this->build_placeholder_score_data($post_id);
+        return $this->build_local_score_data($post_id);
     }
 
     public function get_content_scores_overview(bool $allow_live_fetch = true): array
@@ -265,15 +269,16 @@ class ICap_SEO_Service_Client
         $posts = get_posts([
             'post_type' => ['post', 'page'],
             'post_status' => ['publish', 'draft', 'pending', 'future', 'private'],
-            'posts_per_page' => 100,
+            'posts_per_page' => ICap_SEO_Local_Checks::MAX_PAGES,
             'orderby' => 'modified',
             'order' => 'DESC',
+            'update_post_term_cache' => false,
         ]);
 
         $rows = [];
 
         foreach ($posts as $post) {
-            $score_data = $this->build_placeholder_score_data((int) $post->ID);
+            $score_data = $this->build_local_score_data((int) $post->ID);
             $rows[] = [
                 'id' => (int) $post->ID,
                 'content_key' => sprintf('post_%d', (int) $post->ID),
@@ -282,13 +287,13 @@ class ICap_SEO_Service_Client
                 'status' => (string) $post->post_status,
                 'edit_link' => get_edit_post_link((int) $post->ID, ''),
                 'icap_score' => $score_data['icap_score'],
-                'icap_score_numeric' => null,
+                'icap_score_numeric' => $score_data['icap_score_numeric'],
                 'google_coverage_state' => '',
                 'google_clicks' => null,
                 'google_position' => null,
                 'google_sessions' => null,
                 'google_engagement_rate' => null,
-                'source' => 'placeholder',
+                'source' => $score_data['icap_score_numeric'] !== null ? 'local' : 'placeholder',
             ];
         }
         $this->latest_content_scores_meta = $this->build_content_scores_meta(
@@ -1789,15 +1794,15 @@ class ICap_SEO_Service_Client
     }
 
     /**
-     * Shown for a post the scan service hasn't scored yet. Open the page's detail
-     * view to run the free checks on this site.
+     * The score from the on-site checks, for a post the scan service hasn't scored.
      */
-    private function build_placeholder_score_data(int $post_id): array
+    private function build_local_score_data(int $post_id): array
     {
-        unset($post_id);
+        $score = ICap_SEO_Local_Checks::stored_score($post_id);
 
         return [
-            'icap_score' => __('Not scanned', 'icap-seo'),
+            'icap_score' => $score !== null ? sprintf('%d/100', $score) : __('Not checked', 'icap-seo'),
+            'icap_score_numeric' => $score,
         ];
     }
 

@@ -3,7 +3,7 @@
 iCap SEO is a WordPress plugin that checks your pages for common SEO problems, explains what it finds in plain
 language, and fixes most of it for you, with one click or with a preview you approve first. 35 of its 38 checks
 and their fixes run on your own site with no account. Registering (free) adds Google Search Console and
-Google Analytics reports. Premium adds site-wide scans, 3 checks that need an outside view of your site,
+Google Analytics reports. Premium adds scans from outside your site, 3 checks that need that outside view,
 and AI-assisted drafts.
 
 Built and maintained by [iCapSolutions](https://www.icapsolutions.com).
@@ -39,8 +39,9 @@ gets fixed.
 
 ## Getting started
 
-1. Open **iCap SEO → Content Scores** and pick a page to see the free checks and apply fixes. No account needed.
-2. Optional, for Premium: in **Setup Wizard**, request a registration token by email, enter it in
+1. Open **iCap SEO → Content Scores**, click **Check all pages**, then pick a page to see its results and apply
+   fixes. No account needed.
+2. Optional, for Google reports or Premium: in **Setup Wizard**, request a registration token by email, enter it in
    **Settings**, then click **Test Connection** and **Request Credentials & Register Site**.
 3. Start checkout under **Settings → Billing**. Once Premium is active, click **Trigger Full Scan** in
    **Overview** and connect Google in **Settings**.
@@ -52,13 +53,13 @@ activation and troubleshooting.
 
 - **Free**: 35 checks that run on your own site (title, meta description, H1, HTTPS, robots meta rules and
   robots.txt, security headers, content depth, readability, heading and paragraph structure, canonical URL,
-  structured data, images, internal links, external references, and internal nofollow links) with one-click
-  fixes or guidance, plus social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt,
+  structured data, images, internal links, external references, and internal nofollow links) across all your
+  pages, with a site-wide score and one-click fixes or guidance, plus social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt,
   and Local SEO.
 - **Free with registration**: Google Search Console and Google Analytics reports (SEO Performance,
   Site Analytics, Keywords), connected with your own Google account.
-- **Premium** ($59.95/year): full-site scans and scores run by the iCap SEO service; 3 checks run from outside your
-  site — page reachability, and broken internal and external links; and AI-assisted drafts, paid for with AI
+- **Premium** ($59.95/year): scans run by the iCap SEO service from outside your site, up to 100 pages per scan; 3
+  checks run from outside your site — page reachability, and broken internal and external links; and AI-assisted drafts, paid for with AI
   credits.
 
 ## Support
