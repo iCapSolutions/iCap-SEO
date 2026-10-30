@@ -77,7 +77,7 @@ outside your site (page reachability, and broken internal and external links). S
 - **Content Scores** shows a per-page checklist — what's passing, what needs attention, and one-click fixes.
 
 Without Premium, click **Check all pages** in **Content Scores** to run the free checks across your site, or open
-any page to check it on its own. A few more tabs
+any page to check it on its own, including **Check links** for its broken links. A few more tabs
 work immediately without registration: **Redirects** (set up
 redirects and see a log of 404s visitors hit) and **Local SEO** (enter your business info once to output
 LocalBusiness structured data site-wide). Social sharing previews and `/llms.txt` are on automatically, no

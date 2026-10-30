@@ -310,4 +310,50 @@
             runBatch(0);
         });
     });
+
+    // Runs only on click: this requests other sites' pages from the site's server.
+    document.querySelectorAll('.icap-seo-link-check').forEach(function (panel) {
+        var settings = window.icapSeoAdmin;
+        var button = panel.querySelector('.icap-seo-link-check-start');
+        var status = panel.querySelector('.icap-seo-link-check-status');
+        var results = panel.querySelector('.icap-seo-link-check-results');
+        if (!settings || !button || !status || !results) {
+            return;
+        }
+
+        button.addEventListener('click', function () {
+            button.disabled = true;
+            results.textContent = '';
+            status.textContent = button.getAttribute('data-checking');
+
+            fetch(settings.linksUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': settings.restNonce },
+                body: JSON.stringify({ post_id: parseInt(panel.getAttribute('data-post-id'), 10) })
+            }).then(function (response) {
+                if (!response.ok) {
+                    throw new Error('link check failed');
+                }
+                return response.json();
+            }).then(function (result) {
+                var summary = button.getAttribute('data-summary')
+                    .replace('%1$d', result.checked)
+                    .replace('%2$d', result.total);
+                var outcome = result.broken.length > 0
+                    ? button.getAttribute('data-broken').replace('%d', result.broken.length)
+                    : button.getAttribute('data-clean');
+                status.textContent = summary + ' ' + outcome;
+                result.broken.forEach(function (link) {
+                    var item = document.createElement('li');
+                    item.textContent = link.url + ' (' + (link.status || button.getAttribute('data-no-response')) + ')';
+                    results.appendChild(item);
+                });
+                button.disabled = false;
+            }).catch(function () {
+                status.textContent = button.getAttribute('data-error');
+                button.disabled = false;
+            });
+        });
+    });
 }());

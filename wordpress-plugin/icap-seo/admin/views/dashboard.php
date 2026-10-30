@@ -1537,7 +1537,11 @@ if ($notice_code === 'remediation_apply_noop') {
                                                 <?php elseif ($catalog_status_key === 'applied') : ?>
                                                     <?php esc_html_e('Applied on your site. Reload this page to check it again.', 'icap-seo'); ?>
                                                 <?php elseif ($catalog_status_key === 'premium_service') : ?>
-                                                    <?php esc_html_e('This check runs in the iCap SEO Premium scan service.', 'icap-seo'); ?>
+                                                    <?php if (in_array($catalog_code, ['broken_internal_link_detected', 'broken_external_link_detected'], true)) : ?>
+                                                        <?php esc_html_e('Premium checks this across your pages from outside your site. Use Check links below for this page, free.', 'icap-seo'); ?>
+                                                    <?php else : ?>
+                                                        <?php esc_html_e('This check runs in the iCap SEO Premium scan service.', 'icap-seo'); ?>
+                                                    <?php endif; ?>
                                                 <?php elseif ($catalog_status_key === 'not_scanned') : ?>
                                                     <?php esc_html_e('This site couldn\'t read its own page. Check that the page is public and that your server or firewall allows the site to request itself, then reload.', 'icap-seo'); ?>
                                                 <?php else : ?>
@@ -1548,6 +1552,34 @@ if ($notice_code === 'remediation_apply_noop') {
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
+                        </div>
+                    <?php endif; ?>
+                    <?php $link_check_post_id = absint(str_replace('post_', '', $selected_content_key)); ?>
+                    <?php if ($link_check_post_id > 0) : ?>
+                        <div class="icap-seo-link-check" data-post-id="<?php echo esc_attr((string) $link_check_post_id); ?>">
+                            <h3><?php esc_html_e('Check this page\'s links', 'icap-seo'); ?></h3>
+                            <p class="description">
+                                <?php
+                                printf(
+                                    /* translators: %d: maximum number of links checked at once */
+                                    esc_html__('Your site requests up to %d links from this page and lists any that are broken. The sites it links to see a normal request from your server. Nothing else is sent.', 'icap-seo'),
+                                    (int) ICap_SEO_Local_Checks::MAX_LINKS_PER_CHECK
+                                );
+                                ?>
+                            </p>
+                            <p>
+                                <button type="button" class="button icap-seo-link-check-start"
+                                    data-checking="<?php esc_attr_e('Checking links…', 'icap-seo'); ?>"
+                                    <?php /* translators: 1: links checked, 2: links on the page */ ?>
+                                    data-summary="<?php esc_attr_e('Checked %1$d of %2$d links.', 'icap-seo'); ?>"
+                                    <?php /* translators: %d: number of broken links */ ?>
+                                    data-broken="<?php esc_attr_e('%d broken:', 'icap-seo'); ?>"
+                                    data-clean="<?php esc_attr_e('None are broken.', 'icap-seo'); ?>"
+                                    data-no-response="<?php esc_attr_e('no response', 'icap-seo'); ?>"
+                                    data-error="<?php esc_attr_e('The link check stopped because of a connection problem. Click to try again.', 'icap-seo'); ?>"><?php esc_html_e('Check links', 'icap-seo'); ?></button>
+                                <span class="icap-seo-link-check-status" role="status"></span>
+                            </p>
+                            <ul class="icap-seo-link-check-results"></ul>
                         </div>
                     <?php endif; ?>
                     <?php endif; // content_detail_tab === 'recommendations' ?>
@@ -3468,6 +3500,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <li><?php esc_html_e('Links — internal links, external references, internal nofollow', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Google Search Console and Google Analytics reports — search performance, traffic, and keywords', 'icap-seo'); ?> <em>(<?php esc_html_e('Free with registration', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Site-wide score from checking all pages on this site', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('Broken-link check for any page, when you click Check links', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Scans run from the iCap SEO service, from outside your site', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Page reachability and broken internal and external links, checked by crawling from outside your site', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('AI-drafted titles, descriptions, alt text, and rewrites, paid for with AI credits', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>

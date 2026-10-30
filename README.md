@@ -54,7 +54,7 @@ activation and troubleshooting.
 - **Free**: 35 checks that run on your own site (title, meta description, H1, HTTPS, robots meta rules and
   robots.txt, security headers, content depth, readability, heading and paragraph structure, canonical URL,
   structured data, images, internal links, external references, and internal nofollow links) across all your
-  pages, with a site-wide score and one-click fixes or guidance, plus social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt,
+  pages, with a site-wide score and one-click fixes or guidance, a broken-link check for any page, plus social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt,
   and Local SEO.
 - **Free with registration**: Google Search Console and Google Analytics reports (SEO Performance,
   Site Analytics, Keywords), connected with your own Google account.
