@@ -10,7 +10,7 @@ active, registered site. For step-by-step technical instructions, see [Getting s
 2. **Install** — the plugin is installed and activated in WordPress like any other plugin. No account or
    credentials are required to activate it.
 3. **Request access** — from the plugin's **Setup Wizard**, the customer requests a registration token by
-   entering an email and choosing a plan (see [Requesting a token](#requesting-a-registration-token) below).
+   entering an email (see [Requesting a token](#requesting-a-registration-token) below).
 4. **Connect & register** — the customer enters the registration token in **Settings**, then
    completes registration from **Setup Wizard**. Site credentials are provisioned automatically at this step —
    no manual key management.
@@ -40,15 +40,14 @@ register.
 ## What requires Premium
 
 The rest of the service-side features need a registered site with an active Premium subscription:
-scans run from outside your site, the 3 checks that need that outside view, and AI-assisted drafts. Until the site
+scans run from outside your site, the 3 checks that need that outside view, and AI Improvements, with 25 AI credits included each year. Until the site
 has Premium, these show an upgrade panel.
 
 ## Requesting a registration token
 
-Request one directly from the plugin: open **iCap SEO → Setup Wizard**, click **Continue to registration**, enter your email, choose a plan
-(Baseline, Premium, or AI Scanning), and click **Request Registration**. Verify your email via the link sent
-to you, and your registration token follows by email — instantly for Baseline, after a quick iCapSolutions
-review for Premium and AI Scanning. Then follow [Getting started](getting-started.md) to connect and register
+Request one directly from the plugin: open **iCap SEO → Setup Wizard**, click **Continue to registration**, enter your email,
+and click **Request Registration**. Verify your email via the link sent to you, and your registration token
+follows by email right away. Then follow [Getting started](getting-started.md) to connect and register
 your site.
 
 You can still reach out at [icapsolutions.com](https://www.icapsolutions.com/services/wordpress-seo-plugin.html)

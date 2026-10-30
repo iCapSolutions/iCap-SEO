@@ -26,14 +26,10 @@ Open **iCap SEO → Setup Wizard**. If your site isn't connected yet, you'll see
 token yet?"** section:
 
 1. Enter your email address.
-2. Choose a plan: **Baseline (free)**, **Premium**, or **AI Scanning**.
-3. Click **Request Registration**.
+2. Click **Request Registration**.
 
-You'll get a verification email — click the link to confirm it's you. What happens next depends on the plan:
-
-- **Baseline** verifies and completes instantly. Your registration token arrives by email right away.
-- **Premium** and **AI Scanning** requests go to iCapSolutions for a quick review after verification. You'll
-  get a second email with your registration token once it's approved.
+You'll get a verification email. Click the link to confirm it's you, and your registration token arrives
+by email right away. Premium is bought afterwards, under **Settings → Billing**.
 
 Already have a registration token from your account contact? Skip ahead to step 3. Note that each registration
 token is single-use and tied to the specific site it was issued for — a token from a previous request, or one
@@ -87,7 +83,7 @@ setup needed. IndexNow pings are off until you turn them on in **Settings**.
 
 | Symptom | Fix |
 |---|---|
-| No verification or token email arrives | Check spam/junk. Confirm the email address you entered is correct. Premium/AI Scanning requests wait on a review step before the token email sends. |
+| No verification or token email arrives | Check spam/junk. Confirm the email address you entered is correct. |
 | Registration fails | Double-check the registration token. Each token works once, for one site. |
 | Scan won't start, or the report tabs show an upgrade panel | Run **Check Billing Status** in **Settings** to confirm your Premium subscription is active. |
 | No scores yet | Wait for the scan to finish, then refresh **Content Scores**. |

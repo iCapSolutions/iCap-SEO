@@ -1265,17 +1265,9 @@ class ICap_SEO_Admin
         $email = isset($_POST['registration_request_email'])
             ? sanitize_email((string) wp_unslash($_POST['registration_request_email']))
             : '';
-        $requested_tier = isset($_POST['registration_request_tier'])
-            ? sanitize_text_field((string) wp_unslash($_POST['registration_request_tier']))
-            : '';
-        $allowed_tiers = ['baseline', 'premium', 'ai_scanning'];
 
         if ($email === '' || !is_email($email)) {
             $this->redirect_with_notice('registration_request_invalid_email', 'setup-wizard');
-            return;
-        }
-        if (!in_array($requested_tier, $allowed_tiers, true)) {
-            $this->redirect_with_notice('registration_request_invalid_tier', 'setup-wizard');
             return;
         }
 
@@ -1289,7 +1281,8 @@ class ICap_SEO_Admin
 
         $result = $this->service_client->request_registration([
             'email' => $email,
-            'requested_tier' => $requested_tier,
+            // Everyone registers the same way. Premium is bought afterwards, under Billing.
+            'requested_tier' => 'baseline',
             'site_url' => home_url('/'),
             'wp_version' => get_bloginfo('version'),
             'plugin_version' => ICAP_SEO_VERSION,
