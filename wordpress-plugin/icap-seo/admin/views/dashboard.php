@@ -1552,7 +1552,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             </table>
                         </div>
                     <?php endif; ?>
-                    <?php $link_check_post_id = absint(str_replace('post_', '', $selected_content_key)); ?>
+                    <?php $link_check_post_id = $this->extract_post_id_from_content_key($selected_content_key); ?>
                     <?php if ($link_check_post_id > 0) : ?>
                         <div class="icap-seo-link-check" data-post-id="<?php echo esc_attr((string) $link_check_post_id); ?>">
                             <h3><?php esc_html_e('Check this page\'s links', 'icap-seo'); ?></h3>
