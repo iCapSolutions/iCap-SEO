@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.151
+Stable tag: 0.1.152
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -129,5 +129,5 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings does the
 
 == Changelog ==
 
-= 0.1.151 =
-* Check all pages works on Premium sites too, scoring pages a scan didn't reach.
+= 0.1.152 =
+* Checks use the page's WordPress content when a site can't request itself.

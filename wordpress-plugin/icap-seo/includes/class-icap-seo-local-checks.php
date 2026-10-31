@@ -60,6 +60,24 @@ class ICap_SEO_Local_Checks
 
     private const LAST_CHECK_OPTION = 'icap_seo_local_last_check';
 
+    /** Checks only the live page can answer: the theme's H1, robots rules, and response headers. */
+    private const LIVE_PAGE_CODES = [
+        'missing_h1',
+        'noindex_detected',
+        'page_level_nofollow_detected',
+        'noimageindex_detected',
+        'nosnippet_detected',
+        'missing_security_headers',
+    ];
+
+    /** Set by another SEO plugin when one is active, so they're unknown from this plugin's data. */
+    private const SEO_PLUGIN_CODES = [
+        'missing_title_tag',
+        'title_length_out_of_range',
+        'missing_meta_description',
+        'meta_description_length_out_of_range',
+    ];
+
     /** Pages per request. Each one is a request from the site to itself, so a batch stays well under PHP's time limit. */
     private const BATCH_SIZE = 3;
 
@@ -121,10 +139,11 @@ class ICap_SEO_Local_Checks
      * Run every local check for a post.
      *
      * @return array{issues: array<int, array<string, string>>, ran: string[]}
-     *         `ran` lists the codes that were actually evaluated. Page-level codes are
-     *         absent when the page couldn't be fetched.
+     *         `ran` lists the codes that were actually evaluated. If the page can't be
+     *         fetched and $post is given, the checks read its WordPress data instead, and
+     *         `partial` is true. Checks that need the live page are then left out of `ran`.
      */
-    public static function run_for_post(string $permalink, string $body_html): array
+    public static function run_for_post(string $permalink, string $body_html, ?WP_Post $post = null): array
     {
         $issues = [];
         $ran = [];
@@ -135,6 +154,11 @@ class ICap_SEO_Local_Checks
         }
 
         $page = self::fetch_rendered_page($permalink);
+        $partial = false;
+        if ($page === null && $post !== null) {
+            $page = ['html' => self::page_from_wordpress($post, $permalink, $body_html), 'headers' => []];
+            $partial = true;
+        }
         if ($page !== null) {
             $page_html = $page['html'];
             $issues = array_merge(
@@ -178,7 +202,18 @@ class ICap_SEO_Local_Checks
             'limited_paragraph_structure',
         ]);
 
-        return ['issues' => $issues, 'ran' => $ran];
+        if ($partial) {
+            $unknown_codes = (new ICap_SEO_Output())->is_another_seo_plugin_active()
+                ? array_merge(self::LIVE_PAGE_CODES, self::SEO_PLUGIN_CODES)
+                : self::LIVE_PAGE_CODES;
+            $ran = array_values(array_diff($ran, $unknown_codes));
+            $issues = array_values(array_filter(
+                $issues,
+                static fn(array $issue): bool => !in_array($issue['issue_code'], $unknown_codes, true)
+            ));
+        }
+
+        return ['issues' => $issues, 'ran' => $ran, 'partial' => $partial];
     }
 
     /**
@@ -198,13 +233,14 @@ class ICap_SEO_Local_Checks
         // Core hook: render the post body the way WordPress does, so link and image checks see the same HTML a visitor gets.
         // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- the_content is a WordPress core hook, not a plugin hook.
         $body_html = (string) apply_filters('the_content', $post->post_content);
-        $result = self::run_for_post($permalink, $body_html);
+        $result = self::run_for_post($permalink, $body_html, $post);
 
         return [
             'title' => get_the_title($post),
             'permalink' => $permalink,
             'issues' => $result['issues'],
             'ran' => $result['ran'],
+            'partial' => $result['partial'],
         ];
     }
 
@@ -232,6 +268,7 @@ class ICap_SEO_Local_Checks
         update_post_meta($post_id, self::SCORE_META_KEY, [
             'score' => self::score_for_detail($detail),
             'failed' => count(array_unique(array_column($detail['issues'], 'issue_code'))),
+            'partial' => !empty($detail['partial']),
             'checked_at' => gmdate('c'),
         ]);
         update_option(self::LAST_CHECK_OPTION, current_time('mysql'), false);
@@ -247,6 +284,16 @@ class ICap_SEO_Local_Checks
         $stored = get_post_meta($post_id, self::SCORE_META_KEY, true);
 
         return is_array($stored) && isset($stored['score']) ? (int) $stored['score'] : null;
+    }
+
+    /**
+     * Whether a page's saved score came from its WordPress data, not the live page.
+     */
+    public static function stored_score_is_partial(int $post_id): bool
+    {
+        $stored = get_post_meta($post_id, self::SCORE_META_KEY, true);
+
+        return is_array($stored) && !empty($stored['partial']);
     }
 
     public static function last_check_time(): string
@@ -359,6 +406,29 @@ class ICap_SEO_Local_Checks
             delete_transient('icap_seo_local_page_' . md5($permalink));
         }
         delete_post_meta($post_id, self::SCORE_META_KEY);
+    }
+
+    /**
+     * The page as far as WordPress data can describe it, for hosts where a site can't
+     * request itself. Mirrors what this plugin and core print in the head.
+     */
+    private static function page_from_wordpress(WP_Post $post, string $permalink, string $body_html): string
+    {
+        $title = trim(get_the_title($post) . ' - ' . get_bloginfo('name'), ' -');
+        $description = (new ICap_SEO_Output())->get_effective_meta_description($post, 160);
+        $canonical = (new ICap_SEO_Output())->get_effective_canonical_url($post);
+        $schema = get_post_meta((int) $post->ID, '_icap_seo_jsonld_schema_json', true);
+
+        $head = '<title>' . esc_html($title) . '</title>';
+        if ($description !== '') {
+            $head .= '<meta name="description" content="' . esc_attr($description) . '">';
+        }
+        $head .= '<link rel="canonical" href="' . esc_url($canonical !== '' ? $canonical : $permalink) . '">';
+        if (is_string($schema) && trim($schema) !== '') {
+            $head .= '<script type="application/ld+json">' . $schema . '</script>';
+        }
+
+        return '<html><head>' . $head . '</head><body>' . $body_html . '</body></html>';
     }
 
     /**

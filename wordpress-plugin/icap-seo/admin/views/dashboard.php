@@ -963,7 +963,9 @@ if ($notice_code === 'remediation_apply_noop') {
                                             </div>
                                             <span class="icap-seo-score-bar-label"><?php echo esc_html($row['icap_score']); ?></span>
                                         </div>
-                                        <?php if ($content_scores_has_service_rows && ($row['source'] ?? '') === 'local') : ?>
+                                        <?php if (!empty($row['local_partial'])) : ?>
+                                            <span class="icap-seo-card-subtext"><?php esc_html_e('From WordPress data', 'icap-seo'); ?></span>
+                                        <?php elseif ($content_scores_has_service_rows && ($row['source'] ?? '') === 'local') : ?>
                                             <span class="icap-seo-card-subtext"><?php esc_html_e('Checked on this site', 'icap-seo'); ?></span>
                                         <?php endif; ?>
                                         <?php endif; ?>
@@ -1103,7 +1105,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     // they don't depend on the scan service. Service rows win when both report a code.
                     $local_post_id = $detail_permalink !== '' ? url_to_postid($detail_permalink) : 0;
                     $local_body_html = $local_post_id > 0 ? (string) apply_filters('the_content', get_post_field('post_content', $local_post_id)) : '';
-                    $local_result = ICap_SEO_Local_Checks::run_for_post($detail_permalink, $local_body_html);
+                    $local_result = ICap_SEO_Local_Checks::run_for_post($detail_permalink, $local_body_html, $local_post_id > 0 ? get_post($local_post_id) : null);
                     $local_codes_ran = $local_result['ran'];
                     $detail_issue_codes = array_map(
                         static fn($row): string => is_array($row) && isset($row['issue_code']) ? sanitize_key((string) $row['issue_code']) : '',
@@ -1298,7 +1300,10 @@ if ($notice_code === 'remediation_apply_noop') {
                     </div>
                     <?php if (!empty($content_detail_is_local)) : ?>
                     <div class="notice notice-info inline" style="margin:12px 0;">
-                        <p><?php esc_html_e('These free checks ran on this site, and their fixes apply here without any connection. Registering adds free Google Search Console and Google Analytics reports. Premium adds full-site scans and scores, reachability and broken-link checks run by crawling from outside your site, and AI drafts.', 'icap-seo'); ?></p>
+                        <p><?php esc_html_e('These free checks ran on this site, and their fixes apply here without any connection. Registering adds free Google Search Console and Google Analytics reports. Premium adds AI Improvements, plus scans, reachability, and broken-link checks from outside your site.', 'icap-seo'); ?></p>
+                        <?php if (!empty($content_score_detail['partial'])) : ?>
+                            <p><?php esc_html_e('This site couldn\'t request its own page, so these checks read the page\'s WordPress content instead. Results can differ from the live page, and checks that need the live page show as Couldn\'t check.', 'icap-seo'); ?></p>
+                        <?php endif; ?>
                     </div>
                     <?php else : ?>
                     <div class="icap-seo-actions" style="margin:12px 0;">

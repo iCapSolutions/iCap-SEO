@@ -341,6 +341,7 @@ class ICap_SEO_Service_Client
                 'google_sessions' => null,
                 'google_engagement_rate' => null,
                 'source' => $score_data['icap_score_numeric'] !== null ? 'local' : 'placeholder',
+                'local_partial' => $score_data['local_partial'],
             ];
         }
 
@@ -1843,6 +1844,7 @@ class ICap_SEO_Service_Client
         return [
             'icap_score' => $score !== null ? sprintf('%d/100', $score) : __('Not checked', 'icap-seo'),
             'icap_score_numeric' => $score,
+            'local_partial' => ICap_SEO_Local_Checks::stored_score_is_partial($post_id),
         ];
     }
 
