@@ -587,6 +587,60 @@
     margin: 0;
 }
 
+.icap-seo-overview-actions .icap-seo-actions {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    margin: 0;
+}
+
+.icap-seo-overview-actions .notice {
+    margin: 0 0 12px;
+}
+
+.icap-seo-card-action {
+    margin: 8px 0 0;
+}
+
+/* Softer buttons across the plugin's admin page. */
+.icap-seo-wrap .button.button-primary {
+    background: linear-gradient(180deg, #2f80c2, #2271b1);
+    border-color: #1f68a3;
+    border-radius: 6px;
+    color: #ffffff;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(19, 94, 150, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.icap-seo-wrap .button.button-primary:hover,
+.icap-seo-wrap .button.button-primary:focus {
+    background: linear-gradient(180deg, #2873b0, #1c659f);
+    border-color: #1a5e94;
+    color: #ffffff;
+    box-shadow: 0 2px 5px rgba(19, 94, 150, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.icap-seo-wrap .button.button-primary:focus {
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 3px #2271b1;
+}
+
+.icap-seo-wrap .button:not(.button-primary):not(.button-link-delete) {
+    background: linear-gradient(180deg, #ffffff, #f6f7f7);
+    border-color: #c3c4c7;
+    border-radius: 6px;
+    color: #135e96;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.icap-seo-wrap .button:not(.button-primary):not(.button-link-delete):hover {
+    background: #f0f6fc;
+    border-color: #2271b1;
+}
+
+.icap-seo-wrap .button:disabled,
+.icap-seo-wrap .button.disabled {
+    box-shadow: none;
+}
+
 .icap-seo-settings-form {
     margin-top: 12px;
 }

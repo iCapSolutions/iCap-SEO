@@ -209,10 +209,22 @@ if (!function_exists('icap_seo_render_premium_panel')) {
             ? add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')) . '#icap-seo-billing'
             : add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'));
         ?>
-        <div class="notice notice-info inline icap-seo-premium-panel" style="padding:8px 12px; margin-top:12px;">
+        <div class="icap-seo-panel icap-seo-premium-panel">
             <p><strong><?php esc_html_e('Premium feature', 'icap-seo'); ?></strong> &mdash; <?php echo esc_html($message); ?></p>
-            <p><a class="button button-primary" href="<?php echo esc_url($upgrade_url); ?>"><?php echo $is_registered ? esc_html__('Upgrade to Premium', 'icap-seo') : esc_html__('Register this site', 'icap-seo'); ?></a></p>
+            <p><a class="button button-primary" href="<?php echo esc_url($upgrade_url); ?>"><?php echo $is_registered ? esc_html__('Upgrade to Premium', 'icap-seo') : esc_html__('Register to connect', 'icap-seo'); ?></a></p>
         </div>
+        <?php
+    }
+}
+
+if (!function_exists('icap_seo_render_connect_button')) {
+    // Shown on the Overview tiles that aren't connected yet. Both labels lead to the
+    // Account tab: an unregistered site registers there, a registered one connects Google.
+    function icap_seo_render_connect_button(bool $is_registered): void
+    {
+        $account_url = add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'));
+        ?>
+        <p class="icap-seo-card-action"><a class="button button-primary" href="<?php echo esc_url($account_url); ?>"><?php echo $is_registered ? esc_html__('Connect Google', 'icap-seo') : esc_html__('Register to connect', 'icap-seo'); ?></a></p>
         <?php
     }
 }
@@ -224,9 +236,9 @@ if (!function_exists('icap_seo_render_register_panel')) {
     {
         $register_url = add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'));
         ?>
-        <div class="notice notice-info inline icap-seo-register-panel" style="padding:8px 12px; margin-top:12px;">
+        <div class="icap-seo-panel icap-seo-register-panel">
             <p><strong><?php esc_html_e('Free with registration', 'icap-seo'); ?></strong> &mdash; <?php echo esc_html($message); ?></p>
-            <p><a class="button button-primary" href="<?php echo esc_url($register_url); ?>"><?php esc_html_e('Register this site', 'icap-seo'); ?></a></p>
+            <p><a class="button button-primary" href="<?php echo esc_url($register_url); ?>"><?php esc_html_e('Register to connect', 'icap-seo'); ?></a></p>
         </div>
         <?php
     }
@@ -2338,7 +2350,6 @@ if ($notice_code === 'remediation_apply_noop') {
             <?php endif; ?>
         <?php elseif ($active_tab === 'seo-performance') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['seo-performance'], $tab_icon_allowed_html); ?></span><?php esc_html_e('SEO Performance', 'icap-seo'); ?></h2>
-            <p class="description"><?php esc_html_e('Site-wide search visibility from Google Search Console, over the last 28 days.', 'icap-seo'); ?></p>
             <?php
             $performance_gsc = isset($seo_performance['gsc']) && is_array($seo_performance['gsc']) ? $seo_performance['gsc'] : [];
             $performance_gsc_connected = !empty($performance_gsc['connected']);
@@ -2346,7 +2357,6 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_gsc_daily = isset($performance_gsc['daily']) && is_array($performance_gsc['daily']) ? $performance_gsc['daily'] : [];
             $performance_gsc_pages = isset($performance_gsc['pages']) && is_array($performance_gsc['pages']) ? $performance_gsc['pages'] : [];
 
-            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')));
 
             $seo_performance_pages_orderby = $seo_performance_pages_orderby ?? 'clicks';
             $seo_performance_pages_order = $seo_performance_pages_order ?? 'desc';
@@ -2373,19 +2383,12 @@ if ($notice_code === 'remediation_apply_noop') {
             <?php if (!$service_is_registered) : ?>
                 <?php icap_seo_render_register_panel(__('Register this site to connect Google Search Console and see clicks, impressions, CTR and position for the whole site here, free.', 'icap-seo')); ?>
             <?php elseif (!$performance_gsc_connected) : ?>
-                <p class="description">
-                    <?php
-                    echo wp_kses(
-                        sprintf(
-                            /* translators: %s: link to the Account tab */
-                            __('Connect Google Search Console in %s to see clicks, impressions, CTR and position here.', 'icap-seo'),
-                            '<a href="' . $performance_settings_url . '">' . esc_html__('Account', 'icap-seo') . '</a>'
-                        ),
-                        ['a' => ['href' => []]]
-                    );
-                    ?>
-                </p>
+                <div class="icap-seo-panel">
+                    <p><?php esc_html_e('Connect Google Search Console to see clicks, impressions, CTR and position here.', 'icap-seo'); ?></p>
+                    <?php icap_seo_render_connect_button(true); ?>
+                </div>
             <?php else : ?>
+                <p class="description"><?php esc_html_e('Site-wide search visibility from Google Search Console, over the last 28 days.', 'icap-seo'); ?></p>
                 <div class="icap-seo-cards">
                     <div class="icap-seo-card">
                         <h3><?php esc_html_e('Total Clicks', 'icap-seo'); ?></h3>
@@ -2537,47 +2540,48 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php endif; ?>
 
                 <?php if (!empty($performance_gsc_pages)) : ?>
-                    <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Pages', 'icap-seo'); ?></h3>
-                    <p class="description"><?php esc_html_e('Your highest-clicking pages in Search Console over the last 28 days.', 'icap-seo'); ?></p>
-                    <div class="icap-seo-table-wrap">
-                        <table class="wp-list-table widefat striped">
-                            <thead>
-                                <tr>
-                                    <?php foreach ($seo_performance_pages_columns as $seo_performance_pages_column_key => $seo_performance_pages_column_meta) :
-                                        icap_seo_render_sortable_th(
-                                            $seo_performance_pages_column_meta['label'],
-                                            $seo_performance_pages_orderby === $seo_performance_pages_column_key,
-                                            $seo_performance_pages_order,
-                                            $seo_performance_pages_column_meta['desc_first'],
-                                            $seo_performance_pages_sort_link($seo_performance_pages_column_key, $seo_performance_pages_column_meta['desc_first'])
-                                        );
-                                    endforeach; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($performance_gsc_pages as $gsc_page_row) :
-                                    $gsc_page_url = isset($gsc_page_row['url']) ? (string) $gsc_page_row['url'] : '';
-                                    if ($gsc_page_url === '') {
-                                        continue;
-                                    }
-                                    $gsc_page_display = wp_parse_url($gsc_page_url, PHP_URL_PATH) ?: $gsc_page_url;
-                                    ?>
+                <div class="icap-seo-panel">
+                        <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Pages', 'icap-seo'); ?></h3>
+                        <p class="description"><?php esc_html_e('Your highest-clicking pages in Search Console over the last 28 days.', 'icap-seo'); ?></p>
+                        <div class="icap-seo-table-wrap">
+                            <table class="wp-list-table widefat striped">
+                                <thead>
                                     <tr>
-                                        <td><a href="<?php echo esc_url($gsc_page_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($gsc_page_display); ?></a></td>
-                                        <td><?php echo esc_html(number_format_i18n((int) ($gsc_page_row['clicks'] ?? 0))); ?></td>
-                                        <td><?php echo esc_html(number_format_i18n((int) ($gsc_page_row['impressions'] ?? 0))); ?></td>
-                                        <td><?php echo esc_html(number_format((float) ($gsc_page_row['ctr'] ?? 0) * 100, 1) . '%'); ?></td>
-                                        <td><?php echo esc_html(number_format((float) ($gsc_page_row['position'] ?? 0), 1)); ?></td>
+                                        <?php foreach ($seo_performance_pages_columns as $seo_performance_pages_column_key => $seo_performance_pages_column_meta) :
+                                            icap_seo_render_sortable_th(
+                                                $seo_performance_pages_column_meta['label'],
+                                                $seo_performance_pages_orderby === $seo_performance_pages_column_key,
+                                                $seo_performance_pages_order,
+                                                $seo_performance_pages_column_meta['desc_first'],
+                                                $seo_performance_pages_sort_link($seo_performance_pages_column_key, $seo_performance_pages_column_meta['desc_first'])
+                                            );
+                                        endforeach; ?>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($performance_gsc_pages as $gsc_page_row) :
+                                        $gsc_page_url = isset($gsc_page_row['url']) ? (string) $gsc_page_row['url'] : '';
+                                        if ($gsc_page_url === '') {
+                                            continue;
+                                        }
+                                        $gsc_page_display = wp_parse_url($gsc_page_url, PHP_URL_PATH) ?: $gsc_page_url;
+                                        ?>
+                                        <tr>
+                                            <td><a href="<?php echo esc_url($gsc_page_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($gsc_page_display); ?></a></td>
+                                            <td><?php echo esc_html(number_format_i18n((int) ($gsc_page_row['clicks'] ?? 0))); ?></td>
+                                            <td><?php echo esc_html(number_format_i18n((int) ($gsc_page_row['impressions'] ?? 0))); ?></td>
+                                            <td><?php echo esc_html(number_format((float) ($gsc_page_row['ctr'] ?? 0) * 100, 1) . '%'); ?></td>
+                                            <td><?php echo esc_html(number_format((float) ($gsc_page_row['position'] ?? 0), 1)); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                </div>
                 <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'site-analytics') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['site-analytics'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Site Analytics', 'icap-seo'); ?></h2>
-            <p class="description"><?php esc_html_e('Site-wide traffic from Google Analytics, over the last 28 days.', 'icap-seo'); ?></p>
             <?php
             $performance_ga4 = isset($seo_performance['ga4']) && is_array($seo_performance['ga4']) ? $seo_performance['ga4'] : [];
             $performance_ga4_connected = !empty($performance_ga4['connected']);
@@ -2585,7 +2589,6 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_ga4_pages = isset($performance_ga4['pages']) && is_array($performance_ga4['pages']) ? $performance_ga4['pages'] : [];
             $performance_ga4_channels = isset($performance_ga4['channels']) && is_array($performance_ga4['channels']) ? $performance_ga4['channels'] : [];
 
-            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')));
 
             $site_analytics_pages_orderby = $site_analytics_pages_orderby ?? 'sessions';
             $site_analytics_pages_order = $site_analytics_pages_order ?? 'desc';
@@ -2612,19 +2615,12 @@ if ($notice_code === 'remediation_apply_noop') {
             <?php if (!$service_is_registered) : ?>
                 <?php icap_seo_render_register_panel(__('Register this site to connect Google Analytics and see users, sessions, page views, engagement and traffic channels for the whole site here, free.', 'icap-seo')); ?>
             <?php elseif (!$performance_ga4_connected) : ?>
-                <p class="description">
-                    <?php
-                    echo wp_kses(
-                        sprintf(
-                            /* translators: %s: link to the Account tab */
-                            __('Connect Google Analytics in %s to see sessions, page views, engagement and session duration here.', 'icap-seo'),
-                            '<a href="' . $performance_settings_url . '">' . esc_html__('Account', 'icap-seo') . '</a>'
-                        ),
-                        ['a' => ['href' => []]]
-                    );
-                    ?>
-                </p>
+                <div class="icap-seo-panel">
+                    <p><?php esc_html_e('Connect Google Analytics to see sessions, page views, engagement and session duration here.', 'icap-seo'); ?></p>
+                    <?php icap_seo_render_connect_button(true); ?>
+                </div>
             <?php else : ?>
+                <p class="description"><?php esc_html_e('Site-wide traffic from Google Analytics, over the last 28 days.', 'icap-seo'); ?></p>
                 <div class="icap-seo-cards icap-seo-cards--5">
                     <div class="icap-seo-card">
                         <h3><?php esc_html_e('Users', 'icap-seo'); ?></h3>
@@ -2651,80 +2647,83 @@ if ($notice_code === 'remediation_apply_noop') {
                 <?php if (!empty($performance_ga4_channels)) :
                     $channel_max_sessions = max(array_column($performance_ga4_channels, 'sessions'));
                     ?>
-                    <h3 class="icap-seo-section-heading"><?php esc_html_e('Traffic by Channel', 'icap-seo'); ?></h3>
-                    <p class="description"><?php esc_html_e('Where sessions came from over the last 28 days.', 'icap-seo'); ?></p>
-                    <ul class="icap-seo-channel-breakdown">
-                        <?php foreach ($performance_ga4_channels as $channel_row) :
-                            $channel_name = isset($channel_row['channel']) ? (string) $channel_row['channel'] : '';
-                            if ($channel_name === '') {
-                                continue;
-                            }
-                            $channel_sessions = (int) ($channel_row['sessions'] ?? 0);
-                            $channel_users = (int) ($channel_row['users'] ?? 0);
-                            $channel_bar_percent = $channel_max_sessions > 0 ? round(($channel_sessions / $channel_max_sessions) * 100, 1) : 0;
-                            ?>
-                            <li class="icap-seo-channel-breakdown-item">
-                                <span class="icap-seo-channel-breakdown-label"><?php echo esc_html($channel_name); ?></span>
-                                <span class="icap-seo-channel-breakdown-bar-track">
-                                    <span class="icap-seo-channel-breakdown-bar-fill" style="width: <?php echo esc_attr((string) $channel_bar_percent); ?>%;"></span>
-                                </span>
-                                <span class="icap-seo-channel-breakdown-value">
-                                    <?php
-                                    echo esc_html(sprintf(
-                                        /* translators: 1: session count, 2: user count */
-                                        __('%1$s sessions · %2$s users', 'icap-seo'),
-                                        number_format_i18n($channel_sessions),
-                                        number_format_i18n($channel_users)
-                                    ));
-                                    ?>
-                                </span>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
+                <div class="icap-seo-panel">
+                        <h3 class="icap-seo-section-heading"><?php esc_html_e('Traffic by Channel', 'icap-seo'); ?></h3>
+                        <p class="description"><?php esc_html_e('Where sessions came from over the last 28 days.', 'icap-seo'); ?></p>
+                        <ul class="icap-seo-channel-breakdown">
+                            <?php foreach ($performance_ga4_channels as $channel_row) :
+                                $channel_name = isset($channel_row['channel']) ? (string) $channel_row['channel'] : '';
+                                if ($channel_name === '') {
+                                    continue;
+                                }
+                                $channel_sessions = (int) ($channel_row['sessions'] ?? 0);
+                                $channel_users = (int) ($channel_row['users'] ?? 0);
+                                $channel_bar_percent = $channel_max_sessions > 0 ? round(($channel_sessions / $channel_max_sessions) * 100, 1) : 0;
+                                ?>
+                                <li class="icap-seo-channel-breakdown-item">
+                                    <span class="icap-seo-channel-breakdown-label"><?php echo esc_html($channel_name); ?></span>
+                                    <span class="icap-seo-channel-breakdown-bar-track">
+                                        <span class="icap-seo-channel-breakdown-bar-fill" style="width: <?php echo esc_attr((string) $channel_bar_percent); ?>%;"></span>
+                                    </span>
+                                    <span class="icap-seo-channel-breakdown-value">
+                                        <?php
+                                        echo esc_html(sprintf(
+                                            /* translators: 1: session count, 2: user count */
+                                            __('%1$s sessions · %2$s users', 'icap-seo'),
+                                            number_format_i18n($channel_sessions),
+                                            number_format_i18n($channel_users)
+                                        ));
+                                        ?>
+                                    </span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                </div>
                 <?php endif; ?>
 
                 <?php if (!empty($performance_ga4_pages)) : ?>
-                    <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Pages', 'icap-seo'); ?></h3>
-                    <p class="description"><?php esc_html_e('Your highest-traffic pages in Google Analytics over the last 28 days.', 'icap-seo'); ?></p>
-                    <div class="icap-seo-table-wrap">
-                        <table class="wp-list-table widefat striped">
-                            <thead>
-                                <tr>
-                                    <?php foreach ($site_analytics_pages_columns as $site_analytics_pages_column_key => $site_analytics_pages_column_meta) :
-                                        icap_seo_render_sortable_th(
-                                            $site_analytics_pages_column_meta['label'],
-                                            $site_analytics_pages_orderby === $site_analytics_pages_column_key,
-                                            $site_analytics_pages_order,
-                                            $site_analytics_pages_column_meta['desc_first'],
-                                            $site_analytics_pages_sort_link($site_analytics_pages_column_key, $site_analytics_pages_column_meta['desc_first'])
-                                        );
-                                    endforeach; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($performance_ga4_pages as $ga4_page_row) :
-                                    $ga4_page_path = isset($ga4_page_row['path']) ? (string) $ga4_page_row['path'] : '';
-                                    if ($ga4_page_path === '') {
-                                        continue;
-                                    }
-                                    $ga4_page_url = home_url($ga4_page_path);
-                                    ?>
+                <div class="icap-seo-panel">
+                        <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Pages', 'icap-seo'); ?></h3>
+                        <p class="description"><?php esc_html_e('Your highest-traffic pages in Google Analytics over the last 28 days.', 'icap-seo'); ?></p>
+                        <div class="icap-seo-table-wrap">
+                            <table class="wp-list-table widefat striped">
+                                <thead>
                                     <tr>
-                                        <td><a href="<?php echo esc_url($ga4_page_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($ga4_page_path); ?></a></td>
-                                        <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['sessions'] ?? 0))); ?></td>
-                                        <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['page_views'] ?? 0))); ?></td>
-                                        <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['users'] ?? 0))); ?></td>
-                                        <td><?php echo esc_html(number_format((float) ($ga4_page_row['engagement_rate'] ?? 0) * 100, 1) . '%'); ?></td>
+                                        <?php foreach ($site_analytics_pages_columns as $site_analytics_pages_column_key => $site_analytics_pages_column_meta) :
+                                            icap_seo_render_sortable_th(
+                                                $site_analytics_pages_column_meta['label'],
+                                                $site_analytics_pages_orderby === $site_analytics_pages_column_key,
+                                                $site_analytics_pages_order,
+                                                $site_analytics_pages_column_meta['desc_first'],
+                                                $site_analytics_pages_sort_link($site_analytics_pages_column_key, $site_analytics_pages_column_meta['desc_first'])
+                                            );
+                                        endforeach; ?>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($performance_ga4_pages as $ga4_page_row) :
+                                        $ga4_page_path = isset($ga4_page_row['path']) ? (string) $ga4_page_row['path'] : '';
+                                        if ($ga4_page_path === '') {
+                                            continue;
+                                        }
+                                        $ga4_page_url = home_url($ga4_page_path);
+                                        ?>
+                                        <tr>
+                                            <td><a href="<?php echo esc_url($ga4_page_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($ga4_page_path); ?></a></td>
+                                            <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['sessions'] ?? 0))); ?></td>
+                                            <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['page_views'] ?? 0))); ?></td>
+                                            <td><?php echo esc_html(number_format_i18n((int) ($ga4_page_row['users'] ?? 0))); ?></td>
+                                            <td><?php echo esc_html(number_format((float) ($ga4_page_row['engagement_rate'] ?? 0) * 100, 1) . '%'); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                </div>
                 <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'keywords') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['keywords'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Keywords', 'icap-seo'); ?></h2>
-            <p class="description"><?php esc_html_e('Search queries driving clicks and impressions in Google Search Console, over the last 28 days.', 'icap-seo'); ?></p>
             <?php
             $performance_gsc_keywords_tab = isset($seo_performance['gsc']) && is_array($seo_performance['gsc']) ? $seo_performance['gsc'] : [];
             $performance_gsc_keywords_connected = !empty($performance_gsc_keywords_tab['connected']);
@@ -2732,7 +2731,6 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_gsc_keywords_list = isset($performance_gsc_keywords_tab['keywords']) && is_array($performance_gsc_keywords_tab['keywords']) ? $performance_gsc_keywords_tab['keywords'] : [];
             $performance_gsc_total_keywords = (int) ($performance_gsc_keywords_tab['total_keywords'] ?? 0);
 
-            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')));
 
             $keywords_orderby = $keywords_orderby ?? 'clicks';
             $keywords_order = $keywords_order ?? 'desc';
@@ -2763,19 +2761,12 @@ if ($notice_code === 'remediation_apply_noop') {
             <?php if (!$service_is_registered) : ?>
                 <?php icap_seo_render_register_panel(__('Register this site to see the search keywords bringing visitors to your site, from Google Search Console, free.', 'icap-seo')); ?>
             <?php elseif (!$performance_gsc_keywords_connected) : ?>
-                <p class="description">
-                    <?php
-                    echo wp_kses(
-                        sprintf(
-                            /* translators: %s: link to the Account tab */
-                            __('Connect Google Search Console in %s to see which keywords are driving clicks and impressions here.', 'icap-seo'),
-                            '<a href="' . $performance_settings_url . '">' . esc_html__('Account', 'icap-seo') . '</a>'
-                        ),
-                        ['a' => ['href' => []]]
-                    );
-                    ?>
-                </p>
+                <div class="icap-seo-panel">
+                    <p><?php esc_html_e('Connect Google Search Console to see which keywords are driving clicks and impressions here.', 'icap-seo'); ?></p>
+                    <?php icap_seo_render_connect_button(true); ?>
+                </div>
             <?php else : ?>
+                <p class="description"><?php esc_html_e('Search queries driving clicks and impressions in Google Search Console, over the last 28 days.', 'icap-seo'); ?></p>
                 <div class="icap-seo-cards icap-seo-cards--5">
                     <div class="icap-seo-card">
                         <h3><?php esc_html_e('Total Keywords', 'icap-seo'); ?></h3>
@@ -2800,72 +2791,74 @@ if ($notice_code === 'remediation_apply_noop') {
                 </div>
 
                 <?php if (!empty($performance_gsc_keywords_list)) : ?>
-                    <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Keywords', 'icap-seo'); ?></h3>
-                    <p class="description"><?php esc_html_e('Your highest-clicking search queries in Search Console over the last 28 days.', 'icap-seo'); ?></p>
-                    <div class="icap-seo-table-wrap">
-                        <table class="wp-list-table widefat striped">
-                            <thead>
-                                <tr>
-                                    <?php foreach ($keywords_sort_columns as $keywords_column_key => $keywords_column_meta) :
-                                        icap_seo_render_sortable_th(
-                                            $keywords_column_meta['label'],
-                                            $keywords_orderby === $keywords_column_key,
-                                            $keywords_order,
-                                            $keywords_column_meta['desc_first'],
-                                            $keywords_sort_link($keywords_column_key, $keywords_column_meta['desc_first'])
-                                        );
-                                    endforeach; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($performance_gsc_keywords_list as $gsc_keyword_row) :
-                                    $gsc_keyword_query = isset($gsc_keyword_row['query']) ? (string) $gsc_keyword_row['query'] : '';
-                                    if ($gsc_keyword_query === '') {
-                                        continue;
-                                    }
-                                    ?>
+                <div class="icap-seo-panel">
+                        <h3 class="icap-seo-section-heading"><?php esc_html_e('Top Keywords', 'icap-seo'); ?></h3>
+                        <p class="description"><?php esc_html_e('Your highest-clicking search queries in Search Console over the last 28 days.', 'icap-seo'); ?></p>
+                        <div class="icap-seo-table-wrap">
+                            <table class="wp-list-table widefat striped">
+                                <thead>
                                     <tr>
-                                        <td><?php echo esc_html($gsc_keyword_query); ?></td>
-                                        <td><?php echo esc_html(number_format_i18n((int) ($gsc_keyword_row['clicks'] ?? 0))); ?></td>
-                                        <td><?php echo esc_html(number_format_i18n((int) ($gsc_keyword_row['impressions'] ?? 0))); ?></td>
-                                        <td><?php echo esc_html(number_format((float) ($gsc_keyword_row['ctr'] ?? 0) * 100, 1) . '%'); ?></td>
-                                        <td><?php echo esc_html(number_format((float) ($gsc_keyword_row['position'] ?? 0), 1)); ?></td>
+                                        <?php foreach ($keywords_sort_columns as $keywords_column_key => $keywords_column_meta) :
+                                            icap_seo_render_sortable_th(
+                                                $keywords_column_meta['label'],
+                                                $keywords_orderby === $keywords_column_key,
+                                                $keywords_order,
+                                                $keywords_column_meta['desc_first'],
+                                                $keywords_sort_link($keywords_column_key, $keywords_column_meta['desc_first'])
+                                            );
+                                        endforeach; ?>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($performance_gsc_keywords_list as $gsc_keyword_row) :
+                                        $gsc_keyword_query = isset($gsc_keyword_row['query']) ? (string) $gsc_keyword_row['query'] : '';
+                                        if ($gsc_keyword_query === '') {
+                                            continue;
+                                        }
+                                        ?>
+                                        <tr>
+                                            <td><?php echo esc_html($gsc_keyword_query); ?></td>
+                                            <td><?php echo esc_html(number_format_i18n((int) ($gsc_keyword_row['clicks'] ?? 0))); ?></td>
+                                            <td><?php echo esc_html(number_format_i18n((int) ($gsc_keyword_row['impressions'] ?? 0))); ?></td>
+                                            <td><?php echo esc_html(number_format((float) ($gsc_keyword_row['ctr'] ?? 0) * 100, 1) . '%'); ?></td>
+                                            <td><?php echo esc_html(number_format((float) ($gsc_keyword_row['position'] ?? 0), 1)); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                </div>
                 <?php endif; ?>
             <?php endif; ?>
         <?php elseif ($active_tab === 'notifications') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['notifications'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Notifications', 'icap-seo'); ?></h2>
-            <p class="description"><?php esc_html_e('Things worth your attention, pulled from across this plugin into one place - Google connection issues, billing problems, and unresolved broken links.', 'icap-seo'); ?></p>
+            <div class="icap-seo-panel">
+                <p class="description"><?php esc_html_e('Things worth your attention, pulled from across this plugin into one place - Google connection issues, billing problems, and unresolved broken links.', 'icap-seo'); ?></p>
 
-            <?php if (empty($notifications)) : ?>
-                <p class="description"><?php esc_html_e('Nothing needs your attention right now.', 'icap-seo'); ?></p>
-            <?php else : ?>
-                <ul class="icap-seo-notification-list">
-                    <?php foreach ($notifications as $notification) : ?>
-                        <li class="icap-seo-notification icap-seo-notification-<?php echo esc_attr($notification['severity']); ?>">
-                            <p class="icap-seo-notification-message"><?php echo esc_html($notification['message']); ?></p>
-                            <p class="icap-seo-notification-actions">
-                                <a href="<?php echo esc_url($notification['action_url']); ?>"><?php echo esc_html($notification['action_label']); ?></a>
-                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-notification-dismiss-form">
-                                    <input type="hidden" name="action" value="icap_seo_dismiss_notification">
-                                    <input type="hidden" name="notification_id" value="<?php echo esc_attr($notification['id']); ?>">
-                                    <input type="hidden" name="notification_fingerprint" value="<?php echo esc_attr($notification['fingerprint']); ?>">
-                                    <?php wp_nonce_field('icap_seo_dismiss_notification'); ?>
-                                    <button type="submit" class="button-link"><?php esc_html_e('Dismiss', 'icap-seo'); ?></button>
-                                </form>
-                            </p>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
+                <?php if (empty($notifications)) : ?>
+                    <p class="description"><?php esc_html_e('Nothing needs your attention right now.', 'icap-seo'); ?></p>
+                <?php else : ?>
+                    <ul class="icap-seo-notification-list">
+                        <?php foreach ($notifications as $notification) : ?>
+                            <li class="icap-seo-notification icap-seo-notification-<?php echo esc_attr($notification['severity']); ?>">
+                                <p class="icap-seo-notification-message"><?php echo esc_html($notification['message']); ?></p>
+                                <p class="icap-seo-notification-actions">
+                                    <a href="<?php echo esc_url($notification['action_url']); ?>"><?php echo esc_html($notification['action_label']); ?></a>
+                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-notification-dismiss-form">
+                                        <input type="hidden" name="action" value="icap_seo_dismiss_notification">
+                                        <input type="hidden" name="notification_id" value="<?php echo esc_attr($notification['id']); ?>">
+                                        <input type="hidden" name="notification_fingerprint" value="<?php echo esc_attr($notification['fingerprint']); ?>">
+                                        <?php wp_nonce_field('icap_seo_dismiss_notification'); ?>
+                                        <button type="submit" class="button-link"><?php esc_html_e('Dismiss', 'icap-seo'); ?></button>
+                                    </form>
+                                </p>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+            </div>
         <?php elseif ($active_tab === 'redirects') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['redirects'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Redirects', 'icap-seo'); ?></h2>
-            <p class="description"><?php esc_html_e('Send visitors and search engines from an old URL on this site to a new one. Useful after moving or renaming a page so you don\'t lose traffic or backlinks to a broken link.', 'icap-seo'); ?></p>
-
             <?php
             $redirects_orderby = $redirects_orderby ?? 'source';
             $redirects_order = $redirects_order ?? 'asc';
@@ -2907,231 +2900,243 @@ if ($notice_code === 'remediation_apply_noop') {
             };
             ?>
 
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-add-redirect-form">
-                <input type="hidden" name="action" value="icap_seo_add_redirect">
-                <?php wp_nonce_field('icap_seo_add_redirect'); ?>
-                <table class="form-table" role="presentation">
-                    <tbody>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-redirect-source"><?php esc_html_e('Old path', 'icap-seo'); ?></label></th>
-                            <td>
-                                <?php $redirect_source_prefill = isset($_GET['prefill_source']) ? sanitize_text_field((string) wp_unslash($_GET['prefill_source'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing. ?>
-                                <input id="icap-seo-redirect-source" name="redirect_source" type="text" class="regular-text" placeholder="/old-page/" value="<?php echo esc_attr($redirect_source_prefill); ?>">
-                                <p class="description"><?php esc_html_e('The path on this site to redirect from, e.g. /old-page/.', 'icap-seo'); ?></p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-redirect-target"><?php esc_html_e('New URL', 'icap-seo'); ?></label></th>
-                            <td>
-                                <input id="icap-seo-redirect-target" name="redirect_target" type="url" class="regular-text" placeholder="https://example.com/new-page/">
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-redirect-type"><?php esc_html_e('Redirect type', 'icap-seo'); ?></label></th>
-                            <td>
-                                <select id="icap-seo-redirect-type" name="redirect_type">
-                                    <option value="301"><?php esc_html_e('301 (Permanent)', 'icap-seo'); ?></option>
-                                    <option value="302"><?php esc_html_e('302 (Temporary)', 'icap-seo'); ?></option>
-                                </select>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <p>
-                    <button type="submit" class="button button-primary"><?php esc_html_e('Add Redirect', 'icap-seo'); ?></button>
-                </p>
-            </form>
-
-            <h3><?php esc_html_e('Active redirects', 'icap-seo'); ?></h3>
-            <?php if (empty($redirects)) : ?>
-                <p class="description"><?php esc_html_e('No redirects yet.', 'icap-seo'); ?></p>
-            <?php else : ?>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <?php foreach ($redirects_columns as $redirects_column_key => $redirects_column_meta) :
-                                icap_seo_render_sortable_th(
-                                    $redirects_column_meta['label'],
-                                    $redirects_orderby === $redirects_column_key,
-                                    $redirects_order,
-                                    $redirects_column_meta['desc_first'],
-                                    $redirects_sort_link($redirects_column_key, $redirects_column_meta['desc_first'])
-                                );
-                            endforeach; ?>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($redirects as $redirect_row) : ?>
-                            <?php
-                            if (!is_array($redirect_row)) {
-                                continue;
-                            }
-                            $redirect_id_value = (string) ($redirect_row['id'] ?? '');
-                            $redirect_source_value = (string) ($redirect_row['source'] ?? '');
-                            $redirect_target_value = (string) ($redirect_row['target'] ?? '');
-                            $redirect_type_value = (string) ($redirect_row['type'] ?? '301');
-                            ?>
+            <div class="icap-seo-panel">
+                <h3><?php esc_html_e('Add a redirect', 'icap-seo'); ?></h3>
+                <p class="description"><?php esc_html_e('Send visitors and search engines from an old URL on this site to a new one. Useful after moving or renaming a page so you don\'t lose traffic or backlinks to a broken link.', 'icap-seo'); ?></p>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-add-redirect-form">
+                    <input type="hidden" name="action" value="icap_seo_add_redirect">
+                    <?php wp_nonce_field('icap_seo_add_redirect'); ?>
+                    <table class="form-table" role="presentation">
+                        <tbody>
                             <tr>
-                                <td><code><?php echo esc_html($redirect_source_value); ?></code></td>
-                                <td><code><?php echo esc_html($redirect_target_value); ?></code></td>
-                                <td><?php echo esc_html($redirect_type_value); ?></td>
+                                <th scope="row"><label for="icap-seo-redirect-source"><?php esc_html_e('Old path', 'icap-seo'); ?></label></th>
                                 <td>
-                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
-                                        <input type="hidden" name="action" value="icap_seo_delete_redirect">
-                                        <input type="hidden" name="redirect_id" value="<?php echo esc_attr($redirect_id_value); ?>">
-                                        <?php wp_nonce_field('icap_seo_delete_redirect'); ?>
-                                        <button type="submit" class="button button-link-delete"><?php esc_html_e('Delete', 'icap-seo'); ?></button>
-                                    </form>
+                                    <?php $redirect_source_prefill = isset($_GET['prefill_source']) ? sanitize_text_field((string) wp_unslash($_GET['prefill_source'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing. ?>
+                                    <input id="icap-seo-redirect-source" name="redirect_source" type="text" class="regular-text" placeholder="/old-page/" value="<?php echo esc_attr($redirect_source_prefill); ?>">
+                                    <p class="description"><?php esc_html_e('The path on this site to redirect from, e.g. /old-page/.', 'icap-seo'); ?></p>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
-
-            <h3><?php esc_html_e('Recently seen 404s', 'icap-seo'); ?></h3>
-            <p class="description"><?php esc_html_e('Pages visitors and search engines hit that don\'t exist on your site. Fix the ones worth fixing by turning them into a redirect above.', 'icap-seo'); ?></p>
-            <?php if (empty($log_404)) : ?>
-                <p class="description"><?php esc_html_e('No 404s logged yet.', 'icap-seo'); ?></p>
-            <?php else : ?>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <?php foreach ($log_404_columns as $log_404_column_key => $log_404_column_meta) :
-                                icap_seo_render_sortable_th(
-                                    $log_404_column_meta['label'],
-                                    $log_404_orderby === $log_404_column_key,
-                                    $log_404_order,
-                                    $log_404_column_meta['desc_first'],
-                                    $log_404_sort_link($log_404_column_key, $log_404_column_meta['desc_first'])
-                                );
-                            endforeach; ?>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($log_404 as $log_row) : ?>
-                            <?php
-                            if (!is_array($log_row)) {
-                                continue;
-                            }
-                            $log_path_value = (string) ($log_row['path'] ?? '');
-                            $log_hits_value = (int) ($log_row['hits'] ?? 0);
-                            $log_last_seen_value = (string) ($log_row['last_seen'] ?? '');
-                            $log_referrer_value = (string) ($log_row['referrer'] ?? '');
-                            $create_redirect_url = add_query_arg(
-                                [
-                                    'page' => 'icap-seo',
-                                    'tab' => 'redirects',
-                                    'prefill_source' => $log_path_value,
-                                ],
-                                admin_url('admin.php')
-                            );
-                            ?>
                             <tr>
-                                <td><code><?php echo esc_html($log_path_value); ?></code></td>
-                                <td><?php echo esc_html((string) $log_hits_value); ?></td>
-                                <td><?php echo esc_html($log_last_seen_value); ?></td>
-                                <td><?php echo $log_referrer_value !== '' ? esc_html($log_referrer_value) : '&mdash;'; ?></td>
+                                <th scope="row"><label for="icap-seo-redirect-target"><?php esc_html_e('New URL', 'icap-seo'); ?></label></th>
                                 <td>
-                                    <a href="<?php echo esc_url($create_redirect_url); ?>#icap-seo-redirect-source" class="button button-small"><?php esc_html_e('Create redirect', 'icap-seo'); ?></a>
-                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
-                                        <input type="hidden" name="action" value="icap_seo_dismiss_404">
-                                        <input type="hidden" name="404_path" value="<?php echo esc_attr($log_path_value); ?>">
-                                        <?php wp_nonce_field('icap_seo_dismiss_404'); ?>
-                                        <button type="submit" class="button button-small button-link-delete"><?php esc_html_e('Dismiss', 'icap-seo'); ?></button>
-                                    </form>
+                                    <input id="icap-seo-redirect-target" name="redirect_target" type="url" class="regular-text" placeholder="https://example.com/new-page/">
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
+                            <tr>
+                                <th scope="row"><label for="icap-seo-redirect-type"><?php esc_html_e('Redirect type', 'icap-seo'); ?></label></th>
+                                <td>
+                                    <select id="icap-seo-redirect-type" name="redirect_type">
+                                        <option value="301"><?php esc_html_e('301 (Permanent)', 'icap-seo'); ?></option>
+                                        <option value="302"><?php esc_html_e('302 (Temporary)', 'icap-seo'); ?></option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p>
+                        <button type="submit" class="button button-primary"><?php esc_html_e('Add Redirect', 'icap-seo'); ?></button>
+                    </p>
+                </form>
+            </div>
+
+            <div class="icap-seo-panel">
+                <h3><?php esc_html_e('Active redirects', 'icap-seo'); ?></h3>
+                <?php if (empty($redirects)) : ?>
+                    <p class="description"><?php esc_html_e('No redirects yet.', 'icap-seo'); ?></p>
+                <?php else : ?>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <?php foreach ($redirects_columns as $redirects_column_key => $redirects_column_meta) :
+                                    icap_seo_render_sortable_th(
+                                        $redirects_column_meta['label'],
+                                        $redirects_orderby === $redirects_column_key,
+                                        $redirects_order,
+                                        $redirects_column_meta['desc_first'],
+                                        $redirects_sort_link($redirects_column_key, $redirects_column_meta['desc_first'])
+                                    );
+                                endforeach; ?>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($redirects as $redirect_row) : ?>
+                                <?php
+                                if (!is_array($redirect_row)) {
+                                    continue;
+                                }
+                                $redirect_id_value = (string) ($redirect_row['id'] ?? '');
+                                $redirect_source_value = (string) ($redirect_row['source'] ?? '');
+                                $redirect_target_value = (string) ($redirect_row['target'] ?? '');
+                                $redirect_type_value = (string) ($redirect_row['type'] ?? '301');
+                                ?>
+                                <tr>
+                                    <td><code><?php echo esc_html($redirect_source_value); ?></code></td>
+                                    <td><code><?php echo esc_html($redirect_target_value); ?></code></td>
+                                    <td><?php echo esc_html($redirect_type_value); ?></td>
+                                    <td>
+                                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
+                                            <input type="hidden" name="action" value="icap_seo_delete_redirect">
+                                            <input type="hidden" name="redirect_id" value="<?php echo esc_attr($redirect_id_value); ?>">
+                                            <?php wp_nonce_field('icap_seo_delete_redirect'); ?>
+                                            <button type="submit" class="button button-link-delete"><?php esc_html_e('Delete', 'icap-seo'); ?></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+
+            <div class="icap-seo-panel">
+                <h3><?php esc_html_e('Recently seen 404s', 'icap-seo'); ?></h3>
+                <p class="description"><?php esc_html_e('Pages visitors and search engines hit that don\'t exist on your site. Fix the ones worth fixing by turning them into a redirect above.', 'icap-seo'); ?></p>
+                <?php if (empty($log_404)) : ?>
+                    <p class="description"><?php esc_html_e('No 404s logged yet.', 'icap-seo'); ?></p>
+                <?php else : ?>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <?php foreach ($log_404_columns as $log_404_column_key => $log_404_column_meta) :
+                                    icap_seo_render_sortable_th(
+                                        $log_404_column_meta['label'],
+                                        $log_404_orderby === $log_404_column_key,
+                                        $log_404_order,
+                                        $log_404_column_meta['desc_first'],
+                                        $log_404_sort_link($log_404_column_key, $log_404_column_meta['desc_first'])
+                                    );
+                                endforeach; ?>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($log_404 as $log_row) : ?>
+                                <?php
+                                if (!is_array($log_row)) {
+                                    continue;
+                                }
+                                $log_path_value = (string) ($log_row['path'] ?? '');
+                                $log_hits_value = (int) ($log_row['hits'] ?? 0);
+                                $log_last_seen_value = (string) ($log_row['last_seen'] ?? '');
+                                $log_referrer_value = (string) ($log_row['referrer'] ?? '');
+                                $create_redirect_url = add_query_arg(
+                                    [
+                                        'page' => 'icap-seo',
+                                        'tab' => 'redirects',
+                                        'prefill_source' => $log_path_value,
+                                    ],
+                                    admin_url('admin.php')
+                                );
+                                ?>
+                                <tr>
+                                    <td><code><?php echo esc_html($log_path_value); ?></code></td>
+                                    <td><?php echo esc_html((string) $log_hits_value); ?></td>
+                                    <td><?php echo esc_html($log_last_seen_value); ?></td>
+                                    <td><?php echo $log_referrer_value !== '' ? esc_html($log_referrer_value) : '&mdash;'; ?></td>
+                                    <td>
+                                        <a href="<?php echo esc_url($create_redirect_url); ?>#icap-seo-redirect-source" class="button button-small"><?php esc_html_e('Create redirect', 'icap-seo'); ?></a>
+                                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
+                                            <input type="hidden" name="action" value="icap_seo_dismiss_404">
+                                            <input type="hidden" name="404_path" value="<?php echo esc_attr($log_path_value); ?>">
+                                            <?php wp_nonce_field('icap_seo_dismiss_404'); ?>
+                                            <button type="submit" class="button button-small button-link-delete"><?php esc_html_e('Dismiss', 'icap-seo'); ?></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
         <?php elseif ($active_tab === 'local-seo') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['local-seo'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Local SEO', 'icap-seo'); ?></h2>
-            <p class="description"><?php esc_html_e('For businesses with a physical location or local service area. Fill this in to add LocalBusiness structured data to every page, so Google can build a Maps/Knowledge Panel listing from it. Leave it blank if this doesn\'t apply to your site - nothing is output until a business name and address are set.', 'icap-seo'); ?></p>
-
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-local-business-form">
                 <input type="hidden" name="action" value="icap_seo_save_local_business">
                 <?php wp_nonce_field('icap_seo_save_local_business'); ?>
-                <table class="form-table" role="presentation">
-                    <tbody>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-business-name"><?php esc_html_e('Business name', 'icap-seo'); ?></label></th>
-                            <td><input id="icap-seo-business-name" name="business_name" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['business_name'] ?? '')); ?>"></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-business-type"><?php esc_html_e('Business type', 'icap-seo'); ?></label></th>
-                            <td>
-                                <select id="icap-seo-business-type" name="business_type">
-                                    <?php foreach ($local_business_types as $type_option) : ?>
-                                        <option value="<?php echo esc_attr($type_option); ?>" <?php selected((string) ($local_business['business_type'] ?? 'LocalBusiness'), $type_option); ?>><?php echo esc_html($type_option); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-street-address"><?php esc_html_e('Street address', 'icap-seo'); ?></label></th>
-                            <td><input id="icap-seo-street-address" name="street_address" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['street_address'] ?? '')); ?>"></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-city"><?php esc_html_e('City', 'icap-seo'); ?></label></th>
-                            <td><input id="icap-seo-city" name="city" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['city'] ?? '')); ?>"></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-region"><?php esc_html_e('State / Region', 'icap-seo'); ?></label></th>
-                            <td><input id="icap-seo-region" name="region" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['region'] ?? '')); ?>"></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-postal-code"><?php esc_html_e('Postal code', 'icap-seo'); ?></label></th>
-                            <td><input id="icap-seo-postal-code" name="postal_code" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['postal_code'] ?? '')); ?>"></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-country"><?php esc_html_e('Country', 'icap-seo'); ?></label></th>
-                            <td><input id="icap-seo-country" name="country" type="text" class="regular-text" placeholder="US" value="<?php echo esc_attr((string) ($local_business['country'] ?? '')); ?>">
-                                <p class="description"><?php esc_html_e('Two-letter country code, e.g. US, GB, CA.', 'icap-seo'); ?></p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-phone"><?php esc_html_e('Phone', 'icap-seo'); ?></label></th>
-                            <td><input id="icap-seo-phone" name="phone" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['phone'] ?? '')); ?>"></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-price-range"><?php esc_html_e('Price range', 'icap-seo'); ?></label></th>
-                            <td><input id="icap-seo-price-range" name="price_range" type="text" class="regular-text" placeholder="$$" value="<?php echo esc_attr((string) ($local_business['price_range'] ?? '')); ?>">
-                                <p class="description"><?php esc_html_e('Optional, e.g. $, $$, $$$.', 'icap-seo'); ?></p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3><?php esc_html_e('Hours', 'icap-seo'); ?></h3>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th><?php esc_html_e('Day', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('Closed', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('Opens', 'icap-seo'); ?></th>
-                            <th><?php esc_html_e('Closes', 'icap-seo'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($local_business_days as $day_key) : ?>
-                            <?php $day_hours = $local_business['hours'][$day_key] ?? ['closed' => false, 'opens' => '', 'closes' => '']; ?>
+                <div class="icap-seo-panel">
+                    <h3><?php esc_html_e('Business details', 'icap-seo'); ?></h3>
+                    <p class="description"><?php esc_html_e('For businesses with a physical location or local service area. Fill this in to add LocalBusiness structured data to every page, so Google can build a Maps/Knowledge Panel listing from it. Leave it blank if this doesn\'t apply to your site - nothing is output until a business name and address are set.', 'icap-seo'); ?></p>
+                    <table class="form-table" role="presentation">
+                        <tbody>
                             <tr>
-                                <td><?php echo esc_html(ucfirst($day_key)); ?></td>
-                                <td><input type="checkbox" name="hours[<?php echo esc_attr($day_key); ?>][closed]" value="1" <?php checked(!empty($day_hours['closed'])); ?>></td>
-                                <td><input type="time" name="hours[<?php echo esc_attr($day_key); ?>][opens]" value="<?php echo esc_attr((string) ($day_hours['opens'] ?? '')); ?>"></td>
-                                <td><input type="time" name="hours[<?php echo esc_attr($day_key); ?>][closes]" value="<?php echo esc_attr((string) ($day_hours['closes'] ?? '')); ?>"></td>
+                                <th scope="row"><label for="icap-seo-business-name"><?php esc_html_e('Business name', 'icap-seo'); ?></label></th>
+                                <td><input id="icap-seo-business-name" name="business_name" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['business_name'] ?? '')); ?>"></td>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                            <tr>
+                                <th scope="row"><label for="icap-seo-business-type"><?php esc_html_e('Business type', 'icap-seo'); ?></label></th>
+                                <td>
+                                    <select id="icap-seo-business-type" name="business_type">
+                                        <?php foreach ($local_business_types as $type_option) : ?>
+                                            <option value="<?php echo esc_attr($type_option); ?>" <?php selected((string) ($local_business['business_type'] ?? 'LocalBusiness'), $type_option); ?>><?php echo esc_html($type_option); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="icap-seo-street-address"><?php esc_html_e('Street address', 'icap-seo'); ?></label></th>
+                                <td><input id="icap-seo-street-address" name="street_address" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['street_address'] ?? '')); ?>"></td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="icap-seo-city"><?php esc_html_e('City', 'icap-seo'); ?></label></th>
+                                <td><input id="icap-seo-city" name="city" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['city'] ?? '')); ?>"></td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="icap-seo-region"><?php esc_html_e('State / Region', 'icap-seo'); ?></label></th>
+                                <td><input id="icap-seo-region" name="region" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['region'] ?? '')); ?>"></td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="icap-seo-postal-code"><?php esc_html_e('Postal code', 'icap-seo'); ?></label></th>
+                                <td><input id="icap-seo-postal-code" name="postal_code" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['postal_code'] ?? '')); ?>"></td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="icap-seo-country"><?php esc_html_e('Country', 'icap-seo'); ?></label></th>
+                                <td><input id="icap-seo-country" name="country" type="text" class="regular-text" placeholder="US" value="<?php echo esc_attr((string) ($local_business['country'] ?? '')); ?>">
+                                    <p class="description"><?php esc_html_e('Two-letter country code, e.g. US, GB, CA.', 'icap-seo'); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="icap-seo-phone"><?php esc_html_e('Phone', 'icap-seo'); ?></label></th>
+                                <td><input id="icap-seo-phone" name="phone" type="text" class="regular-text" value="<?php echo esc_attr((string) ($local_business['phone'] ?? '')); ?>"></td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="icap-seo-price-range"><?php esc_html_e('Price range', 'icap-seo'); ?></label></th>
+                                <td><input id="icap-seo-price-range" name="price_range" type="text" class="regular-text" placeholder="$$" value="<?php echo esc_attr((string) ($local_business['price_range'] ?? '')); ?>">
+                                    <p class="description"><?php esc_html_e('Optional, e.g. $, $$, $$$.', 'icap-seo'); ?></p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <p>
-                    <button type="submit" class="button button-primary"><?php esc_html_e('Save Business Info', 'icap-seo'); ?></button>
-                </p>
+                <div class="icap-seo-panel">
+                    <h3><?php esc_html_e('Hours', 'icap-seo'); ?></h3>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <th><?php esc_html_e('Day', 'icap-seo'); ?></th>
+                                <th><?php esc_html_e('Closed', 'icap-seo'); ?></th>
+                                <th><?php esc_html_e('Opens', 'icap-seo'); ?></th>
+                                <th><?php esc_html_e('Closes', 'icap-seo'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($local_business_days as $day_key) : ?>
+                                <?php $day_hours = $local_business['hours'][$day_key] ?? ['closed' => false, 'opens' => '', 'closes' => '']; ?>
+                                <tr>
+                                    <td><?php echo esc_html(ucfirst($day_key)); ?></td>
+                                    <td><input type="checkbox" name="hours[<?php echo esc_attr($day_key); ?>][closed]" value="1" <?php checked(!empty($day_hours['closed'])); ?>></td>
+                                    <td><input type="time" name="hours[<?php echo esc_attr($day_key); ?>][opens]" value="<?php echo esc_attr((string) ($day_hours['opens'] ?? '')); ?>"></td>
+                                    <td><input type="time" name="hours[<?php echo esc_attr($day_key); ?>][closes]" value="<?php echo esc_attr((string) ($day_hours['closes'] ?? '')); ?>"></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+
+                    <p>
+                        <button type="submit" class="button button-primary"><?php esc_html_e('Save Business Info', 'icap-seo'); ?></button>
+                    </p>
+                </div>
             </form>
         <?php else : ?>
             <?php
@@ -3204,42 +3209,8 @@ if ($notice_code === 'remediation_apply_noop') {
                     <div class="icap-seo-card-text">
                         <h3><?php esc_html_e('Connection Status', 'icap-seo'); ?></h3>
                         <p class="icap-seo-card-value"><?php echo esc_html($overview_is_connected ? __('Connected', 'icap-seo') : __('Not Connected', 'icap-seo')); ?></p>
-                    </div>
-                </div>
-                <div class="icap-seo-card icap-seo-card--icon">
-                    <div class="icap-seo-card-icon icap-seo-status-icon icap-seo-status-icon--<?php echo $overview_site_health_ok ? 'connected' : 'disconnected'; ?>" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5 12 3l8 3.5-8 3.5-8-3.5Z"/><path d="M4 12l8 3.5 8-3.5M4 17.5l8 3.5 8-3.5"/></svg>
-                    </div>
-                    <div class="icap-seo-card-text">
-                        <h3><?php esc_html_e('Site Health', 'icap-seo'); ?></h3>
-                        <p class="icap-seo-card-value<?php echo $overview_site_health_ok ? '' : ' icap-seo-card-value--muted'; ?>"><?php echo esc_html($overview_site_health_ok ? __('Good', 'icap-seo') : __('Needs attention', 'icap-seo')); ?></p>
-                        <?php if (!$overview_permalink_structure_ok) : ?>
-                            <p class="icap-seo-card-subtext">
-                                <?php
-                                echo wp_kses(
-                                    sprintf(
-                                        /* translators: %s: link to WordPress's own Permalinks settings screen */
-                                        __('Plain permalinks (?p=123) hurt SEO — %s', 'icap-seo'),
-                                        '<a href="' . esc_url(admin_url('options-permalink.php')) . '">' . esc_html__('set a pretty permalink structure', 'icap-seo') . '</a>'
-                                    ),
-                                    ['a' => ['href' => []]]
-                                );
-                                ?>
-                            </p>
-                        <?php endif; ?>
-                        <?php if ($overview_rss_shows_full_text) : ?>
-                            <p class="icap-seo-card-subtext">
-                                <?php
-                                echo wp_kses(
-                                    sprintf(
-                                        /* translators: %s: link to WordPress's own Reading settings screen */
-                                        __('Your RSS feed publishes full post content, which content-scraping sites can republish — %s', 'icap-seo'),
-                                        '<a href="' . esc_url(admin_url('options-reading.php')) . '">' . esc_html__('switch feeds to a summary', 'icap-seo') . '</a>'
-                                    ),
-                                    ['a' => ['href' => []]]
-                                );
-                                ?>
-                            </p>
+                        <?php if (!$overview_is_connected) : ?>
+                            <?php icap_seo_render_connect_button(false); ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -3267,9 +3238,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         ?>
                         <p class="icap-seo-card-value<?php echo esc_attr($overview_google_value_class); ?>"><?php echo esc_html($overview_google_value); ?></p>
                         <?php if ($overview_google_status !== 'connected') : ?>
-                            <p class="icap-seo-card-subtext">
-                                <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'))); ?>"><?php esc_html_e('Connect in Account', 'icap-seo'); ?></a>
-                            </p>
+                            <?php icap_seo_render_connect_button($overview_is_connected); ?>
                         <?php else : ?>
                             <?php
                             // Site-wide totals computed client-side from the already-fetched
@@ -3362,8 +3331,43 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </p>
                             <?php endif; ?>
                         <?php else : ?>
+                            <?php icap_seo_render_connect_button($overview_is_connected); ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="icap-seo-card icap-seo-card--icon">
+                    <div class="icap-seo-card-icon icap-seo-status-icon icap-seo-status-icon--<?php echo $overview_site_health_ok ? 'connected' : 'disconnected'; ?>" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5 12 3l8 3.5-8 3.5-8-3.5Z"/><path d="M4 12l8 3.5 8-3.5M4 17.5l8 3.5 8-3.5"/></svg>
+                    </div>
+                    <div class="icap-seo-card-text">
+                        <h3><?php esc_html_e('Site Health', 'icap-seo'); ?></h3>
+                        <p class="icap-seo-card-value<?php echo $overview_site_health_ok ? '' : ' icap-seo-card-value--muted'; ?>"><?php echo esc_html($overview_site_health_ok ? __('Good', 'icap-seo') : __('Needs attention', 'icap-seo')); ?></p>
+                        <?php if (!$overview_permalink_structure_ok) : ?>
                             <p class="icap-seo-card-subtext">
-                                <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'))); ?>"><?php esc_html_e('Connect in Account', 'icap-seo'); ?></a>
+                                <?php
+                                echo wp_kses(
+                                    sprintf(
+                                        /* translators: %s: link to WordPress's own Permalinks settings screen */
+                                        __('Plain permalinks (?p=123) hurt SEO — %s', 'icap-seo'),
+                                        '<a href="' . esc_url(admin_url('options-permalink.php')) . '">' . esc_html__('set a pretty permalink structure', 'icap-seo') . '</a>'
+                                    ),
+                                    ['a' => ['href' => []]]
+                                );
+                                ?>
+                            </p>
+                        <?php endif; ?>
+                        <?php if ($overview_rss_shows_full_text) : ?>
+                            <p class="icap-seo-card-subtext">
+                                <?php
+                                echo wp_kses(
+                                    sprintf(
+                                        /* translators: %s: link to WordPress's own Reading settings screen */
+                                        __('Your RSS feed publishes full post content, which content-scraping sites can republish — %s', 'icap-seo'),
+                                        '<a href="' . esc_url(admin_url('options-reading.php')) . '">' . esc_html__('switch feeds to a summary', 'icap-seo') . '</a>'
+                                    ),
+                                    ['a' => ['href' => []]]
+                                );
+                                ?>
                             </p>
                         <?php endif; ?>
                     </div>
@@ -3418,6 +3422,45 @@ if ($notice_code === 'remediation_apply_noop') {
                 </div>
             </div>
 
+            <?php if ($overview_is_premium) : ?>
+                <div class="icap-seo-panel icap-seo-overview-actions">
+                    <?php if ($overview_ai_credits_exhausted) : ?>
+                        <p class="notice notice-warning inline" style="padding:8px 12px;">
+                            <?php esc_html_e('AI content generation is paused — this site is out of AI credits.', 'icap-seo'); ?>
+                        </p>
+                    <?php endif; ?>
+                    <div class="icap-seo-actions">
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form">
+                            <input type="hidden" name="action" value="icap_seo_trigger_scan">
+                            <?php wp_nonce_field('icap_seo_trigger_scan'); ?>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Trigger Full Scan', 'icap-seo'); ?></button>
+                            <div class="icap-seo-scan-progress" data-scanning-label="<?php esc_attr_e('Scanning your site…', 'icap-seo'); ?>">
+                                <span class="icap-seo-scan-progress-track"></span>
+                                <span class="icap-seo-scan-progress-label"></span>
+                            </div>
+                        </form>
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                            <input type="hidden" name="action" value="icap_seo_start_ai_credit_checkout">
+                            <input type="hidden" name="credit_pack" value="starter">
+                            <?php wp_nonce_field('icap_seo_start_ai_credit_checkout'); ?>
+                            <button type="submit" class="button<?php echo $overview_ai_credits_exhausted ? ' button-primary' : ''; ?>">
+                                <?php esc_html_e('Add 25 credits — $4.99', 'icap-seo'); ?>
+                            </button>
+                        </form>
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                            <input type="hidden" name="action" value="icap_seo_start_ai_credit_checkout">
+                            <input type="hidden" name="credit_pack" value="standard">
+                            <?php wp_nonce_field('icap_seo_start_ai_credit_checkout'); ?>
+                            <button type="submit" class="button">
+                                <?php esc_html_e('Add 100 credits — $19.95', 'icap-seo'); ?>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            <?php else : ?>
+                <?php icap_seo_render_premium_panel(__('Premium improves your pages with AI, including 25 AI credits a year, and adds scans, broken-link, and reachability checks from outside your site. The 35 on-site checks, your site-wide score, and the Google reports are free.', 'icap-seo'), $overview_is_connected); ?>
+            <?php endif; ?>
+
             <div class="icap-seo-feature-summary">
                 <p><?php esc_html_e('iCap SEO checks your pages — 35 checks run on this site, plus 3 that only the iCap SEO scan service can run from outside it — and fixes most of what it finds, with one click or with a preview you approve first.', 'icap-seo'); ?></p>
                 <ul>
@@ -3436,48 +3479,6 @@ if ($notice_code === 'remediation_apply_noop') {
                 </ul>
                 <p><?php esc_html_e('Also included, free, outside the 38-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, optional IndexNow pings (off by default), an llms.txt file for AI assistants, and LocalBusiness structured data for businesses with a physical location.', 'icap-seo'); ?></p>
             </div>
-
-            <?php if ($overview_is_premium) : ?>
-                <?php if ($overview_ai_credits_exhausted) : ?>
-                    <p class="notice notice-warning inline" style="padding:8px 12px; margin-top:16px;">
-                        <?php esc_html_e('AI content generation is paused — this site is out of AI credits.', 'icap-seo'); ?>
-                    </p>
-                <?php endif; ?>
-                <div class="icap-seo-actions" style="margin-top:8px;">
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block; margin-right:8px;">
-                        <input type="hidden" name="action" value="icap_seo_start_ai_credit_checkout">
-                        <input type="hidden" name="credit_pack" value="starter">
-                        <?php wp_nonce_field('icap_seo_start_ai_credit_checkout'); ?>
-                        <button type="submit" class="button<?php echo $overview_ai_credits_exhausted ? ' button-primary' : ''; ?>">
-                            <?php esc_html_e('Add 25 credits — $4.99', 'icap-seo'); ?>
-                        </button>
-                    </form>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;">
-                        <input type="hidden" name="action" value="icap_seo_start_ai_credit_checkout">
-                        <input type="hidden" name="credit_pack" value="standard">
-                        <?php wp_nonce_field('icap_seo_start_ai_credit_checkout'); ?>
-                        <button type="submit" class="button">
-                            <?php esc_html_e('Add 100 credits — $19.95', 'icap-seo'); ?>
-                        </button>
-                    </form>
-                </div>
-            <?php endif; ?>
-
-            <?php if ($overview_is_premium) : ?>
-                <div class="icap-seo-actions" style="margin-top:16px;">
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form">
-                        <input type="hidden" name="action" value="icap_seo_trigger_scan">
-                        <?php wp_nonce_field('icap_seo_trigger_scan'); ?>
-                        <button type="submit" class="button button-primary"><?php esc_html_e('Trigger Full Scan', 'icap-seo'); ?></button>
-                        <div class="icap-seo-scan-progress" data-scanning-label="<?php esc_attr_e('Scanning your site…', 'icap-seo'); ?>">
-                            <span class="icap-seo-scan-progress-track"></span>
-                            <span class="icap-seo-scan-progress-label"></span>
-                        </div>
-                    </form>
-                </div>
-            <?php else : ?>
-                <?php icap_seo_render_premium_panel(__('Premium improves your pages with AI, including 25 AI credits a year, and adds scans, broken-link, and reachability checks from outside your site. The 35 on-site checks, your site-wide score, and the Google reports are free.', 'icap-seo'), $overview_is_connected); ?>
-            <?php endif; ?>
         <?php endif; ?>
     </section>
 </div>
