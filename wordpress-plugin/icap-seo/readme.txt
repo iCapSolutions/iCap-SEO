@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.152
+Stable tag: 0.1.153
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,7 +44,7 @@ Everything in the "Runs on your site" list above works the same with or without 
 1. Install the plugin from **Plugins → Add New**, or upload the ZIP under **Plugins → Add New → Upload Plugin**.
 2. Activate it.
 3. Open **iCap SEO → Content Scores**, click **Check all pages**, then pick a page to see its results and apply fixes.
-4. Optional: to add the free Google reports, open **iCap SEO → Setup Wizard**, click **Continue to registration**, enter your email to request a registration token, follow the link in the email to register the site, then connect Google under **Settings**. For Premium, start checkout under **Settings → Billing**.
+4. Optional: to add the free Google reports, open **iCap SEO → Account**, click **Get started**, enter your email to request a token, follow the link in the email, paste the token on the same page, and click **Connect this site**. Then connect Google and, for Premium, upgrade on the same tab.
 
 == Frequently Asked Questions ==
 
@@ -58,7 +58,7 @@ No. Nothing changes until you click Apply. Larger content changes (expanded cont
 
 = What is sent to the iCap SEO service? =
 
-Nothing, until you start registration in the Setup Wizard. Registering sends basic site details, scans read your public pages, and AI drafts send the relevant page content. See "External services" below for details.
+Nothing, until you start registration on the Account tab. Registering sends basic site details, scans read your public pages, and AI drafts send the relevant page content. See "External services" below for details.
 
 = How do I report a bug, request a feature, or report a security issue? =
 
@@ -66,7 +66,7 @@ Email support@icapsolutions.com. Report security vulnerabilities to security@ica
 
 == External services ==
 
-The plugin works without contacting any external service. It connects to the services below only after you start registration or test the connection in the Setup Wizard, connect a Google account, start a checkout, request an AI draft, click Check links, or turn on IndexNow pings.
+The plugin works without contacting any external service. It connects to the services below only after you start registration or test the connection on the Account tab, connect a Google account, start a checkout, request an AI draft, click Check links, or turn on IndexNow pings.
 
 = iCap SEO service (iCapSolutions) =
 
@@ -77,7 +77,7 @@ Used for site registration, subscription status, the free Google reports, and th
 * Requests after registration: the site ID and access token issued at registration and the plugin version, with the post IDs or page keys involved. Scans fetch your public pages from our servers. Fix previews send the issue codes you select.
 * AI draft requests: the page's title and text, the site name, the post type, the target length, the titles of related posts offered as links, and the page's image URLs.
 * Billing and Google connections: the address of your WordPress dashboard, so you can be sent back to it.
-* When: when you click Continue to registration, request a token, register, test the connection, run a scan, preview a fix, request an AI draft, or check billing status. Once the site is registered, opening the plugin's pages also refreshes billing status and loads saved results. Nothing is sent until you take one of these actions.
+* When: when you click Get started, request a token, register, test the connection, run a scan, preview a fix, request an AI draft, or check billing status. Once the site is registered, opening the plugin's pages also refreshes billing status and loads saved results. Nothing is sent until you take one of these actions.
 * Privacy policy: https://www.icapsolutions.com/about/privacy-policy.html
 * Terms of service: https://www.icapsolutions.com/about/terms-of-service.html
 
@@ -103,18 +103,18 @@ Subscriptions and AI credit purchases are handled by Stripe Checkout and the Str
 
 = Google Search Console and Google Analytics =
 
-Optional, free for registered sites. Connected from Settings with your own Google account, using read-only access. Your browser is sent to Google to approve access, and the data is fetched by the iCap SEO service and shown in your WordPress dashboard.
+Optional, free for registered sites. Connected from the Account tab with your own Google account, using read-only access. Your browser is sent to Google to approve access, and the data is fetched by the iCap SEO service and shown in your WordPress dashboard.
 
 * Data used: Search Console search performance and indexing data for properties you have verified, and Google Analytics (GA4) traffic data for the property you choose. Your Google account name and email are used to show which account is connected.
 * When: when you connect the account, and when the Overview, SEO Performance, Site Analytics, Keywords, or Content Scores tabs request this data.
-* Revoke at any time from the plugin's Settings tab or from your Google Account's connected apps page.
+* Revoke at any time from the plugin's Account tab or from your Google Account's connected apps page.
 * Google privacy policy: https://policies.google.com/privacy
 * Google terms of service: https://policies.google.com/terms
 * Google API Services User Data Policy: https://developers.google.com/terms/api-services-user-data-policy
 
 = IndexNow =
 
-Optional, off by default. Only if you tick "IndexNow pings" in Settings does the plugin send a post or page's URL and a site-specific verification key to the IndexNow endpoint when you publish, update, or delete it. IndexNow shares the URL with participating search engines (including Bing and Yandex). Untick the setting to turn it off.
+Optional, off by default. Only if you tick "IndexNow pings" under Advanced on the Account tab does the plugin send a post or page's URL and a site-specific verification key to the IndexNow endpoint when you publish, update, or delete it. IndexNow shares the URL with participating search engines (including Bing and Yandex). Untick the setting to turn it off.
 
 * Endpoint: https://api.indexnow.org/indexnow
 * Data sent: the URL of the changed page and the site's IndexNow key. No personal data is sent.
@@ -123,11 +123,12 @@ Optional, off by default. Only if you tick "IndexNow pings" in Settings does the
 
 == Screenshots ==
 
-1. Setup Wizard — connect and register a site in a few steps.
+1. Account — connect a site in a few steps.
 2. Overview dashboard — full-site health score across all 6 categories.
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
 
-= 0.1.152 =
-* Checks use the page's WordPress content when a site can't request itself.
+= 0.1.153 =
+* A single Account tab replaces Setup Wizard and Settings.
+* Page results lead with what to fix.

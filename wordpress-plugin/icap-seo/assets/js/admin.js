@@ -317,8 +317,22 @@
         var button = panel.querySelector('.icap-seo-link-check-start');
         var status = panel.querySelector('.icap-seo-link-check-status');
         var results = panel.querySelector('.icap-seo-link-check-results');
+        var fixHelp = panel.querySelector('.icap-seo-link-check-fix');
         if (!settings || !button || !status || !results) {
             return;
+        }
+
+        function describeStatus(code) {
+            if (!code) {
+                return button.getAttribute('data-no-response');
+            }
+            if (code === 404 || code === 410) {
+                return code + ', ' + button.getAttribute('data-not-found');
+            }
+            if (code === 401 || code === 403 || code === 429) {
+                return code + ', ' + button.getAttribute('data-blocked');
+            }
+            return code >= 500 ? code + ', ' + button.getAttribute('data-server-error') : String(code);
         }
 
         button.addEventListener('click', function () {
@@ -346,9 +360,12 @@
                 status.textContent = summary + ' ' + outcome;
                 result.broken.forEach(function (link) {
                     var item = document.createElement('li');
-                    item.textContent = link.url + ' (' + (link.status || button.getAttribute('data-no-response')) + ')';
+                    item.textContent = link.url + ' (' + describeStatus(link.status) + ')';
                     results.appendChild(item);
                 });
+                if (fixHelp) {
+                    fixHelp.hidden = result.broken.length === 0;
+                }
                 button.disabled = false;
             }).catch(function () {
                 status.textContent = button.getAttribute('data-error');

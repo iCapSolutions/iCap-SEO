@@ -350,6 +350,10 @@ class ICap_SEO_Admin
     public function render_dashboard(): void
     {
         $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'overview'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        // Setup Wizard and Settings became the Account tab; older links still land there.
+        if (in_array($active_tab, ['setup-wizard', 'settings'], true)) {
+            $active_tab = 'account';
+        }
         $notice_code = isset($_GET[self::NOTICE_QUERY_KEY]) ? sanitize_key(wp_unslash($_GET[self::NOTICE_QUERY_KEY])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         $billing_state = isset($_GET['billing']) ? sanitize_key(wp_unslash($_GET['billing'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         $google_connected = isset($_GET['google_connected']) ? sanitize_key(wp_unslash($_GET['google_connected'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
@@ -398,7 +402,7 @@ class ICap_SEO_Admin
             }
         }
         // Discovery is a handful of live Google Admin API calls, not a cheap status read -
-        // only run it on the Settings tab, and only when it's actually needed (Analytics
+        // only run it on the Account tab, and only when it's actually needed (Analytics
         // granted but no property picked yet), not on every tab load like the status check
         // above.
         $analytics_property_candidates = [];
@@ -413,12 +417,12 @@ class ICap_SEO_Admin
             true
         );
         // A GET-only re-run flag, not a state change itself (no nonce needed) - lets the
-        // "Change property" link on the Settings tab re-trigger discovery even when a
+        // "Change property" link on the Account tab re-trigger discovery even when a
         // property_id is already saved, which the empty() check below otherwise blocks
         // forever once ANY property (including a wrong auto-discovered one) is saved.
         $refresh_analytics_property = isset($_GET['refresh_analytics_property']) && sanitize_key(wp_unslash($_GET['refresh_analytics_property'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (
-            $active_tab === 'settings'
+            $active_tab === 'account'
             && $service_is_registered
             && $analytics_scope_granted
             && (empty($google_connection_status['analytics_property_id']) || $refresh_analytics_property)
@@ -438,7 +442,7 @@ class ICap_SEO_Admin
         $search_console_discovery_failed = false;
         $refresh_search_console_property = isset($_GET['refresh_search_console_property']) && sanitize_key(wp_unslash($_GET['refresh_search_console_property'])) === '1'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         if (
-            $active_tab === 'settings'
+            $active_tab === 'account'
             && $service_is_registered
             && ($google_connection_status['status'] ?? '') === 'connected'
             && (empty($google_connection_status['search_console_property_url']) || $refresh_search_console_property)
@@ -488,7 +492,7 @@ class ICap_SEO_Admin
         $seo_recommendation_catalog = $this->get_seo_recommendation_catalog();
         $allow_live_fetch = $this->service_client->is_api_connection_configured_public();
         $registration_challenge = [];
-        $registration_started = $active_tab === 'setup-wizard' && $this->is_registration_start_confirmed();
+        $registration_started = $active_tab === 'account' && $this->is_registration_start_confirmed();
         $redirects = $active_tab === 'redirects' ? $this->get_redirects() : [];
         $log_404 = in_array($active_tab, ['redirects', 'notifications'], true) ? $this->get_404_log() : [];
         $redirects_orderby = 'source';
@@ -726,7 +730,7 @@ class ICap_SEO_Admin
                 }
             }
 
-            if ($active_tab === 'setup-wizard' || $active_tab === 'overview') {
+            if ($active_tab === 'overview') {
                 $scan_status_result = $this->service_client->get_scan_status(null, $allow_live_fetch);
                 $scan_status_data = $scan_status_result['success'] ? $scan_status_result['data'] : [];
                 if (empty($latest_content_scores_meta)) {
@@ -831,20 +835,12 @@ class ICap_SEO_Admin
         }
         check_admin_referer('icap_seo_save_settings');
 
-        $registration_token = isset($_POST['registration_token']) ? sanitize_text_field((string) wp_unslash($_POST['registration_token'])) : '';
-        $site_id = isset($_POST['site_id']) ? sanitize_text_field((string) wp_unslash($_POST['site_id'])) : '';
-        $site_token = isset($_POST['site_token']) ? sanitize_text_field((string) wp_unslash($_POST['site_token'])) : '';
         // Unchecked boxes are absent from the POST, so presence alone means "on".
         $indexnow_enabled = isset($_POST['indexnow_enabled']) ? '1' : '0';
 
-        $this->service_client->update_connection_settings([
-            'registration_token' => $registration_token,
-            'site_id' => $site_id,
-            'site_token' => $site_token,
-        ]);
         update_option('icap_seo_indexnow_enabled', $indexnow_enabled, false);
 
-        $this->redirect_with_notice('settings_saved', 'settings');
+        $this->redirect_with_notice('settings_saved', 'account');
     }
 
     /**
@@ -1063,8 +1059,8 @@ class ICap_SEO_Admin
                 'fingerprint' => '1',
                 'severity' => 'warning',
                 'message' => __('Your Google Search Console connection was revoked. Reconnect it to keep real indexing status updating.', 'icap-seo'),
-                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')),
-                'action_label' => __('Reconnect in Settings', 'icap-seo'),
+                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')),
+                'action_label' => __('Reconnect in Account', 'icap-seo'),
             ];
         }
 
@@ -1075,7 +1071,7 @@ class ICap_SEO_Admin
                 'fingerprint' => '1',
                 'severity' => 'warning',
                 'message' => __('This site\'s billing needs attention (past due or in a grace period). Resolve it to keep Premium.', 'icap-seo'),
-                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')),
+                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')),
                 'action_label' => __('Review billing', 'icap-seo'),
             ];
         } elseif ($billing_state === 'suspended') {
@@ -1084,7 +1080,7 @@ class ICap_SEO_Admin
                 'fingerprint' => '1',
                 'severity' => 'error',
                 'message' => __('This site\'s account is suspended. Premium features are paused until it\'s resolved.', 'icap-seo'),
-                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')),
+                'action_url' => add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')),
                 'action_label' => __('Review billing', 'icap-seo'),
             ];
         }
@@ -1216,6 +1212,11 @@ class ICap_SEO_Admin
         }
         check_admin_referer('icap_seo_register_site');
 
+        $posted_token = isset($_POST['registration_token']) ? sanitize_text_field(wp_unslash($_POST['registration_token'])) : '';
+        if ($posted_token !== '') {
+            $this->service_client->update_connection_settings(['registration_token' => $posted_token]);
+        }
+
         $pre_register_settings = $this->service_client->get_connection_settings();
         $was_already_connected = $pre_register_settings['site_id'] !== '' && $pre_register_settings['site_token'] !== '';
 
@@ -1229,17 +1230,19 @@ class ICap_SEO_Admin
         ]);
 
         if ($result['success']) {
-            $this->redirect_with_notice('register_success', 'settings');
+            // Tokens work once, so a used one shouldn't linger in settings.
+            $this->service_client->update_connection_settings(['registration_token' => '']);
+            $this->redirect_with_notice('register_success', 'account');
             return;
         }
         $error_code = $this->extract_error_code($result);
 
         if ($error_code === 'registration_token_missing') {
-            $this->redirect_with_notice('registration_token_missing', 'settings');
+            $this->redirect_with_notice('registration_token_missing', 'account', ['account_step' => 'token']);
             return;
         }
         if ($error_code === 'api_base_url_missing') {
-            $this->redirect_with_notice('api_base_url_missing', 'settings');
+            $this->redirect_with_notice('api_base_url_missing', 'account');
             return;
         }
 
@@ -1249,11 +1252,11 @@ class ICap_SEO_Admin
         // replay. Steer toward the actual fix (a new token) instead of the
         // generic message, which reads as if the saved values are just wrong.
         if ($was_already_connected) {
-            $this->redirect_with_notice('register_failed_already_connected', 'setup-wizard');
+            $this->redirect_with_notice('register_failed_already_connected', 'account', ['account_step' => 'token']);
             return;
         }
 
-        $this->redirect_with_notice('register_failed', 'settings');
+        $this->redirect_with_notice('register_failed', 'account', ['account_step' => 'token']);
     }
 
     public function handle_request_registration(): void
@@ -1268,7 +1271,7 @@ class ICap_SEO_Admin
             : '';
 
         if ($email === '' || !is_email($email)) {
-            $this->redirect_with_notice('registration_request_invalid_email', 'setup-wizard');
+            $this->redirect_with_notice('registration_request_invalid_email', 'account');
             return;
         }
 
@@ -1295,29 +1298,29 @@ class ICap_SEO_Admin
         ]);
 
         if ($result['success']) {
-            $this->redirect_with_notice('registration_request_submitted', 'setup-wizard');
+            $this->redirect_with_notice('registration_request_submitted', 'account', ['account_step' => 'token']);
             return;
         }
         $error_code = $this->extract_error_code($result);
 
         if ($error_code === 'api_base_url_missing') {
-            $this->redirect_with_notice('api_base_url_missing', 'settings');
+            $this->redirect_with_notice('api_base_url_missing', 'account');
             return;
         }
         if ($error_code === 'captcha_failed') {
-            $this->redirect_with_notice('registration_request_captcha_failed', 'setup-wizard');
+            $this->redirect_with_notice('registration_request_captcha_failed', 'account');
             return;
         }
         if ($error_code === 'request_already_pending') {
-            $this->redirect_with_notice('registration_request_already_pending', 'setup-wizard');
+            $this->redirect_with_notice('registration_request_already_pending', 'account');
             return;
         }
         if ($error_code === 'disposable_email_blocked') {
-            $this->redirect_with_notice('registration_request_disposable_email', 'setup-wizard');
+            $this->redirect_with_notice('registration_request_disposable_email', 'account');
             return;
         }
 
-        $this->redirect_with_notice('registration_request_failed', 'setup-wizard');
+        $this->redirect_with_notice('registration_request_failed', 'account');
     }
 
     public function handle_test_connection(): void
@@ -1331,33 +1334,33 @@ class ICap_SEO_Admin
         if ($result['success']) {
             $mode = isset($result['mode']) && is_string($result['mode']) ? sanitize_key($result['mode']) : '';
             if ($mode === 'authenticated') {
-                $this->redirect_with_notice('connection_ok_authenticated', 'setup-wizard');
+                $this->redirect_with_notice('connection_ok_authenticated', 'account');
                 return;
             }
 
-            $this->redirect_with_notice('connection_ok_reachable', 'setup-wizard');
+            $this->redirect_with_notice('connection_ok_reachable', 'account');
             return;
         }
 
         $error_code = $this->extract_error_code($result);
         if ($error_code === 'api_base_url_missing') {
-            $this->redirect_with_notice('connection_api_base_url_missing', 'settings');
+            $this->redirect_with_notice('connection_api_base_url_missing', 'account');
             return;
         }
         if ($error_code === 'invalid_token' || $error_code === 'forbidden') {
-            $this->redirect_with_notice('connection_invalid_token', 'setup-wizard');
+            $this->redirect_with_notice('connection_invalid_token', 'account');
             return;
         }
         if ($error_code === 'endpoint_not_found') {
-            $this->redirect_with_notice('connection_endpoint_not_found', 'setup-wizard');
+            $this->redirect_with_notice('connection_endpoint_not_found', 'account');
             return;
         }
         if ($error_code === 'network_error' || $error_code === 'upstream_unavailable') {
-            $this->redirect_with_notice('connection_unreachable', 'setup-wizard');
+            $this->redirect_with_notice('connection_unreachable', 'account');
             return;
         }
 
-        $this->redirect_with_notice('connection_failed', 'setup-wizard');
+        $this->redirect_with_notice('connection_failed', 'account');
     }
 
     public function handle_trigger_scan(): void
@@ -1476,14 +1479,14 @@ class ICap_SEO_Admin
         if (!$result['success']) {
             $error_code = $this->extract_error_code($result);
             if ($error_code === 'api_base_url_missing') {
-                $this->redirect_with_notice('api_base_url_missing', 'settings');
+                $this->redirect_with_notice('api_base_url_missing', 'account');
                 return;
             }
             if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
-                $this->redirect_with_notice('billing_status_not_configured', 'settings');
+                $this->redirect_with_notice('billing_status_not_configured', 'account');
                 return;
             }
-            $this->redirect_with_notice('billing_status_unavailable', 'settings');
+            $this->redirect_with_notice('billing_status_unavailable', 'account');
             return;
         }
 
@@ -1496,26 +1499,26 @@ class ICap_SEO_Admin
         }
 
         if ($state === 'active') {
-            $this->redirect_with_notice('billing_status_active', 'settings');
+            $this->redirect_with_notice('billing_status_active', 'account');
             return;
         }
         if ($state === 'trialing') {
             // "trialing" is the default state for a site that has never paid - there
             // is no free premium trial period in this product, so this is the free
             // tier, not an active/premium status.
-            $this->redirect_with_notice('billing_status_free_tier', 'settings');
+            $this->redirect_with_notice('billing_status_free_tier', 'account');
             return;
         }
         if ($state === 'past_due' || $state === 'grace_period') {
-            $this->redirect_with_notice('billing_status_attention', 'settings');
+            $this->redirect_with_notice('billing_status_attention', 'account');
             return;
         }
         if ($state === 'canceled' || $state === 'suspended') {
-            $this->redirect_with_notice('billing_status_blocked', 'settings');
+            $this->redirect_with_notice('billing_status_blocked', 'account');
             return;
         }
 
-        $this->redirect_with_notice('billing_status_unknown', 'settings');
+        $this->redirect_with_notice('billing_status_unknown', 'account');
     }
 
     public function handle_start_billing_checkout(): void
@@ -1531,22 +1534,22 @@ class ICap_SEO_Admin
         if (!$result['success']) {
             $error_code = $this->extract_error_code($result);
             if ($error_code === 'api_base_url_missing') {
-                $this->redirect_with_notice('api_base_url_missing', 'settings');
+                $this->redirect_with_notice('api_base_url_missing', 'account');
                 return;
             }
             if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
-                $this->redirect_with_notice('billing_checkout_not_configured', 'settings');
+                $this->redirect_with_notice('billing_checkout_not_configured', 'account');
                 return;
             }
             if ($error_code === 'validation_error') {
-                $this->redirect_with_notice('billing_checkout_misconfigured', 'settings');
+                $this->redirect_with_notice('billing_checkout_misconfigured', 'account');
                 return;
             }
             if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
-                $this->redirect_with_notice('billing_checkout_unavailable', 'settings');
+                $this->redirect_with_notice('billing_checkout_unavailable', 'account');
                 return;
             }
-            $this->redirect_with_notice('billing_checkout_failed', 'settings');
+            $this->redirect_with_notice('billing_checkout_failed', 'account');
             return;
         }
 
@@ -1555,7 +1558,7 @@ class ICap_SEO_Admin
             $checkout_url = esc_url_raw($result['data']['checkout_url']);
         }
         if ($checkout_url === '' || !wp_http_validate_url($checkout_url)) {
-            $this->redirect_with_notice('billing_checkout_failed', 'settings');
+            $this->redirect_with_notice('billing_checkout_failed', 'account');
             return;
         }
 
@@ -1575,26 +1578,26 @@ class ICap_SEO_Admin
         if (!$result['success']) {
             $error_code = $this->extract_error_code($result);
             if ($error_code === 'api_base_url_missing') {
-                $this->redirect_with_notice('api_base_url_missing', 'settings');
+                $this->redirect_with_notice('api_base_url_missing', 'account');
                 return;
             }
             if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
-                $this->redirect_with_notice('billing_portal_not_configured', 'settings');
+                $this->redirect_with_notice('billing_portal_not_configured', 'account');
                 return;
             }
             if ($error_code === 'subscription_required') {
-                $this->redirect_with_notice('billing_portal_subscription_required', 'settings');
+                $this->redirect_with_notice('billing_portal_subscription_required', 'account');
                 return;
             }
             if ($error_code === 'validation_error') {
-                $this->redirect_with_notice('billing_portal_misconfigured', 'settings');
+                $this->redirect_with_notice('billing_portal_misconfigured', 'account');
                 return;
             }
             if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
-                $this->redirect_with_notice('billing_portal_unavailable', 'settings');
+                $this->redirect_with_notice('billing_portal_unavailable', 'account');
                 return;
             }
-            $this->redirect_with_notice('billing_portal_failed', 'settings');
+            $this->redirect_with_notice('billing_portal_failed', 'account');
             return;
         }
 
@@ -1603,7 +1606,7 @@ class ICap_SEO_Admin
             $portal_url = esc_url_raw($result['data']['portal_url']);
         }
         if ($portal_url === '' || !wp_http_validate_url($portal_url)) {
-            $this->redirect_with_notice('billing_portal_failed', 'settings');
+            $this->redirect_with_notice('billing_portal_failed', 'account');
             return;
         }
 
@@ -1623,22 +1626,22 @@ class ICap_SEO_Admin
         if (!$result['success']) {
             $error_code = $this->extract_error_code($result);
             if ($error_code === 'api_base_url_missing') {
-                $this->redirect_with_notice('api_base_url_missing', 'settings');
+                $this->redirect_with_notice('api_base_url_missing', 'account');
                 return;
             }
             if ($error_code === 'site_not_configured' || $error_code === 'not_configured') {
-                $this->redirect_with_notice('google_connect_not_configured', 'settings');
+                $this->redirect_with_notice('google_connect_not_configured', 'account');
                 return;
             }
             if ($error_code === 'premium_required') {
-                $this->redirect_with_notice('google_connect_premium_required', 'settings');
+                $this->redirect_with_notice('google_connect_premium_required', 'account');
                 return;
             }
             if ($error_code === 'upstream_unavailable' || $error_code === 'network_error') {
-                $this->redirect_with_notice('google_connect_unavailable', 'settings');
+                $this->redirect_with_notice('google_connect_unavailable', 'account');
                 return;
             }
-            $this->redirect_with_notice('google_connect_failed', 'settings');
+            $this->redirect_with_notice('google_connect_failed', 'account');
             return;
         }
 
@@ -1647,7 +1650,7 @@ class ICap_SEO_Admin
             $authorization_url = esc_url_raw($result['data']['authorization_url']);
         }
         if ($authorization_url === '' || !wp_http_validate_url($authorization_url)) {
-            $this->redirect_with_notice('google_connect_failed', 'settings');
+            $this->redirect_with_notice('google_connect_failed', 'account');
             return;
         }
 
@@ -1663,10 +1666,10 @@ class ICap_SEO_Admin
         check_admin_referer('icap_seo_google_disconnect');
         $result = $this->service_client->disconnect_google_connection();
         if (!$result['success']) {
-            $this->redirect_with_notice('google_disconnect_failed', 'settings');
+            $this->redirect_with_notice('google_disconnect_failed', 'account');
             return;
         }
-        $this->redirect_with_notice('google_disconnected', 'settings');
+        $this->redirect_with_notice('google_disconnected', 'account');
     }
 
     public function handle_save_analytics_property(): void
@@ -1677,20 +1680,20 @@ class ICap_SEO_Admin
         check_admin_referer('icap_seo_save_analytics_property');
         $property_id = isset($_POST['analytics_property_id']) ? sanitize_text_field((string) wp_unslash($_POST['analytics_property_id'])) : '';
         if ($property_id === '') {
-            $this->redirect_with_notice('analytics_property_invalid', 'settings');
+            $this->redirect_with_notice('analytics_property_invalid', 'account');
             return;
         }
         $result = $this->service_client->save_analytics_property_id($property_id);
         if (!$result['success']) {
             $error_code = $this->extract_error_code($result);
             if ($error_code === 'validation_error') {
-                $this->redirect_with_notice('analytics_property_invalid', 'settings');
+                $this->redirect_with_notice('analytics_property_invalid', 'account');
                 return;
             }
-            $this->redirect_with_notice('analytics_property_save_failed', 'settings');
+            $this->redirect_with_notice('analytics_property_save_failed', 'account');
             return;
         }
-        $this->redirect_with_notice('analytics_property_saved', 'settings');
+        $this->redirect_with_notice('analytics_property_saved', 'account');
     }
 
     public function handle_save_search_console_property(): void
@@ -1701,20 +1704,20 @@ class ICap_SEO_Admin
         check_admin_referer('icap_seo_save_search_console_property');
         $property_url = isset($_POST['search_console_property_url']) ? sanitize_text_field((string) wp_unslash($_POST['search_console_property_url'])) : '';
         if ($property_url === '') {
-            $this->redirect_with_notice('search_console_property_invalid', 'settings');
+            $this->redirect_with_notice('search_console_property_invalid', 'account');
             return;
         }
         $result = $this->service_client->save_search_console_property_url($property_url);
         if (!$result['success']) {
             $error_code = $this->extract_error_code($result);
             if ($error_code === 'validation_error') {
-                $this->redirect_with_notice('search_console_property_invalid', 'settings');
+                $this->redirect_with_notice('search_console_property_invalid', 'account');
                 return;
             }
-            $this->redirect_with_notice('search_console_property_save_failed', 'settings');
+            $this->redirect_with_notice('search_console_property_save_failed', 'account');
             return;
         }
-        $this->redirect_with_notice('search_console_property_saved', 'settings');
+        $this->redirect_with_notice('search_console_property_saved', 'account');
     }
 
     public function handle_start_ai_credit_checkout(): void
@@ -5713,7 +5716,7 @@ class ICap_SEO_Admin
         return add_query_arg(
             [
                 'page' => 'icap-seo',
-                'tab' => 'settings',
+                'tab' => 'account',
                 'billing' => $normalized_state,
             ],
             admin_url('admin.php')
@@ -5745,7 +5748,7 @@ class ICap_SEO_Admin
         return add_query_arg(
             [
                 'page' => 'icap-seo',
-                'tab' => 'settings',
+                'tab' => 'account',
             ],
             admin_url('admin.php')
         );
