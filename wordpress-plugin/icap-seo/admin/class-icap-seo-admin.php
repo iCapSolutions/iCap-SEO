@@ -698,7 +698,7 @@ class ICap_SEO_Admin
                                 : '';
                             $local_post_id = $this->extract_post_id_from_content_key($selected_content_key);
                             $local_only_detail = null;
-                            if (in_array($detail_error_code, ['live_fetch_disabled', 'site_not_configured', 'premium_required'], true) && $local_post_id > 0) {
+                            if (in_array($detail_error_code, ['live_fetch_disabled', 'site_not_configured', 'premium_required', 'content_not_found'], true) && $local_post_id > 0) {
                                 $local_only_detail = ICap_SEO_Local_Checks::detail_for_post($local_post_id);
                             }
                             if (!empty($local_only_detail)) {
@@ -1014,7 +1014,7 @@ class ICap_SEO_Admin
     private function build_content_scores_rollup(array $content_scores): array
     {
         $scored_values = [];
-        foreach ($content_scores as $row) {
+        foreach (ICap_SEO_Service_Client::rows_for_site_score($content_scores) as $row) {
             if (isset($row['icap_score_numeric']) && is_numeric($row['icap_score_numeric'])) {
                 $scored_values[] = max(0, min(100, (int) $row['icap_score_numeric']));
             }
