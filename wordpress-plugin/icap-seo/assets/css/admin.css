@@ -732,3 +732,27 @@
 .icap-seo-notification-dismiss-form {
     margin: 0;
 }
+
+.icap-seo-advanced,
+.icap-seo-all-checks {
+    margin-top: 16px;
+}
+
+.icap-seo-advanced summary,
+.icap-seo-all-checks summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.icap-seo-advanced .icap-seo-settings-form {
+    margin-top: 12px;
+}
+
+.icap-seo-fix-heading {
+    margin-bottom: 8px;
+}
+
+.icap-seo-link-check-results {
+    list-style: disc;
+    margin-left: 20px;
+}

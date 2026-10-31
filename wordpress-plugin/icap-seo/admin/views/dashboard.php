@@ -201,13 +201,13 @@ if (!function_exists('icap_seo_render_sortable_th')) {
 
 if (!function_exists('icap_seo_render_premium_panel')) {
     // Shown where a Premium feature (full-site scans and scores) would be. Points a
-    // registered site at Billing in Settings, and an unregistered one at the Setup Wizard,
+    // site to Billing and an unregistered one to registration, both on the Account tab,
     // since a Premium subscription is attached to a registered site.
     function icap_seo_render_premium_panel(string $message, bool $is_registered): void
     {
         $upgrade_url = $is_registered
-            ? add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')) . '#icap-seo-billing'
-            : add_query_arg(['page' => 'icap-seo', 'tab' => 'setup-wizard'], admin_url('admin.php'));
+            ? add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')) . '#icap-seo-billing'
+            : add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'));
         ?>
         <div class="notice notice-info inline icap-seo-premium-panel" style="padding:8px 12px; margin-top:12px;">
             <p><strong><?php esc_html_e('Premium feature', 'icap-seo'); ?></strong> &mdash; <?php echo esc_html($message); ?></p>
@@ -222,7 +222,7 @@ if (!function_exists('icap_seo_render_register_panel')) {
     // Analytics reports) would be, on a site that hasn't registered with the service yet.
     function icap_seo_render_register_panel(string $message): void
     {
-        $register_url = add_query_arg(['page' => 'icap-seo', 'tab' => 'setup-wizard'], admin_url('admin.php'));
+        $register_url = add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'));
         ?>
         <div class="notice notice-info inline icap-seo-register-panel" style="padding:8px 12px; margin-top:12px;">
             <p><strong><?php esc_html_e('Free with registration', 'icap-seo'); ?></strong> &mdash; <?php echo esc_html($message); ?></p>
@@ -236,7 +236,6 @@ $service_is_registered = $connection_settings['site_id'] !== '' && $connection_s
 
 $icap_seo_tabs = [
     'overview' => __('Overview', 'icap-seo'),
-    'setup-wizard' => __('Setup Wizard', 'icap-seo'),
     'content-scores' => __('Content Scores', 'icap-seo'),
     'seo-performance' => __('SEO Performance', 'icap-seo'),
     'site-analytics' => __('Site Analytics', 'icap-seo'),
@@ -244,14 +243,13 @@ $icap_seo_tabs = [
     'notifications' => __('Notifications', 'icap-seo'),
     'redirects' => __('Redirects', 'icap-seo'),
     'local-seo' => __('Local SEO', 'icap-seo'),
-    'settings' => __('Settings', 'icap-seo'),
+    'account' => __('Account', 'icap-seo'),
 ];
 
 // Small line icons matching the Overview cards' visual style, shown next to
 // each tab label so the tab bar reads at a glance instead of as plain text.
 $tab_icons = [
     'overview' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>',
-    'setup-wizard' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
     'content-scores' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1Z"/><path d="M8 5H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/><path d="m9 12 2 2 4-4"/></svg>',
     'seo-performance' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>',
     'site-analytics' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="5"/><rect x="12" y="9" width="3" height="9"/><rect x="17" y="5" width="3" height="13"/></svg>',
@@ -259,7 +257,7 @@ $tab_icons = [
     'notifications' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
     'redirects' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a4 4 0 0 1 4 4v1"/><path d="m15 4 4 4-4 4"/><path d="M20 17H9a4 4 0 0 1-4-4v-1"/><path d="m9 20-4-4 4-4"/></svg>',
     'local-seo' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
-    'settings' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    'account' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
 ];
 
 // Allowed markup for the hardcoded icons above, so they are escaped at output like everything else.
@@ -273,13 +271,13 @@ $tab_icon_allowed_html = [
 ];
 
 $notice_map = [
-    'settings_saved' => ['type' => 'updated', 'message' => __('Connection settings saved.', 'icap-seo')],
-    'register_success' => ['type' => 'updated', 'message' => __('Site registration request succeeded.', 'icap-seo')],
-    'registration_token_missing' => ['type' => 'error', 'message' => __('Site registration failed. Set Registration Token in Settings or define ICAP_SEO_REGISTRATION_TOKEN in wp-config.php.', 'icap-seo')],
+    'settings_saved' => ['type' => 'updated', 'message' => __('Saved.', 'icap-seo')],
+    'register_success' => ['type' => 'updated', 'message' => __('This site is connected.', 'icap-seo')],
+    'registration_token_missing' => ['type' => 'error', 'message' => __('Paste the token from your email, then click Connect this site.', 'icap-seo')],
     'api_base_url_missing' => ['type' => 'error', 'message' => __('Site registration failed. The iCap SEO service address is not configured.', 'icap-seo')],
-    'register_failed' => ['type' => 'error', 'message' => __('Site registration failed. Confirm the Registration Token, then retry.', 'icap-seo')],
-    'register_failed_already_connected' => ['type' => 'error', 'message' => __('Re-registration failed. Registration tokens are single-use, so this usually means the saved token was already used to connect this site. Request a new token below, save it in Settings, then try again - your existing connection is untouched in the meantime.', 'icap-seo')],
-    'registration_request_submitted' => ['type' => 'updated', 'message' => __('Registration request submitted. Check your email to verify and complete registration.', 'icap-seo')],
+    'register_failed' => ['type' => 'error', 'message' => __('That token didn\'t work. A token works once, for this site only. Check that you copied all of it, or request a new one.', 'icap-seo')],
+    'register_failed_already_connected' => ['type' => 'error', 'message' => __('That token didn\'t work. A token works once, so request a new one to reconnect this site.', 'icap-seo')],
+    'registration_request_submitted' => ['type' => 'updated', 'message' => __('Check your email. Click the verification link and your token will follow.', 'icap-seo')],
     'registration_request_invalid_email' => ['type' => 'error', 'message' => __('Enter a valid email address to request registration.', 'icap-seo')],
     'registration_request_failed' => ['type' => 'error', 'message' => __('Registration request failed. Check that this site can reach the iCap SEO service, then retry.', 'icap-seo')],
     'registration_request_captcha_failed' => ['type' => 'error', 'message' => __('Registration request could not be verified. Reload the page and try again.', 'icap-seo')],
@@ -288,7 +286,7 @@ $notice_map = [
     'connection_ok_authenticated' => ['type' => 'updated', 'message' => __('Connection test succeeded. API and saved site credentials are valid.', 'icap-seo')],
     'connection_ok_reachable' => ['type' => 'updated', 'message' => __('Connection test reached the API. Next step: register this site to provision credentials.', 'icap-seo')],
     'connection_api_base_url_missing' => ['type' => 'error', 'message' => __('Connection test failed. The iCap SEO service address is not configured.', 'icap-seo')],
-    'connection_invalid_token' => ['type' => 'error', 'message' => __('Connection test reached the API, but Site ID/Site Token were rejected. Re-run registration in Setup Wizard.', 'icap-seo')],
+    'connection_invalid_token' => ['type' => 'error', 'message' => __('Connection test reached the service, but it rejected this site. Reconnect this site with a new token under Advanced.', 'icap-seo')],
     'connection_endpoint_not_found' => ['type' => 'error', 'message' => __('Connection test reached the service host, but the API route was not found. The service may be temporarily unavailable; retry later.', 'icap-seo')],
     'connection_unreachable' => ['type' => 'error', 'message' => __('Connection test could not reach the API. Verify network access and API availability.', 'icap-seo')],
     'connection_failed' => ['type' => 'error', 'message' => __('Connection test failed with an unexpected API response. Check logs and retry.', 'icap-seo')],
@@ -302,7 +300,7 @@ $notice_map = [
     'payment_required' => ['type' => 'error', 'message' => __('Scan request blocked: payment is required for this site subscription. Resolve billing and retry.', 'icap-seo')],
     'subscription_required' => ['type' => 'error', 'message' => __('Scan request blocked: no active subscription is associated with this site. Activate a plan and retry.', 'icap-seo')],
     'account_suspended' => ['type' => 'error', 'message' => __('Scan request blocked: account is suspended. Contact iCap SEO support to restore access.', 'icap-seo')],
-    'invalid_token' => ['type' => 'error', 'message' => __('Scan request failed: site credentials are invalid. Re-run registration from Setup Wizard.', 'icap-seo')],
+    'invalid_token' => ['type' => 'error', 'message' => __('Scan request failed: this site needs reconnecting. Use Advanced on the Account tab.', 'icap-seo')],
     'rate_limited' => ['type' => 'error', 'message' => __('Scan request was rate-limited. Wait and retry.', 'icap-seo')],
     'scan_failed' => ['type' => 'error', 'message' => __('Scan request failed. Confirm site is registered and billing/auth are active.', 'icap-seo')],
     'billing_status_active' => ['type' => 'updated', 'message' => __('Billing status check: site entitlement is active.', 'icap-seo')],
@@ -328,7 +326,7 @@ $notice_map = [
     'google_connect_unavailable' => ['type' => 'error', 'message' => __('Connecting Google Search Console is temporarily unavailable. Please retry shortly.', 'icap-seo')],
     'google_connect_invalid_state' => ['type' => 'error', 'message' => __('Google connection could not be verified (the request may have expired). Please try connecting again.', 'icap-seo')],
     'google_connect_consent_denied' => ['type' => 'error', 'message' => __('Google Search Console connection was not completed - access was not granted.', 'icap-seo')],
-    'google_connect_premium_required' => ['type' => 'error', 'message' => __('The iCap SEO service declined the Google connection for this site\'s plan. Use Check Billing Status under Settings, then try again.', 'icap-seo')],
+    'google_connect_premium_required' => ['type' => 'error', 'message' => __('The iCap SEO service declined the Google connection for this site\'s plan. Use Refresh billing status under Advanced on the Account tab, then try again.', 'icap-seo')],
     'google_connect_failed' => ['type' => 'error', 'message' => __('Google Search Console connection failed. Please try again.', 'icap-seo')],
     'google_disconnected' => ['type' => 'updated', 'message' => __('Google Search Console disconnected.', 'icap-seo')],
     'google_disconnect_failed' => ['type' => 'error', 'message' => __('Disconnecting Google Search Console failed. Please try again.', 'icap-seo')],
@@ -347,7 +345,7 @@ $notice_map = [
     'ai_credit_checkout_returned' => ['type' => 'updated', 'message' => __('AI credit purchase completed. Your balance has been updated below.', 'icap-seo')],
     'ai_credit_checkout_cancelled' => ['type' => 'error', 'message' => __('AI credit purchase was canceled before completion.', 'icap-seo')],
     'remediation_preview_ready' => ['type' => 'updated', 'message' => __('Remediation preview refreshed for this content item.', 'icap-seo')],
-    'remediation_apply_title_updated' => ['type' => 'updated', 'message' => __('Remediation applied locally for this item. Re-scan to verify score movement.', 'icap-seo')],
+    'remediation_apply_title_updated' => ['type' => 'updated', 'message' => __('Remediation applied locally for this item. Open this page again to see its new score.', 'icap-seo')],
     'remediation_apply_noop' => ['type' => 'error', 'message' => __('No local SEO field changes were applied for this recommendation.', 'icap-seo')],
     'remediation_apply_title_update_failed' => ['type' => 'error', 'message' => __('Remediation request was accepted, but local field updates could not be applied. Verify edit permissions and content key mapping.', 'icap-seo')],
     'remediation_content_key_missing' => ['type' => 'error', 'message' => __('Remediation request failed: content key is required.', 'icap-seo')],
@@ -357,7 +355,7 @@ $notice_map = [
     'remediation_preview_failed' => ['type' => 'error', 'message' => __('Remediation preview failed with an unexpected response.', 'icap-seo')],
     'content_depth_preview_ready' => ['type' => 'updated', 'message' => __('Content depth draft generated. Review it below before publishing.', 'icap-seo')],
     'content_depth_already_sufficient' => ['type' => 'error', 'message' => __('No-op: this page already meets the content depth word-count target.', 'icap-seo')],
-    'content_depth_published' => ['type' => 'updated', 'message' => __('Content depth draft published to this page. Re-scan to verify score movement.', 'icap-seo')],
+    'content_depth_published' => ['type' => 'updated', 'message' => __('Content depth draft published to this page. Open this page again to see its new score.', 'icap-seo')],
     'content_depth_discarded' => ['type' => 'updated', 'message' => __('Content depth draft discarded.', 'icap-seo')],
     'content_depth_content_key_missing' => ['type' => 'error', 'message' => __('Content depth request failed: content key is required.', 'icap-seo')],
     'content_depth_preview_failed' => ['type' => 'error', 'message' => __('Could not generate a content depth draft for this page. Verify edit permissions and content key mapping.', 'icap-seo')],
@@ -552,7 +550,7 @@ if ($notice_code === 'remediation_apply_title_updated') {
         );
     }
     if ($notice_override_message !== '') {
-        $notice_override_message .= ' ' . __('Re-scan to verify score movement.', 'icap-seo');
+        $notice_override_message .= ' ' . __('Open this page again to see its new score.', 'icap-seo');
     }
 }
 if ($notice_code === 'content_rescan_complete') {
@@ -569,7 +567,7 @@ if ($notice_code === 'content_depth_published') {
     $content_depth_words_added_notice = isset($_GET['content_depth_words_added']) ? (int) sanitize_text_field((string) wp_unslash($_GET['content_depth_words_added'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     $notice_override_message = sprintf(
         /* translators: %d: number of words added */
-        __('Content depth draft published: %d words added to this page. Re-scan to verify score movement.', 'icap-seo'),
+        __('Content depth draft published: %d words added to this page. Open this page again to see its new score.', 'icap-seo'),
         $content_depth_words_added_notice
     );
 }
@@ -654,102 +652,33 @@ if ($notice_code === 'remediation_apply_noop') {
     </nav>
 
     <section class="icap-seo-content">
-        <?php if ($active_tab === 'setup-wizard') : ?>
-            <?php $is_connected = $connection_settings['site_id'] !== '' && $connection_settings['site_token'] !== ''; ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['setup-wizard'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Setup Wizard', 'icap-seo'); ?></h2>
-            <div class="icap-seo-panel">
-            <p class="description">
-                <?php esc_html_e('The 35 on-site checks and their fixes work without registering. Registering connects this site to iCapSolutions\' cloud service and adds free Google Search Console and Google Analytics reports; a Premium subscription adds AI Improvements with 25 AI credits a year, plus scans and link checks from outside your site. A scan sends the scanned page\'s public content to that service; nothing is published or changed on your site without your explicit approval.', 'icap-seo'); ?>
-            </p>
-            <?php if ($is_connected) : ?>
-                <p><?php esc_html_e('This site is connected to iCap SEO.', 'icap-seo'); ?></p>
-                <p class="icap-seo-meta-line">
-                    <?php esc_html_e('Site ID:', 'icap-seo'); ?>
-                    <span class="icap-seo-meta-value"><?php echo esc_html($connection_settings['site_id']); ?></span>
-                </p>
-                <?php
-                // Same four-state Search Console status and Analytics readiness
-                // check as the Overview tab's cards (scope granted + property set,
-                // not just "revoked" - see class-icap-seo-admin.php); repeated here
-                // rather than shared because both spots already inline this kind of
-                // one-off status labeling (see the 'revoked' notice above).
-                $wizard_google_status = isset($google_connection_status['status']) ? (string) $google_connection_status['status'] : 'not_connected';
-                if ($wizard_google_status === 'connected') {
-                    $wizard_gsc_label = __('Connected', 'icap-seo');
-                } elseif ($wizard_google_status === 'revoked') {
-                    $wizard_gsc_label = __('Revoked — reconnect', 'icap-seo');
-                } elseif ($wizard_google_status === 'error') {
-                    $wizard_gsc_label = __('Needs attention', 'icap-seo');
-                } else {
-                    $wizard_gsc_label = __('Not connected', 'icap-seo');
-                }
-                $wizard_analytics_scope_granted = in_array(
-                    'https://www.googleapis.com/auth/analytics.readonly',
-                    $google_connection_status['granted_scopes'] ?? [],
-                    true
-                );
-                $wizard_analytics_connected = $wizard_google_status === 'connected'
-                    && $wizard_analytics_scope_granted
-                    && !empty($google_connection_status['analytics_property_id']);
-                $wizard_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
-                ?>
-                <p class="icap-seo-meta-line">
-                    <?php esc_html_e('Google Search Console:', 'icap-seo'); ?>
-                    <span class="icap-seo-meta-value"><?php echo esc_html($wizard_gsc_label); ?></span>
-                    <?php if ($wizard_google_status !== 'connected') : ?>
-                        &middot; <a href="<?php echo esc_url($wizard_settings_url); ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
-                    <?php endif; ?>
-                </p>
-                <p class="icap-seo-meta-line">
-                    <?php esc_html_e('Google Analytics:', 'icap-seo'); ?>
-                    <span class="icap-seo-meta-value"><?php echo esc_html($wizard_analytics_connected ? __('Connected', 'icap-seo') : __('Not connected', 'icap-seo')); ?></span>
-                    <?php if (!$wizard_analytics_connected) : ?>
-                        &middot; <a href="<?php echo esc_url($wizard_settings_url); ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
-                    <?php endif; ?>
-                </p>
-                <p><?php esc_html_e('Check your pages and review the results in the Content Scores tab.', 'icap-seo'); ?></p>
-            <?php else : ?>
-                <ol>
-                    <li><?php esc_html_e('Enter your Registration Token in Settings.', 'icap-seo'); ?></li>
-                    <li><?php esc_html_e('Test the connection to confirm the API is reachable.', 'icap-seo'); ?></li>
-                    <li><?php esc_html_e('Register this site to provision your scan credentials.', 'icap-seo'); ?></li>
-                    <li><?php esc_html_e('Head to the Content Scores tab to check your pages.', 'icap-seo'); ?></li>
-                </ol>
-            <?php endif; ?>
-            </div>
-            <p class="description" style="margin-top:16px;">
-                <?php esc_html_e('Registering connects this site to the iCap SEO service at api.icapsolutions.com. The service receives the site URL and name, the site\'s admin email address, the WordPress and plugin versions, and the site\'s time zone. Requesting a token also sends the email address you enter.', 'icap-seo'); ?>
-                <a href="https://www.icapsolutions.com/about/terms-of-service.html" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Terms of Service', 'icap-seo'); ?></a>
-                &middot;
-                <a href="https://www.icapsolutions.com/about/privacy-policy.html" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Privacy Policy', 'icap-seo'); ?></a>
-            </p>
-            <div class="icap-seo-actions" style="margin-top:16px;">
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="icap_seo_register_site">
-                    <?php wp_nonce_field('icap_seo_register_site'); ?>
-                    <button type="submit" class="button button-primary"><?php echo esc_html($is_connected ? __('Re-register Site', 'icap-seo') : __('Request Credentials & Register Site', 'icap-seo')); ?></button>
-                </form>
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="icap_seo_test_connection">
-                    <?php wp_nonce_field('icap_seo_test_connection'); ?>
-                    <button type="submit" class="button"><?php esc_html_e('Test Connection', 'icap-seo'); ?></button>
-                </form>
-            </div>
-            <hr>
-            <?php if ($is_connected) : ?>
-                <h3><?php esc_html_e('Need a new registration token?', 'icap-seo'); ?></h3>
-                <p class="description"><?php esc_html_e('Registration tokens are single-use, so re-registering (e.g. after a failed attempt) needs a fresh one. Request one below, save it in Settings, then use Re-register Site above - your existing connection keeps working until then.', 'icap-seo'); ?></p>
-            <?php else : ?>
-                <h3><?php esc_html_e("Don't have a registration token yet?", 'icap-seo'); ?></h3>
-                <p class="description"><?php esc_html_e('Request one below. We\'ll email you a verification link, then your registration token.', 'icap-seo'); ?></p>
-            <?php endif; ?>
-            <?php if (!$registration_started) : ?>
-                <p class="description"><?php esc_html_e('Continuing contacts the iCap SEO service to load the form\'s spam check. Nothing is sent before you click.', 'icap-seo'); ?></p>
-                <p>
-                    <a class="button" href="<?php echo esc_url(wp_nonce_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'setup-wizard', 'icap_seo_start_registration' => '1'], admin_url('admin.php')), 'icap_seo_start_registration')); ?>"><?php esc_html_e('Continue to registration', 'icap-seo'); ?></a>
-                </p>
-            <?php else : ?>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-registration-request-form"<?php echo !empty($registration_challenge) ? ' data-altcha-challenge="' . esc_attr(wp_json_encode($registration_challenge)) . '"' : ''; ?>>
+        <?php if ($active_tab === 'account') : ?>
+            <?php
+            $is_connected = $connection_settings['site_id'] !== '' && $connection_settings['site_token'] !== '';
+            $account_step = isset($_GET['account_step']) ? sanitize_key(wp_unslash($_GET['account_step'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+            $account_token_url = add_query_arg(['page' => 'icap-seo', 'tab' => 'account', 'account_step' => 'token'], admin_url('admin.php'));
+            $account_start_url = wp_nonce_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account', 'icap_seo_start_registration' => '1'], admin_url('admin.php')), 'icap_seo_start_registration');
+            ?>
+            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['account'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Account', 'icap-seo'); ?></h2>
+            <?php if ($account_step === 'token') : ?>
+                <div class="icap-seo-panel">
+                    <h3><?php esc_html_e('Paste your token', 'icap-seo'); ?></h3>
+                    <p><?php esc_html_e('We emailed you a verification link, then your token. Check your spam folder if you don\'t see them.', 'icap-seo'); ?></p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="icap_seo_register_site">
+                        <?php wp_nonce_field('icap_seo_register_site'); ?>
+                        <p>
+                            <label for="icap-seo-registration-token"><?php esc_html_e('Token', 'icap-seo'); ?></label><br>
+                            <input id="icap-seo-registration-token" name="registration_token" type="text" class="regular-text" autocomplete="off" required>
+                        </p>
+                        <button type="submit" class="button button-primary"><?php esc_html_e('Connect this site', 'icap-seo'); ?></button>
+                    </form>
+                    <p class="description"><a href="<?php echo esc_url($account_start_url); ?>"><?php esc_html_e('Need a new token?', 'icap-seo'); ?></a></p>
+                </div>
+            <?php elseif ($registration_started) : ?>
+                <div class="icap-seo-panel">
+                    <h3><?php esc_html_e('Get your token', 'icap-seo'); ?></h3>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-registration-request-form"<?php echo !empty($registration_challenge) ? ' data-altcha-challenge="' . esc_attr(wp_json_encode($registration_challenge)) . '"' : ''; ?>>
                 <input type="hidden" name="action" value="icap_seo_request_registration">
                 <?php wp_nonce_field('icap_seo_request_registration'); ?>
                 <input type="hidden" name="altcha_payload" value="">
@@ -758,20 +687,231 @@ if ($notice_code === 'remediation_apply_noop') {
                     <input id="icap-seo-registration-request-website" name="website" type="text" tabindex="-1" autocomplete="off">
                 </div>
                 <p>
-                    <label for="icap-seo-registration-request-email"><?php esc_html_e('Email', 'icap-seo'); ?></label><br>
+                    <label for="icap-seo-registration-request-email"><?php esc_html_e('Your email', 'icap-seo'); ?></label><br>
                     <input id="icap-seo-registration-request-email" name="registration_request_email" type="email" class="regular-text" required placeholder="you@example.com">
                 </p>
-                <button type="submit" class="button button-primary"><?php esc_html_e('Request Registration', 'icap-seo'); ?></button>
+                <button type="submit" class="button button-primary"><?php esc_html_e('Email me a token', 'icap-seo'); ?></button>
             </form>
+                    <p class="description"><a href="<?php echo esc_url($account_token_url); ?>"><?php esc_html_e('Already have a token?', 'icap-seo'); ?></a></p>
+                </div>
+            <?php elseif (!$is_connected) : ?>
+                <div class="icap-seo-panel">
+                    <h3><?php esc_html_e('Connect this site', 'icap-seo'); ?></h3>
+                    <p><?php esc_html_e('The 35 checks and their fixes already work without an account. Connecting this site, for free, adds your Google Search Console and Analytics reports.', 'icap-seo'); ?></p>
+                    <p>
+                        <strong><?php esc_html_e('What\'s shared:', 'icap-seo'); ?></strong>
+                        <?php esc_html_e('Connecting links this site to the iCap SEO service at api.icapsolutions.com. The service receives the email you enter, the site URL and name, the site\'s admin email address, the WordPress and plugin versions, and the site\'s time zone.', 'icap-seo'); ?>
+                        <a href="https://www.icapsolutions.com/about/terms-of-service.html" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Terms of Service', 'icap-seo'); ?></a>
+                        &middot;
+                        <a href="https://www.icapsolutions.com/about/privacy-policy.html" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Privacy Policy', 'icap-seo'); ?></a>
+                    </p>
+                    <p><a class="button button-primary" href="<?php echo esc_url($account_start_url); ?>"><?php esc_html_e('Get started', 'icap-seo'); ?></a></p>
+                    <p class="description"><a href="<?php echo esc_url($account_token_url); ?>"><?php esc_html_e('Already have a token?', 'icap-seo'); ?></a></p>
+                </div>
+            <?php else : ?>
+                <div class="icap-seo-panel">
+                    <h3><?php esc_html_e('This site is connected', 'icap-seo'); ?></h3>
+                    <p><?php echo esc_html($service_is_premium ? __('Your plan: Premium', 'icap-seo') : __('Your plan: Free', 'icap-seo')); ?></p>
+                </div>
+                <div class="icap-seo-panel">
+            <h3><?php esc_html_e('Google reports', 'icap-seo'); ?></h3>
+            <p class="description"><?php esc_html_e('Connect your own Google account to show real Search Console indexing status alongside content scores.', 'icap-seo'); ?></p>
+            <?php
+            $google_status_value = isset($google_connection_status['status']) ? (string) $google_connection_status['status'] : 'not_connected';
+            $google_account_email_value = isset($google_connection_status['google_account_email']) ? (string) $google_connection_status['google_account_email'] : '';
+            $google_last_verified_value = isset($google_connection_status['last_verified_at']) ? (string) $google_connection_status['last_verified_at'] : '';
+            $google_last_error_value = isset($google_connection_status['last_error']) ? (string) $google_connection_status['last_error'] : '';
+            ?>
+            <?php if ($google_status_value === 'connected') : ?>
+                <p class="description">
+                    <?php
+                    echo esc_html(
+                        sprintf(
+                            /* translators: %s: connected Google account email address */
+                            __('Connected as %s.', 'icap-seo'),
+                            $google_account_email_value !== '' ? $google_account_email_value : __('unknown account', 'icap-seo')
+                        )
+                    );
+                    ?>
+                    <?php if ($google_last_verified_value !== '') : ?>
+                        <?php esc_html_e('Last verified:', 'icap-seo'); ?> <code><?php echo esc_html($google_last_verified_value); ?></code>
+                    <?php endif; ?>
+                </p>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                    <input type="hidden" name="action" value="icap_seo_google_disconnect">
+                    <?php wp_nonce_field('icap_seo_google_disconnect'); ?>
+                    <p>
+                        <button type="submit" class="button"><?php esc_html_e('Disconnect', 'icap-seo'); ?></button>
+                    </p>
+                </form>
+
+                <?php
+                $search_console_property_url_value = isset($google_connection_status['search_console_property_url'])
+                    ? (string) $google_connection_status['search_console_property_url']
+                    : '';
+                ?>
+                <?php if (!$service_is_registered) : ?>
+                    <?php // A connected Google account implies a registered site, so this never renders. ?>
+                <?php elseif (!empty($search_console_property_candidates)) : ?>
+                    <p class="description"><?php echo $search_console_property_url_value !== '' ? esc_html__('Choose the Search Console property this site should use:', 'icap-seo') : esc_html__('We couldn\'t confirm which Search Console property matches this site (it may be registered under a different URL, or as a domain property). Select the right one:', 'icap-seo'); ?></p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                        <input type="hidden" name="action" value="icap_seo_save_search_console_property">
+                        <?php wp_nonce_field('icap_seo_save_search_console_property'); ?>
+                        <p>
+                            <select name="search_console_property_url">
+                                <?php foreach ($search_console_property_candidates as $sc_candidate) : ?>
+                                    <option value="<?php echo esc_attr($sc_candidate['property_url']); ?>" <?php selected(!empty($sc_candidate['matches_site_url']), true); ?>>
+                                        <?php echo esc_html($sc_candidate['property_url']); ?><?php echo !empty($sc_candidate['is_domain_property']) ? ' (' . esc_html__('domain property', 'icap-seo') . ')' : ''; ?><?php echo !empty($sc_candidate['matches_site_url']) ? ' — ' . esc_html__('likely match', 'icap-seo') : ''; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Save', 'icap-seo'); ?></button>
+                        </p>
+                    </form>
+                <?php elseif (!empty($search_console_discovery_failed)) : ?>
+                    <p class="description"><?php esc_html_e('Looking up your Search Console properties failed. Please retry shortly.', 'icap-seo'); ?></p>
+                <?php elseif ($search_console_property_url_value !== '') : ?>
+                    <p class="description">
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %s: the selected Search Console property */
+                                __('Search Console property: %s', 'icap-seo'),
+                                $search_console_property_url_value
+                            )
+                        );
+                        ?>
+                        &mdash;
+                        <a href="<?php echo esc_url(add_query_arg('refresh_search_console_property', '1')); ?>"><?php esc_html_e('Change property', 'icap-seo'); ?></a>
+                    </p>
+                <?php else : ?>
+                    <p class="description"><?php esc_html_e('No Search Console properties were found for this Google account. iCap SEO will use a property derived from this site\'s URL, which may not match what\'s registered in Search Console - verify access in Search Console if Search Console stats elsewhere in this plugin look wrong (e.g. showing zero).', 'icap-seo'); ?></p>
+                <?php endif; ?>
+
+                <?php
+                $analytics_property_id_value = isset($google_connection_status['analytics_property_id'])
+                    ? (string) $google_connection_status['analytics_property_id']
+                    : '';
+                ?>
+                <?php if (!$service_is_registered) : ?>
+                    <?php // A connected Google account implies a registered site, so this never renders. ?>
+                <?php elseif (!$analytics_scope_granted) : ?>
+                    <p class="notice notice-info inline" style="padding:8px 12px; margin-top:12px;">
+                        <?php esc_html_e('New: iCap SEO can also show real traffic data from Google Analytics. Reconnect Google to add it — your existing Search Console connection won\'t be affected.', 'icap-seo'); ?>
+                    </p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                        <input type="hidden" name="action" value="icap_seo_google_connect_start">
+                        <?php wp_nonce_field('icap_seo_google_connect_start'); ?>
+                        <p>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Reconnect Google (add Analytics)', 'icap-seo'); ?></button>
+                        </p>
+                    </form>
+                <?php elseif (!empty($analytics_property_candidates)) : ?>
+                    <p class="description"><?php echo $analytics_property_id_value !== '' ? esc_html__('Choose the Google Analytics property this site should use:', 'icap-seo') : esc_html__('We couldn\'t auto-detect your Google Analytics property. Select one:', 'icap-seo'); ?></p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                        <input type="hidden" name="action" value="icap_seo_save_analytics_property">
+                        <?php wp_nonce_field('icap_seo_save_analytics_property'); ?>
+                        <p>
+                            <select name="analytics_property_id">
+                                <?php foreach ($analytics_property_candidates as $candidate) : ?>
+                                    <option value="<?php echo esc_attr($candidate['property_id']); ?>" <?php selected($candidate['property_id'] === $analytics_property_id_value, true); ?>>
+                                        <?php echo esc_html($candidate['display_name'] !== '' ? $candidate['display_name'] : $candidate['property_id']); ?>
+                                        (<?php echo esc_html($candidate['property_id']); ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Save', 'icap-seo'); ?></button>
+                        </p>
+                    </form>
+                <?php elseif (!empty($analytics_discovery_failed)) : ?>
+                    <p class="description"><?php esc_html_e('Looking up your Google Analytics properties failed. Please retry shortly.', 'icap-seo'); ?></p>
+                <?php elseif ($analytics_property_id_value !== '') : ?>
+                    <p class="description">
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %s: the connected Google Analytics property id */
+                                __('Google Analytics property: %s', 'icap-seo'),
+                                $analytics_property_id_value
+                            )
+                        );
+                        ?>
+                        &mdash;
+                        <a href="<?php echo esc_url(add_query_arg('refresh_analytics_property', '1')); ?>"><?php esc_html_e('Change property', 'icap-seo'); ?></a>
+                    </p>
+                <?php else : ?>
+                    <p class="description"><?php esc_html_e('No Google Analytics properties found for this Google account.', 'icap-seo'); ?></p>
+                <?php endif; ?>
+            <?php else : ?>
+                <?php $google_needs_reconnect = in_array($google_status_value, ['error', 'revoked'], true); ?>
+                <?php if ($google_status_value === 'revoked') : ?>
+                    <p class="description">
+                        <?php esc_html_e('Connection was revoked. Reconnect to resume real Search Console indexing status.', 'icap-seo'); ?>
+                    </p>
+                <?php elseif ($google_status_value === 'error') : ?>
+                    <p class="description">
+                        <?php esc_html_e('Connection needs attention:', 'icap-seo'); ?>
+                        <code><?php echo esc_html($google_last_error_value !== '' ? $google_last_error_value : 'unknown_error'); ?></code>
+                    </p>
+                <?php else : ?>
+                    <p class="description"><?php esc_html_e('Not connected.', 'icap-seo'); ?></p>
+                <?php endif; ?>
+                <?php if (!$service_is_registered) : ?>
+                    <?php icap_seo_render_register_panel(__('Register this site to connect your Google Search Console and Google Analytics accounts and see their reports here, free.', 'icap-seo')); ?>
+                <?php else : ?>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                    <input type="hidden" name="action" value="icap_seo_google_connect_start">
+                    <?php wp_nonce_field('icap_seo_google_connect_start'); ?>
+                    <p>
+                        <button type="submit" class="button button-primary"><?php echo esc_html($google_needs_reconnect ? __('Reconnect Google Search Console', 'icap-seo') : __('Connect Google Search Console', 'icap-seo')); ?></button>
+                    </p>
+                </form>
+                <?php endif; ?>
             <?php endif; ?>
-            <p class="description">
-                <?php esc_html_e('Connection profile:', 'icap-seo'); ?>
-                <?php esc_html_e('Service address', 'icap-seo'); ?>
-                <code><?php echo esc_html($connection_settings['api_base_url'] !== '' ? 'configured' : 'missing'); ?></code>
-                |
-                <?php esc_html_e('Site credentials', 'icap-seo'); ?>
-                <code><?php echo esc_html($is_connected ? 'present' : 'missing'); ?></code>
-            </p>
+                </div>
+                <div class="icap-seo-panel">
+                    <h3 id="icap-seo-billing"><?php esc_html_e('Billing', 'icap-seo'); ?></h3>
+                    <?php if ($service_is_premium) : ?>
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                            <input type="hidden" name="action" value="icap_seo_open_billing_portal">
+                            <?php wp_nonce_field('icap_seo_open_billing_portal'); ?>
+                            <button type="submit" class="button"><?php esc_html_e('Manage billing', 'icap-seo'); ?></button>
+                        </form>
+                    <?php else : ?>
+                        <p><?php esc_html_e('Premium adds AI Improvements with 25 AI credits a year, plus scans and link checks from outside your site.', 'icap-seo'); ?></p>
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                            <input type="hidden" name="action" value="icap_seo_start_billing_checkout">
+                            <?php wp_nonce_field('icap_seo_start_billing_checkout'); ?>
+                            <button type="submit" class="button button-primary"><?php esc_html_e('Upgrade to Premium', 'icap-seo'); ?></button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+            <details class="icap-seo-advanced">
+                <summary><?php esc_html_e('Advanced', 'icap-seo'); ?></summary>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                    <input type="hidden" name="action" value="icap_seo_save_settings">
+                    <?php wp_nonce_field('icap_seo_save_settings'); ?>
+                    <p>
+                        <label><input type="checkbox" name="indexnow_enabled" value="1" <?php checked(get_option('icap_seo_indexnow_enabled', '0') === '1'); ?>> <?php esc_html_e('IndexNow pings', 'icap-seo'); ?></label><br>
+                        <span class="description"><?php esc_html_e('Sends the URL of each changed post or page to the IndexNow service (api.indexnow.org), which shares it with participating search engines. Off by default.', 'icap-seo'); ?></span>
+                    </p>
+                    <button type="submit" class="button"><?php esc_html_e('Save', 'icap-seo'); ?></button>
+                </form>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                    <input type="hidden" name="action" value="icap_seo_test_connection">
+                    <?php wp_nonce_field('icap_seo_test_connection'); ?>
+                    <button type="submit" class="button"><?php esc_html_e('Test connection', 'icap-seo'); ?></button>
+                </form>
+                <?php if ($is_connected) : ?>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
+                        <input type="hidden" name="action" value="icap_seo_check_billing_status">
+                        <?php wp_nonce_field('icap_seo_check_billing_status'); ?>
+                        <button type="submit" class="button"><?php esc_html_e('Refresh billing status', 'icap-seo'); ?></button>
+                    </form>
+                    <p class="description"><a href="<?php echo esc_url($account_start_url); ?>"><?php esc_html_e('Reconnect this site with a new token', 'icap-seo'); ?></a></p>
+                <?php endif; ?>
+            </details>
         <?php elseif ($active_tab === 'content-scores') : ?>
             <?php if ($selected_content_key === '') : ?>
             <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['content-scores'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Content Scores', 'icap-seo'); ?></h2>
@@ -1318,7 +1458,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             </div>
                         </form>
                         <p class="description" style="margin:6px 0 0;">
-                            <?php esc_html_e('Runs a focused cloud scan for this page only, then refreshes score/recommendation details without waiting for a full-site scan.', 'icap-seo'); ?>
+                            <?php esc_html_e('Scans this page from outside your site with the iCap SEO service.', 'icap-seo'); ?>
                         </p>
                     </div>
                     <?php endif; ?>
@@ -1328,8 +1468,8 @@ if ($notice_code === 'remediation_apply_noop') {
                         $content_detail_tab = 'recommendations';
                     }
                     $content_detail_tabs = [
-                        'recommendations' => __('Recommendations', 'icap-seo'),
-                        'ai-drafts' => __('AI Drafts', 'icap-seo'),
+                        'recommendations' => __('Fixes', 'icap-seo'),
+                        'ai-drafts' => __('AI Improvements', 'icap-seo'),
                         'history' => __('History', 'icap-seo'),
                     ];
                     ?>
@@ -1353,11 +1493,9 @@ if ($notice_code === 'remediation_apply_noop') {
                         <?php endforeach; ?>
                     </nav>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
-                    <div class="icap-seo-panel">
-                    <h4><?php esc_html_e('Category score breakdown', 'icap-seo'); ?></h4>
-                    <?php if (empty($detail_category_scores)) : ?>
-                        <p><?php esc_html_e('No category scores returned for this scan.', 'icap-seo'); ?></p>
-                    <?php else : ?>
+                    <?php if (!empty($detail_category_scores)) : ?>
+                        <div class="icap-seo-panel">
+                        <h4><?php esc_html_e('Scores by category', 'icap-seo'); ?></h4>
                         <ul>
                             <?php foreach ($detail_category_scores as $category_name => $category_score) : ?>
                                 <li>
@@ -1366,10 +1504,8 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </li>
                             <?php endforeach; ?>
                         </ul>
+                        </div>
                     <?php endif; ?>
-                    </div>
-                    <h4><?php esc_html_e('Full recommendation catalog', 'icap-seo'); ?></h4>
-                    <p class="description"><?php esc_html_e('Every check iCap SEO can run against this page: whether it currently passes, which plan it requires, and how it gets fixed.', 'icap-seo'); ?></p>
                     <?php
                     $seo_recommendation_catalog = isset($seo_recommendation_catalog) && is_array($seo_recommendation_catalog) ? $seo_recommendation_catalog : [];
                     $catalog_label_by_code = [];
@@ -1393,7 +1529,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     $catalog_status_colors = [
                         'good' => ['bg' => '#eafaf0', 'fg' => '#1e7f4f', 'label' => __('Passing', 'icap-seo')],
                         'warn' => ['bg' => '#fdf0e0', 'fg' => '#9a5b0a', 'label' => __('Needs attention', 'icap-seo')],
-                        'applied' => ['bg' => '#eef3fc', 'fg' => '#2455c7', 'label' => __('Applied — pending rescan', 'icap-seo')],
+                        'applied' => ['bg' => '#eef3fc', 'fg' => '#2455c7', 'label' => __('Applied', 'icap-seo')],
                         'premium_service' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Premium service check', 'icap-seo')],
                         'not_scanned' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Couldn\'t check', 'icap-seo')],
                         'not_evaluated' => ['bg' => '#f1f1f1', 'fg' => '#6b7481', 'label' => __('Not evaluated', 'icap-seo')],
@@ -1402,15 +1538,45 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php if (empty($seo_recommendation_catalog)) : ?>
                         <p><?php esc_html_e('Recommendation catalog is unavailable right now.', 'icap-seo'); ?></p>
                     <?php else : ?>
+                        <?php
+                        $catalog_fix_count = 0;
+                        foreach ($seo_recommendation_catalog as $catalog_count_item) {
+                            $catalog_count_code = isset($catalog_count_item['issue_code']) ? sanitize_key((string) $catalog_count_item['issue_code']) : '';
+                            if (isset($catalog_issue_rows_by_code[$catalog_count_code]) && !in_array($catalog_count_code, $locally_applied_issue_codes, true)) {
+                                $catalog_fix_count++;
+                            }
+                        }
+                        ?>
+                        <?php foreach (['fix', 'other'] as $catalog_section) : ?>
+                        <?php if ($catalog_section === 'fix') : ?>
+                            <h3 class="icap-seo-fix-heading">
+                                <?php
+                                if ($catalog_fix_count === 0) {
+                                    esc_html_e('Nothing to fix on this page', 'icap-seo');
+                                } else {
+                                    echo esc_html(sprintf(
+                                        /* translators: %d: number of things to fix on this page */
+                                        _n('%d thing to fix', '%d things to fix', $catalog_fix_count, 'icap-seo'),
+                                        $catalog_fix_count
+                                    ));
+                                }
+                                ?>
+                            </h3>
+                            <?php if ($catalog_fix_count === 0) { continue; } ?>
+                        <?php else : ?>
+                            <details class="icap-seo-all-checks">
+                            <summary><?php esc_html_e('All other checks', 'icap-seo'); ?></summary>
+                        <?php endif; ?>
                         <div style="overflow-x:auto;">
                             <table class="widefat striped">
                                 <thead>
                                     <tr>
                                         <th><?php esc_html_e('Check', 'icap-seo'); ?></th>
-                                        <th><?php esc_html_e('Layer', 'icap-seo'); ?></th>
-                                        <th><?php esc_html_e('Plan', 'icap-seo'); ?></th>
-                                        <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
-                                        <th><?php esc_html_e('Details / Fix', 'icap-seo'); ?></th>
+                                        <?php if ($catalog_section === 'other') : ?>
+                                            <th><?php esc_html_e('Plan', 'icap-seo'); ?></th>
+                                            <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
+                                        <?php endif; ?>
+                                        <th><?php echo $catalog_section === 'fix' ? esc_html__('How to fix it', 'icap-seo') : esc_html__('Details', 'icap-seo'); ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1418,7 +1584,6 @@ if ($notice_code === 'remediation_apply_noop') {
                                         <?php
                                         $catalog_code = isset($catalog_item['issue_code']) ? sanitize_key((string) $catalog_item['issue_code']) : '';
                                         $catalog_label = isset($catalog_item['label']) ? (string) $catalog_item['label'] : $catalog_code;
-                                        $catalog_layer = isset($catalog_item['layer']) ? (string) $catalog_item['layer'] : '';
                                         $catalog_premium = !empty($catalog_item['premium']);
 
                                         $catalog_is_applied = in_array($catalog_code, $locally_applied_issue_codes, true);
@@ -1452,23 +1617,25 @@ if ($notice_code === 'remediation_apply_noop') {
                                             $catalog_status_key = 'good';
                                         }
                                         $catalog_status = $catalog_status_colors[$catalog_status_key];
+                                        if (($catalog_section === 'fix') !== ($catalog_status_key === 'warn')) {
+                                            continue;
+                                        }
                                         ?>
                                         <tr>
                                             <td><?php echo esc_html($catalog_label); ?></td>
-                                            <td><?php echo esc_html($catalog_layer); ?></td>
+                                            <?php if ($catalog_section === 'other') : ?>
                                             <td><?php echo $catalog_premium ? esc_html__('Premium', 'icap-seo') : esc_html__('Free', 'icap-seo'); ?></td>
                                             <td>
                                                 <span style="display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; background:<?php echo esc_attr($catalog_status['bg']); ?>; color:<?php echo esc_attr($catalog_status['fg']); ?>;">
                                                     <?php echo esc_html($catalog_status['label']); ?>
                                                 </span>
                                             </td>
+                                            <?php endif; ?>
                                             <td style="min-width:260px;">
                                                 <?php if ($catalog_status_key === 'warn' && $catalog_open_issue !== null) : ?>
                                                     <?php
-                                                    $issue_severity = isset($catalog_open_issue['severity']) ? sanitize_text_field((string) $catalog_open_issue['severity']) : 'medium';
                                                     $issue_description = isset($catalog_open_issue['description']) ? sanitize_text_field((string) $catalog_open_issue['description']) : '';
                                                     $issue_recommended_fix = isset($catalog_open_issue['recommended_fix']) ? sanitize_text_field((string) $catalog_open_issue['recommended_fix']) : '';
-                                                    $issue_effort = isset($catalog_open_issue['estimated_effort']) ? sanitize_text_field((string) $catalog_open_issue['estimated_effort']) : '';
                                                     $is_content_depth_code = in_array($catalog_code, ['thin_content', 'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement'], true);
                                                     $is_readability_code = in_array($catalog_code, ['readability_score_low'], true);
                                                     $catalog_apply_type = isset($catalog_item['apply_type']) ? sanitize_key((string) $catalog_item['apply_type']) : '';
@@ -1494,18 +1661,6 @@ if ($notice_code === 'remediation_apply_noop') {
                                                         'readability_score_low',
                                                     ], true);
                                                     ?>
-                                                    <div>
-                                                        <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
-                                                        <?php if ($issue_effort !== '') : ?>
-                                                            <span>(<?php
-                                                            echo esc_html(sprintf(
-                                                                /* translators: %s: effort level (low/medium/high) */
-                                                                __('effort: %s', 'icap-seo'),
-                                                                $issue_effort
-                                                            ));
-                                                            ?>)</span>
-                                                        <?php endif; ?>
-                                                    </div>
                                                     <div><?php echo esc_html($issue_description !== '' ? $issue_description : __('No issue description provided.', 'icap-seo')); ?></div>
                                                     <?php if ($issue_recommended_fix !== '') : ?>
                                                         <div><em><?php echo esc_html($issue_recommended_fix); ?></em></div>
@@ -1513,9 +1668,9 @@ if ($notice_code === 'remediation_apply_noop') {
                                                     <?php if (!empty($content_detail_is_posts_page) && $is_content_body_code) : ?>
                                                         <div style="margin-top:6px;"><em><?php esc_html_e('This page\'s content isn\'t displayed here (see the notice above) — applying this fix would have no visible effect.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($is_content_depth_code) : ?>
-                                                        <div style="margin-top:6px;"><em><?php esc_html_e('Use Content depth expansion on the AI Drafts tab — this recommendation requires reviewing generated content before publishing.', 'icap-seo'); ?></em></div>
+                                                        <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use Content depth expansion on the AI Drafts tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Add more useful content to this page in the editor. Premium\'s AI Improvements can draft it for you.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($is_readability_code) : ?>
-                                                        <div style="margin-top:6px;"><em><?php esc_html_e('Use the Readability rewrite on the AI Drafts tab — this recommendation requires reviewing generated content before publishing.', 'icap-seo'); ?></em></div>
+                                                        <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use the Readability rewrite on the AI Drafts tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Edit this page using shorter sentences and simpler words. Premium\'s AI Improvements can rewrite it for you.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($catalog_apply_type === 'auto') : ?>
                                                         <div style="margin-top:6px;">
                                                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -1523,11 +1678,11 @@ if ($notice_code === 'remediation_apply_noop') {
                                                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                                                 <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($catalog_code); ?>">
                                                                 <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
-                                                                <button type="submit" class="button button-secondary"><?php esc_html_e('Apply this recommendation', 'icap-seo'); ?></button>
+                                                                <button type="submit" class="button button-secondary"><?php esc_html_e('Fix this', 'icap-seo'); ?></button>
                                                             </form>
                                                         </div>
                                                     <?php else : ?>
-                                                        <div style="margin-top:6px;"><em><?php esc_html_e('No automatic fix available for this check yet — make the change above manually, then rescan to confirm.', 'icap-seo'); ?></em></div>
+                                                        <div style="margin-top:6px;"><em><?php esc_html_e('Make this change in the editor, then open this page again to check it.', 'icap-seo'); ?></em></div>
                                                     <?php endif; ?>
                                                 <?php elseif ($catalog_status_key === 'not_evaluated') : ?>
                                                     <?php
@@ -1556,6 +1711,10 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </tbody>
                             </table>
                         </div>
+                        <?php if ($catalog_section === 'other') : ?>
+                            </details>
+                        <?php endif; ?>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                     <?php $link_check_post_id = $this->extract_post_id_from_content_key($selected_content_key); ?>
                     <?php if ($link_check_post_id > 0) : ?>
@@ -1578,11 +1737,23 @@ if ($notice_code === 'remediation_apply_noop') {
                                     <?php /* translators: %d: number of broken links */ ?>
                                     data-broken="<?php esc_attr_e('%d broken:', 'icap-seo'); ?>"
                                     data-clean="<?php esc_attr_e('None are broken.', 'icap-seo'); ?>"
+                                    data-not-found="<?php esc_attr_e('page not found', 'icap-seo'); ?>"
+                                    data-blocked="<?php esc_attr_e('that site blocked the check, so the link may be fine', 'icap-seo'); ?>"
+                                    data-server-error="<?php esc_attr_e('that site had an error', 'icap-seo'); ?>"
                                     data-no-response="<?php esc_attr_e('no response', 'icap-seo'); ?>"
                                     data-error="<?php esc_attr_e('The link check stopped because of a connection problem. Click to try again.', 'icap-seo'); ?>"><?php esc_html_e('Check links', 'icap-seo'); ?></button>
                                 <span class="icap-seo-link-check-status" role="status"></span>
                             </p>
                             <ul class="icap-seo-link-check-results"></ul>
+                            <p class="icap-seo-link-check-fix" hidden>
+                                <?php esc_html_e('To fix a broken link, update or remove it in the page editor. If the address moved within your own site, add a redirect.', 'icap-seo'); ?>
+                                <?php $link_check_edit_url = get_edit_post_link($link_check_post_id, ''); ?>
+                                <?php if (is_string($link_check_edit_url) && $link_check_edit_url !== '') : ?>
+                                    <a href="<?php echo esc_url($link_check_edit_url); ?>"><?php esc_html_e('Edit this page', 'icap-seo'); ?></a>
+                                    &middot;
+                                <?php endif; ?>
+                                <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'redirects'], admin_url('admin.php'))); ?>"><?php esc_html_e('Add a redirect', 'icap-seo'); ?></a>
+                            </p>
                         </div>
                     <?php endif; ?>
                     <?php endif; // content_detail_tab === 'recommendations' ?>
@@ -1812,7 +1983,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php if (!empty($applied_detail_issues)) : ?>
                         <div class="icap-seo-panel">
                         <h4><?php esc_html_e('Applied recommendations (local)', 'icap-seo'); ?></h4>
-                        <p class="description"><?php esc_html_e('These were applied in WordPress already. Use regenerate if you want a new AI draft before the next rescan.', 'icap-seo'); ?></p>
+                        <p class="description"><?php esc_html_e('These were applied in WordPress already. Use regenerate if you want a new AI draft.', 'icap-seo'); ?></p>
                         <ol>
                             <?php foreach ($applied_detail_issues as $issue) : ?>
                                 <?php
@@ -1848,9 +2019,8 @@ if ($notice_code === 'remediation_apply_noop') {
                         </div>
                     <?php endif; ?>
                     <div class="icap-seo-panel">
-                    <h4><?php esc_html_e('Remediation preview and apply', 'icap-seo'); ?></h4>
-                    <p class="description"><?php esc_html_e('Preview/apply actions only include open recommendations. Locally applied items are excluded until a rescan refreshes cloud findings.', 'icap-seo'); ?></p>
-                    <p class="description"><?php esc_html_e('Content depth recommendations are excluded from "Apply all" — use the Content depth expansion preview/publish flow above instead.', 'icap-seo'); ?></p>
+                    <h4><?php esc_html_e('Fix everything at once', 'icap-seo'); ?></h4>
+                    <p class="description"><?php esc_html_e('Applies every fix on this page that doesn\'t need your review.', 'icap-seo'); ?></p>
                     </div>
                     <?php if (!empty($content_detail_is_local)) : ?>
                         <?php // The proposed-changes preview comes from the iCap SEO service; on-site detail applies fixes directly. ?>
@@ -2176,7 +2346,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_gsc_daily = isset($performance_gsc['daily']) && is_array($performance_gsc['daily']) ? $performance_gsc['daily'] : [];
             $performance_gsc_pages = isset($performance_gsc['pages']) && is_array($performance_gsc['pages']) ? $performance_gsc['pages'] : [];
 
-            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')));
 
             $seo_performance_pages_orderby = $seo_performance_pages_orderby ?? 'clicks';
             $seo_performance_pages_order = $seo_performance_pages_order ?? 'desc';
@@ -2207,9 +2377,9 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php
                     echo wp_kses(
                         sprintf(
-                            /* translators: %s: link to the Settings tab */
+                            /* translators: %s: link to the Account tab */
                             __('Connect Google Search Console in %s to see clicks, impressions, CTR and position here.', 'icap-seo'),
-                            '<a href="' . $performance_settings_url . '">' . esc_html__('Settings', 'icap-seo') . '</a>'
+                            '<a href="' . $performance_settings_url . '">' . esc_html__('Account', 'icap-seo') . '</a>'
                         ),
                         ['a' => ['href' => []]]
                     );
@@ -2415,7 +2585,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_ga4_pages = isset($performance_ga4['pages']) && is_array($performance_ga4['pages']) ? $performance_ga4['pages'] : [];
             $performance_ga4_channels = isset($performance_ga4['channels']) && is_array($performance_ga4['channels']) ? $performance_ga4['channels'] : [];
 
-            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')));
 
             $site_analytics_pages_orderby = $site_analytics_pages_orderby ?? 'sessions';
             $site_analytics_pages_order = $site_analytics_pages_order ?? 'desc';
@@ -2446,9 +2616,9 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php
                     echo wp_kses(
                         sprintf(
-                            /* translators: %s: link to the Settings tab */
+                            /* translators: %s: link to the Account tab */
                             __('Connect Google Analytics in %s to see sessions, page views, engagement and session duration here.', 'icap-seo'),
-                            '<a href="' . $performance_settings_url . '">' . esc_html__('Settings', 'icap-seo') . '</a>'
+                            '<a href="' . $performance_settings_url . '">' . esc_html__('Account', 'icap-seo') . '</a>'
                         ),
                         ['a' => ['href' => []]]
                     );
@@ -2562,7 +2732,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $performance_gsc_keywords_list = isset($performance_gsc_keywords_tab['keywords']) && is_array($performance_gsc_keywords_tab['keywords']) ? $performance_gsc_keywords_tab['keywords'] : [];
             $performance_gsc_total_keywords = (int) ($performance_gsc_keywords_tab['total_keywords'] ?? 0);
 
-            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php')));
+            $performance_settings_url = esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')));
 
             $keywords_orderby = $keywords_orderby ?? 'clicks';
             $keywords_order = $keywords_order ?? 'desc';
@@ -2597,9 +2767,9 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php
                     echo wp_kses(
                         sprintf(
-                            /* translators: %s: link to the Settings tab */
+                            /* translators: %s: link to the Account tab */
                             __('Connect Google Search Console in %s to see which keywords are driving clicks and impressions here.', 'icap-seo'),
-                            '<a href="' . $performance_settings_url . '">' . esc_html__('Settings', 'icap-seo') . '</a>'
+                            '<a href="' . $performance_settings_url . '">' . esc_html__('Account', 'icap-seo') . '</a>'
                         ),
                         ['a' => ['href' => []]]
                     );
@@ -2963,248 +3133,6 @@ if ($notice_code === 'remediation_apply_noop') {
                     <button type="submit" class="button button-primary"><?php esc_html_e('Save Business Info', 'icap-seo'); ?></button>
                 </p>
             </form>
-        <?php elseif ($active_tab === 'settings') : ?>
-            <h2 class="icap-seo-tab-heading"><span class="icap-seo-heading-icon" aria-hidden="true"><?php echo wp_kses($tab_icons['settings'], $tab_icon_allowed_html); ?></span><?php esc_html_e('Settings', 'icap-seo'); ?></h2>
-            <h3><?php esc_html_e('Connection', 'icap-seo'); ?></h3>
-            <p class="description"><?php esc_html_e('API credentials used to register this site and run scans. Running a scan sends the scanned page\'s public content to iCapSolutions\' cloud service to generate scores and suggested fixes.', 'icap-seo'); ?></p>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                <input type="hidden" name="action" value="icap_seo_save_settings">
-                <?php wp_nonce_field('icap_seo_save_settings'); ?>
-                <table class="form-table" role="presentation">
-                    <tbody>
-                        <tr>
-                            <th scope="row"><?php esc_html_e('Service address', 'icap-seo'); ?></th>
-                            <td>
-                                <?php echo esc_html($connection_settings['api_base_url']); ?>
-                                <p class="description"><?php esc_html_e('The iCap SEO service this site connects to after you register it. See "External services" in the plugin readme for what is sent.', 'icap-seo'); ?></p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-registration-token"><?php esc_html_e('Registration Token', 'icap-seo'); ?></label></th>
-                            <td>
-                                <input id="icap-seo-registration-token" name="registration_token" type="password" class="regular-text" value="<?php echo esc_attr($connection_settings['registration_token']); ?>" autocomplete="off">
-                                <p class="description"><?php esc_html_e('Required for registration requests. If ICAP_SEO_REGISTRATION_TOKEN is defined in wp-config.php, that constant takes precedence over this saved value.', 'icap-seo'); ?></p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-site-id"><?php esc_html_e('Site ID', 'icap-seo'); ?></label></th>
-                            <td>
-                                <input id="icap-seo-site-id" name="site_id" type="text" class="regular-text" value="<?php echo esc_attr($connection_settings['site_id']); ?>">
-                                <p class="description"><?php esc_html_e('Usually auto-filled after registration.', 'icap-seo'); ?></p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="icap-seo-site-token"><?php esc_html_e('Site Token', 'icap-seo'); ?></label></th>
-                            <td>
-                                <input id="icap-seo-site-token" name="site_token" type="password" class="regular-text" value="<?php echo esc_attr($connection_settings['site_token']); ?>" autocomplete="off">
-                                <p class="description"><?php esc_html_e('Usually auto-filled after registration. Stored in WordPress options; rotate from customer portal when needed.', 'icap-seo'); ?></p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><?php esc_html_e('IndexNow pings', 'icap-seo'); ?></th>
-                            <td>
-                                <label><input type="checkbox" name="indexnow_enabled" value="1" <?php checked(get_option('icap_seo_indexnow_enabled', '0') === '1'); ?>> <?php esc_html_e('Notify Bing and Yandex when posts and pages are published, updated, or deleted', 'icap-seo'); ?></label>
-                                <p class="description"><?php esc_html_e('Sends the URL of each changed post or page to the IndexNow service (api.indexnow.org), which shares it with Bing and Yandex. Untick to stop these notifications.', 'icap-seo'); ?></p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <p>
-                    <button type="submit" class="button button-primary"><?php esc_html_e('Save Settings', 'icap-seo'); ?></button>
-                </p>
-            </form>
-            <p class="description">
-                <?php esc_html_e('Last successful score sync:', 'icap-seo'); ?>
-                <code><?php echo esc_html($connection_settings['last_sync_at'] ?: 'n/a'); ?></code>
-            </p>
-
-            <hr>
-            <h3><?php esc_html_e('Google Search Console', 'icap-seo'); ?></h3>
-            <p class="description"><?php esc_html_e('Connect your own Google account to show real Search Console indexing status alongside content scores.', 'icap-seo'); ?></p>
-            <?php
-            $google_status_value = isset($google_connection_status['status']) ? (string) $google_connection_status['status'] : 'not_connected';
-            $google_account_email_value = isset($google_connection_status['google_account_email']) ? (string) $google_connection_status['google_account_email'] : '';
-            $google_last_verified_value = isset($google_connection_status['last_verified_at']) ? (string) $google_connection_status['last_verified_at'] : '';
-            $google_last_error_value = isset($google_connection_status['last_error']) ? (string) $google_connection_status['last_error'] : '';
-            ?>
-            <?php if ($google_status_value === 'connected') : ?>
-                <p class="description">
-                    <?php
-                    echo esc_html(
-                        sprintf(
-                            /* translators: %s: connected Google account email address */
-                            __('Connected as %s.', 'icap-seo'),
-                            $google_account_email_value !== '' ? $google_account_email_value : __('unknown account', 'icap-seo')
-                        )
-                    );
-                    ?>
-                    <?php if ($google_last_verified_value !== '') : ?>
-                        <?php esc_html_e('Last verified:', 'icap-seo'); ?> <code><?php echo esc_html($google_last_verified_value); ?></code>
-                    <?php endif; ?>
-                </p>
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                    <input type="hidden" name="action" value="icap_seo_google_disconnect">
-                    <?php wp_nonce_field('icap_seo_google_disconnect'); ?>
-                    <p>
-                        <button type="submit" class="button"><?php esc_html_e('Disconnect', 'icap-seo'); ?></button>
-                    </p>
-                </form>
-
-                <?php
-                $search_console_property_url_value = isset($google_connection_status['search_console_property_url'])
-                    ? (string) $google_connection_status['search_console_property_url']
-                    : '';
-                ?>
-                <?php if (!$service_is_registered) : ?>
-                    <?php // A connected Google account implies a registered site, so this never renders. ?>
-                <?php elseif (!empty($search_console_property_candidates)) : ?>
-                    <p class="description"><?php echo $search_console_property_url_value !== '' ? esc_html__('Choose the Search Console property this site should use:', 'icap-seo') : esc_html__('We couldn\'t confirm which Search Console property matches this site (it may be registered under a different URL, or as a domain property). Select the right one:', 'icap-seo'); ?></p>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                        <input type="hidden" name="action" value="icap_seo_save_search_console_property">
-                        <?php wp_nonce_field('icap_seo_save_search_console_property'); ?>
-                        <p>
-                            <select name="search_console_property_url">
-                                <?php foreach ($search_console_property_candidates as $sc_candidate) : ?>
-                                    <option value="<?php echo esc_attr($sc_candidate['property_url']); ?>" <?php selected(!empty($sc_candidate['matches_site_url']), true); ?>>
-                                        <?php echo esc_html($sc_candidate['property_url']); ?><?php echo !empty($sc_candidate['is_domain_property']) ? ' (' . esc_html__('domain property', 'icap-seo') . ')' : ''; ?><?php echo !empty($sc_candidate['matches_site_url']) ? ' — ' . esc_html__('likely match', 'icap-seo') : ''; ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="submit" class="button button-primary"><?php esc_html_e('Save', 'icap-seo'); ?></button>
-                        </p>
-                    </form>
-                <?php elseif (!empty($search_console_discovery_failed)) : ?>
-                    <p class="description"><?php esc_html_e('Looking up your Search Console properties failed. Please retry shortly.', 'icap-seo'); ?></p>
-                <?php elseif ($search_console_property_url_value !== '') : ?>
-                    <p class="description">
-                        <?php
-                        echo esc_html(
-                            sprintf(
-                                /* translators: %s: the selected Search Console property */
-                                __('Search Console property: %s', 'icap-seo'),
-                                $search_console_property_url_value
-                            )
-                        );
-                        ?>
-                        &mdash;
-                        <a href="<?php echo esc_url(add_query_arg('refresh_search_console_property', '1')); ?>"><?php esc_html_e('Change property', 'icap-seo'); ?></a>
-                    </p>
-                <?php else : ?>
-                    <p class="description"><?php esc_html_e('No Search Console properties were found for this Google account. iCap SEO will use a property derived from this site\'s URL, which may not match what\'s registered in Search Console - verify access in Search Console if Search Console stats elsewhere in this plugin look wrong (e.g. showing zero).', 'icap-seo'); ?></p>
-                <?php endif; ?>
-
-                <?php
-                $analytics_property_id_value = isset($google_connection_status['analytics_property_id'])
-                    ? (string) $google_connection_status['analytics_property_id']
-                    : '';
-                ?>
-                <?php if (!$service_is_registered) : ?>
-                    <?php // A connected Google account implies a registered site, so this never renders. ?>
-                <?php elseif (!$analytics_scope_granted) : ?>
-                    <p class="notice notice-info inline" style="padding:8px 12px; margin-top:12px;">
-                        <?php esc_html_e('New: iCap SEO can also show real traffic data from Google Analytics. Reconnect Google to add it — your existing Search Console connection won\'t be affected.', 'icap-seo'); ?>
-                    </p>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                        <input type="hidden" name="action" value="icap_seo_google_connect_start">
-                        <?php wp_nonce_field('icap_seo_google_connect_start'); ?>
-                        <p>
-                            <button type="submit" class="button button-primary"><?php esc_html_e('Reconnect Google (add Analytics)', 'icap-seo'); ?></button>
-                        </p>
-                    </form>
-                <?php elseif (!empty($analytics_property_candidates)) : ?>
-                    <p class="description"><?php echo $analytics_property_id_value !== '' ? esc_html__('Choose the Google Analytics property this site should use:', 'icap-seo') : esc_html__('We couldn\'t auto-detect your Google Analytics property. Select one:', 'icap-seo'); ?></p>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                        <input type="hidden" name="action" value="icap_seo_save_analytics_property">
-                        <?php wp_nonce_field('icap_seo_save_analytics_property'); ?>
-                        <p>
-                            <select name="analytics_property_id">
-                                <?php foreach ($analytics_property_candidates as $candidate) : ?>
-                                    <option value="<?php echo esc_attr($candidate['property_id']); ?>" <?php selected($candidate['property_id'] === $analytics_property_id_value, true); ?>>
-                                        <?php echo esc_html($candidate['display_name'] !== '' ? $candidate['display_name'] : $candidate['property_id']); ?>
-                                        (<?php echo esc_html($candidate['property_id']); ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="submit" class="button button-primary"><?php esc_html_e('Save', 'icap-seo'); ?></button>
-                        </p>
-                    </form>
-                <?php elseif (!empty($analytics_discovery_failed)) : ?>
-                    <p class="description"><?php esc_html_e('Looking up your Google Analytics properties failed. Please retry shortly.', 'icap-seo'); ?></p>
-                <?php elseif ($analytics_property_id_value !== '') : ?>
-                    <p class="description">
-                        <?php
-                        echo esc_html(
-                            sprintf(
-                                /* translators: %s: the connected Google Analytics property id */
-                                __('Google Analytics property: %s', 'icap-seo'),
-                                $analytics_property_id_value
-                            )
-                        );
-                        ?>
-                        &mdash;
-                        <a href="<?php echo esc_url(add_query_arg('refresh_analytics_property', '1')); ?>"><?php esc_html_e('Change property', 'icap-seo'); ?></a>
-                    </p>
-                <?php else : ?>
-                    <p class="description"><?php esc_html_e('No Google Analytics properties found for this Google account.', 'icap-seo'); ?></p>
-                <?php endif; ?>
-            <?php else : ?>
-                <?php $google_needs_reconnect = in_array($google_status_value, ['error', 'revoked'], true); ?>
-                <?php if ($google_status_value === 'revoked') : ?>
-                    <p class="description">
-                        <?php esc_html_e('Connection was revoked. Reconnect to resume real Search Console indexing status.', 'icap-seo'); ?>
-                    </p>
-                <?php elseif ($google_status_value === 'error') : ?>
-                    <p class="description">
-                        <?php esc_html_e('Connection needs attention:', 'icap-seo'); ?>
-                        <code><?php echo esc_html($google_last_error_value !== '' ? $google_last_error_value : 'unknown_error'); ?></code>
-                    </p>
-                <?php else : ?>
-                    <p class="description"><?php esc_html_e('Not connected.', 'icap-seo'); ?></p>
-                <?php endif; ?>
-                <?php if (!$service_is_registered) : ?>
-                    <?php icap_seo_render_register_panel(__('Register this site to connect your Google Search Console and Google Analytics accounts and see their reports here, free.', 'icap-seo')); ?>
-                <?php else : ?>
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                    <input type="hidden" name="action" value="icap_seo_google_connect_start">
-                    <?php wp_nonce_field('icap_seo_google_connect_start'); ?>
-                    <p>
-                        <button type="submit" class="button button-primary"><?php echo esc_html($google_needs_reconnect ? __('Reconnect Google Search Console', 'icap-seo') : __('Connect Google Search Console', 'icap-seo')); ?></button>
-                    </p>
-                </form>
-                <?php endif; ?>
-            <?php endif; ?>
-
-            <hr>
-            <h3 id="icap-seo-billing"><?php esc_html_e('Billing', 'icap-seo'); ?></h3>
-            <p class="description"><?php esc_html_e('Manage your iCap SEO subscription. Premium adds AI Improvements with 25 AI credits a year, plus scans, reachability, and broken-link checks run from outside your site. The 35 checks that run on this site and the Google Search Console and Google Analytics reports are free either way.', 'icap-seo'); ?></p>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                <input type="hidden" name="action" value="icap_seo_check_billing_status">
-                <?php wp_nonce_field('icap_seo_check_billing_status'); ?>
-                <p>
-                    <button type="submit" class="button"><?php esc_html_e('Check Billing Status', 'icap-seo'); ?></button>
-                </p>
-            </form>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                <input type="hidden" name="action" value="icap_seo_start_billing_checkout">
-                <?php wp_nonce_field('icap_seo_start_billing_checkout'); ?>
-                <p>
-                    <button type="submit" class="button button-primary"><?php esc_html_e('Start Billing Checkout', 'icap-seo'); ?></button>
-                </p>
-            </form>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
-                <input type="hidden" name="action" value="icap_seo_open_billing_portal">
-                <?php wp_nonce_field('icap_seo_open_billing_portal'); ?>
-                <p>
-                    <button type="submit" class="button"><?php esc_html_e('Open Billing Portal', 'icap-seo'); ?></button>
-                </p>
-            </form>
-            <p class="description">
-                <?php esc_html_e('Last known billing state:', 'icap-seo'); ?>
-                <code><?php echo esc_html($connection_settings['last_billing_state'] ?: 'unknown'); ?></code>
-                |
-                <?php esc_html_e('Last billing check:', 'icap-seo'); ?>
-                <code><?php echo esc_html($connection_settings['last_billing_checked_at'] ?: 'n/a'); ?></code>
-            </p>
         <?php else : ?>
             <?php
             $overview_is_connected = $connection_settings['site_id'] !== '' && $connection_settings['site_token'] !== '';
@@ -3252,15 +3180,15 @@ if ($notice_code === 'remediation_apply_noop') {
 
             <?php if (isset($google_connection_status['status']) && $google_connection_status['status'] === 'revoked') : ?>
                 <?php
-                $google_reconnect_url = add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php'));
+                $google_reconnect_url = add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'));
                 ?>
                 <p class="notice notice-warning inline" style="padding:8px 12px; margin-bottom:16px;">
                     <?php
                     echo wp_kses(
                         sprintf(
-                            /* translators: %s: link to the Settings tab */
+                            /* translators: %s: link to the Account tab */
                             __('Your Google Search Console connection was revoked. Content scores will keep working, but real indexing status won\'t update until you reconnect it in %s.', 'icap-seo'),
-                            '<a href="' . esc_url($google_reconnect_url) . '">' . esc_html__('Settings', 'icap-seo') . '</a>'
+                            '<a href="' . esc_url($google_reconnect_url) . '">' . esc_html__('Account', 'icap-seo') . '</a>'
                         ),
                         ['a' => ['href' => []]]
                     );
@@ -3340,7 +3268,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <p class="icap-seo-card-value<?php echo esc_attr($overview_google_value_class); ?>"><?php echo esc_html($overview_google_value); ?></p>
                         <?php if ($overview_google_status !== 'connected') : ?>
                             <p class="icap-seo-card-subtext">
-                                <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php'))); ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
+                                <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'))); ?>"><?php esc_html_e('Connect in Account', 'icap-seo'); ?></a>
                             </p>
                         <?php else : ?>
                             <?php
@@ -3435,7 +3363,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php endif; ?>
                         <?php else : ?>
                             <p class="icap-seo-card-subtext">
-                                <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'settings'], admin_url('admin.php'))); ?>"><?php esc_html_e('Connect in Settings', 'icap-seo'); ?></a>
+                                <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php'))); ?>"><?php esc_html_e('Connect in Account', 'icap-seo'); ?></a>
                             </p>
                         <?php endif; ?>
                     </div>

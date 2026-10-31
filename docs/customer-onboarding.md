@@ -9,14 +9,14 @@ active, registered site. For step-by-step technical instructions, see [Getting s
    and downloads the plugin ZIP.
 2. **Install** — the plugin is installed and activated in WordPress like any other plugin. No account or
    credentials are required to activate it.
-3. **Request access** — from the plugin's **Setup Wizard**, the customer requests a registration token by
-   entering an email (see [Requesting a token](#requesting-a-registration-token) below).
-4. **Connect & register** — the customer enters the registration token in **Settings**, then
-   completes registration from **Setup Wizard**. Site credentials are provisioned automatically at this step —
+3. **Request access** — on the plugin's **Account** tab, the customer clicks **Get started** and requests a
+   registration token by entering an email (see [Requesting a token](#requesting-a-registration-token) below).
+4. **Connect & register** — the customer pastes the token on the same page and clicks
+   **Connect this site**. Site credentials are provisioned automatically at this step —
    no manual key management.
-5. **Connect Google** — any registered site can connect Google Search Console and Google Analytics in
-   **Settings**, free, to fill the report tabs.
-6. **Upgrade to Premium** — the customer starts billing checkout from **Settings → Billing**.
+5. **Connect Google** — any registered site can connect Google Search Console and Google Analytics on the
+   **Account** tab, free, to fill the report tabs.
+6. **Upgrade to Premium** — the customer starts billing checkout from **Account → Billing**.
 7. **First scan** — with Premium active, the customer triggers a scan from **Overview** and reviews results
    in **Content Scores** and the report tabs.
 
@@ -45,7 +45,7 @@ has Premium, these show an upgrade panel.
 
 ## Requesting a registration token
 
-Request one directly from the plugin: open **iCap SEO → Setup Wizard**, click **Continue to registration**, enter your email,
+Request one directly from the plugin: open **iCap SEO → Account**, click **Get started**, enter your email,
 and click **Request Registration**. Verify your email via the link sent to you, and your registration token
 follows by email right away. Then follow [Getting started](getting-started.md) to connect and register
 your site.
