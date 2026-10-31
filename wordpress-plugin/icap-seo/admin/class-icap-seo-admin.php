@@ -818,6 +818,7 @@ class ICap_SEO_Admin
             'post_type' => (string) get_post_type($post_id),
             'permalink' => (string) $local_detail['permalink'],
             'overall_score' => ICap_SEO_Local_Checks::score_for_detail($local_detail),
+            'partial' => !empty($local_detail['partial']),
             'category_scores' => [],
             'issues' => $local_detail['issues'],
         ];
