@@ -75,7 +75,7 @@ class ICap_SEO_Service_Client
     }
     public function get_site_score_snapshot(bool $allow_live_fetch = true): array
     {
-        $scores = $this->get_content_scores_overview($allow_live_fetch);
+        $scores = self::rows_for_site_score($this->get_content_scores_overview($allow_live_fetch));
 
         $sum = 0;
         $count = 0;
@@ -178,7 +178,40 @@ class ICap_SEO_Service_Client
         return $this->build_local_score_data($post_id);
     }
 
+    /**
+     * Rows for the Content Scores table. Pages a service scan didn't reach are added with
+     * their on-site result, so Check all pages covers them on Premium sites too.
+     */
     public function get_content_scores_overview(bool $allow_live_fetch = true): array
+    {
+        $rows = $this->load_content_scores($allow_live_fetch);
+        $has_service_rows = in_array('api', array_column($rows, 'source'), true);
+        if (!$has_service_rows) {
+            return $rows;
+        }
+
+        $service_post_ids = array_map('intval', array_column($rows, 'id'));
+        foreach ($this->build_local_rows() as $local_row) {
+            if (!in_array($local_row['id'], $service_post_ids, true)) {
+                $rows[] = $local_row;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Rows behind a site-wide score. Service and on-site scores use different formulas, so
+     * a site with service scans is scored from those alone.
+     */
+    public static function rows_for_site_score(array $rows): array
+    {
+        $service_rows = array_filter($rows, static fn(array $row): bool => ($row['source'] ?? '') === 'api');
+
+        return !empty($service_rows) ? array_values($service_rows) : $rows;
+    }
+
+    private function load_content_scores(bool $allow_live_fetch): array
     {
         $settings = $this->get_connection_settings();
         $site_id = $settings['site_id'];
@@ -266,6 +299,20 @@ class ICap_SEO_Service_Client
                 return $cached;
             }
         }
+        $rows = $this->build_local_rows();
+        $this->latest_content_scores_meta = $this->build_content_scores_meta(
+            '',
+            '',
+            [],
+            count($rows),
+            'placeholder'
+        );
+
+        return $rows;
+    }
+
+    private function build_local_rows(): array
+    {
         $posts = get_posts([
             'post_type' => ['post', 'page'],
             'post_status' => ['publish', 'draft', 'pending', 'future', 'private'],
@@ -296,13 +343,6 @@ class ICap_SEO_Service_Client
                 'source' => $score_data['icap_score_numeric'] !== null ? 'local' : 'placeholder',
             ];
         }
-        $this->latest_content_scores_meta = $this->build_content_scores_meta(
-            '',
-            '',
-            [],
-            count($rows),
-            'placeholder'
-        );
 
         return $rows;
     }

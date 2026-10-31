@@ -815,8 +815,8 @@ if ($notice_code === 'remediation_apply_noop') {
                 ));
             };
             ?>
-            <?php if ($latest_scores_source !== 'api') : ?>
-                <div class="icap-seo-local-batch">
+            <?php $content_scores_has_service_rows = in_array('api', array_column($content_scores, 'source'), true); ?>
+            <div class="icap-seo-local-batch">
                     <p>
                         <button type="button" class="button button-primary icap-seo-local-batch-start"
                             data-starting="<?php esc_attr_e('Starting…', 'icap-seo'); ?>"
@@ -828,9 +828,13 @@ if ($notice_code === 'remediation_apply_noop') {
                             data-error="<?php esc_attr_e('The check stopped because of a connection problem. Results so far are saved. Click to try again.', 'icap-seo'); ?>"><?php esc_html_e('Check all pages', 'icap-seo'); ?></button>
                         <span class="icap-seo-local-batch-status" role="status"></span>
                     </p>
-                    <p class="description"><?php esc_html_e('Runs the 35 free checks on every published page, a few at a time, on this site. Nothing is sent anywhere. Stay on this page until it finishes.', 'icap-seo'); ?></p>
-                </div>
-            <?php endif; ?>
+                    <p class="description">
+                        <?php esc_html_e('Runs the 35 free checks on every published page, a few at a time, on this site. Nothing is sent anywhere. Stay on this page until it finishes.', 'icap-seo'); ?>
+                        <?php if ($content_scores_has_service_rows) : ?>
+                            <?php esc_html_e('Pages your Premium scans cover keep their scan score, and the rest show their on-site score.', 'icap-seo'); ?>
+                        <?php endif; ?>
+                    </p>
+            </div>
             <?php if (!empty($content_scores_rollup) && ($content_scores_rollup['total_scored'] ?? 0) > 0) :
                 $rollup = $content_scores_rollup;
                 $rollup_total_scored = $rollup['total_scored'];
@@ -959,6 +963,9 @@ if ($notice_code === 'remediation_apply_noop') {
                                             </div>
                                             <span class="icap-seo-score-bar-label"><?php echo esc_html($row['icap_score']); ?></span>
                                         </div>
+                                        <?php if ($content_scores_has_service_rows && ($row['source'] ?? '') === 'local') : ?>
+                                            <span class="icap-seo-card-subtext"><?php esc_html_e('Checked on this site', 'icap-seo'); ?></span>
+                                        <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
                                     <td>
@@ -1377,7 +1384,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             $catalog_issue_rows_by_code[sanitize_key((string) $catalog_issue_row['issue_code'])] = $catalog_issue_row;
                         }
                     }
-                    $catalog_is_premium_scan = $latest_scores_scan_tier === 'premium';
+                    $catalog_is_premium_scan = $latest_scores_scan_tier === 'premium' && empty($content_detail_is_local);
                     $catalog_status_colors = [
                         'good' => ['bg' => '#eafaf0', 'fg' => '#1e7f4f', 'label' => __('Passing', 'icap-seo')],
                         'warn' => ['bg' => '#fdf0e0', 'fg' => '#9a5b0a', 'label' => __('Needs attention', 'icap-seo')],
@@ -3227,9 +3234,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $overview_ai_credit_fill = $overview_is_premium ? max(0, min(100, $overview_ai_credits_remaining)) : 0;
             $overview_ai_credit_color = $overview_is_premium ? icap_seo_meter_color($overview_ai_credit_fill, 0, 100) : '#dcdcde';
 
-            $overview_scored_items_count = $latest_scores_source === 'api'
-                ? max(count($content_scores), $latest_scores_item_count)
-                : count(array_filter(array_column($content_scores, 'icap_score_numeric'), 'is_numeric'));
+            $overview_scored_items_count = count(array_filter(array_column($content_scores, 'icap_score_numeric'), 'is_numeric'));
 
             // Site-wide environment/config checks - local get_option() reads, no backend
             // scan or page fetch involved. Distinct from the per-page 38-check catalog,
