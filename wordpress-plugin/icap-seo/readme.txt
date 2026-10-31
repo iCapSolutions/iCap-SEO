@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.153
+Stable tag: 0.1.155
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,13 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
 
 == Changelog ==
+
+= 0.1.155 =
+* Every tab now shows its content in the same framed tiles.
+
+= 0.1.154 =
+* Overview tiles that aren't connected now have a button to connect them, and the page is easier to scan.
+* Softer button styling throughout.
 
 = 0.1.153 =
 * A single Account tab replaces Setup Wizard and Settings.
