@@ -358,6 +358,10 @@ class ICap_SEO_Admin
         $billing_state = isset($_GET['billing']) ? sanitize_key(wp_unslash($_GET['billing'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         $google_connected = isset($_GET['google_connected']) ? sanitize_key(wp_unslash($_GET['google_connected'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         $google_connect_error = isset($_GET['google_connect_error']) ? sanitize_key(wp_unslash($_GET['google_connect_error'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        if ($google_connected === '1') {
+            // Back from Google: the cached reports predate the connection.
+            $this->service_client->clear_seo_performance_cache();
+        }
         if ($notice_code === '') {
             if ($billing_state === 'success') {
                 $notice_code = 'billing_checkout_returned';
@@ -1669,6 +1673,7 @@ class ICap_SEO_Admin
             $this->redirect_with_notice('google_disconnect_failed', 'account');
             return;
         }
+        $this->service_client->clear_seo_performance_cache();
         $this->redirect_with_notice('google_disconnected', 'account');
     }
 
@@ -1693,6 +1698,7 @@ class ICap_SEO_Admin
             $this->redirect_with_notice('analytics_property_save_failed', 'account');
             return;
         }
+        $this->service_client->clear_seo_performance_cache();
         $this->redirect_with_notice('analytics_property_saved', 'account');
     }
 
@@ -1717,6 +1723,7 @@ class ICap_SEO_Admin
             $this->redirect_with_notice('search_console_property_save_failed', 'account');
             return;
         }
+        $this->service_client->clear_seo_performance_cache();
         $this->redirect_with_notice('search_console_property_saved', 'account');
     }
 

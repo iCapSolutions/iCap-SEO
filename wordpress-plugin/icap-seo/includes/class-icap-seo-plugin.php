@@ -173,6 +173,9 @@ class ICap_SEO_Plugin
             return;
         }
 
+        // WordPress has already marked this path a 404, and IndexNow only accepts a key
+        // file served with 200.
+        status_header(200);
         header('Content-Type: text/plain; charset=utf-8');
         echo esc_html($key);
         exit;
@@ -303,6 +306,8 @@ class ICap_SEO_Plugin
         // "&"/quotes already present in real titles/descriptions. No injection risk
         // to escape against: Content-Type is already sent, and post titles can't
         // contain newlines to fake extra lines.
+        // WordPress has already marked this path a 404; crawlers skip files served that way.
+        status_header(200);
         header('Content-Type: text/plain; charset=utf-8');
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- text/plain response; HTML escaping would corrupt the markdown output (see comment above).
         echo implode("\n", $lines);
