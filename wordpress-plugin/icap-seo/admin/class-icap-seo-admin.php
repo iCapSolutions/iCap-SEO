@@ -2635,7 +2635,11 @@ class ICap_SEO_Admin
         $jsonld_schema_no_op_reason = '';
         $generated_jsonld_schema_json = '';
         if ($apply_jsonld_schema_recommendation) {
-            $jsonld_schema_generated = $this->build_jsonld_schema_for_post($post, $content_key);
+            $jsonld_schema_generated = $this->build_jsonld_schema_for_post(
+                $post,
+                $content_key,
+                $meta_description_was_updated ? $updated_meta_description : ''
+            );
             $generated_jsonld_schema_json = $jsonld_schema_generated['json'];
             $jsonld_schema_was_updated = $generated_jsonld_schema_json !== '' && (
                 $force_regenerate || $generated_jsonld_schema_json !== $current_jsonld_schema['json']
@@ -2787,7 +2791,28 @@ class ICap_SEO_Admin
             update_post_meta($post_id, self::JSONLD_SCHEMA_JSON_META_KEY, wp_slash($generated_jsonld_schema_json));
         }
 
-        $this->mark_issue_codes_applied($post_id, $normalized_codes);
+        // Only the codes a fix actually changed count as applied. Codes with no local fix
+        // (security headers, readability, images to add) stay open for the next check.
+        $codes_fixed_by = [
+            [$title_was_updated, ['title_length_out_of_range', 'missing_title_tag']],
+            [$meta_description_was_updated, ['missing_meta_description', 'meta_description_length_out_of_range']],
+            [$h1_was_updated, ['missing_h1']],
+            [$images_alt_was_updated, ['images_missing_alt']],
+            [$images_dimensions_was_updated, ['images_missing_dimensions']],
+            [$images_lazy_was_updated, ['images_not_lazy_loaded']],
+            [$canonical_was_updated, ['missing_canonical']],
+            [$jsonld_schema_was_updated, ['missing_jsonld_schema', 'schema_type_missing', 'schema_missing_required_properties']],
+            [$heading_structure_was_updated, ['limited_heading_structure']],
+            [$internal_linking_was_updated, ['low_internal_linking', 'no_links_detected']],
+            [$paragraph_structure_was_updated, ['limited_paragraph_structure']],
+        ];
+        $applied_codes = [];
+        foreach ($codes_fixed_by as [$was_updated, $codes]) {
+            if ($was_updated) {
+                $applied_codes = array_merge($applied_codes, array_intersect($codes, $normalized_codes));
+            }
+        }
+        $this->mark_issue_codes_applied($post_id, $applied_codes);
 
         $this->store_remediation_history_entry(
             $post_id,
@@ -4706,7 +4731,7 @@ class ICap_SEO_Admin
         return strpos($answer, 'YES') === 0;
     }
 
-    private function build_jsonld_schema_for_post(WP_Post $post, string $content_key = ''): array
+    private function build_jsonld_schema_for_post(WP_Post $post, string $content_key = '', string $description_override = ''): array
     {
         $title = sanitize_text_field((string) $post->post_title);
         if ($title === '') {
@@ -4788,7 +4813,17 @@ class ICap_SEO_Admin
             $schema['name'] = $title;
         }
 
-        $description = $this->get_current_meta_description_for_post($post);
+        // WebPage requires a description, so a page without a meta description or excerpt
+        // gets one summarized from its content; otherwise the check keeps flagging it and
+        // this fix can never clear it.
+        $description = $description_override !== '' ? $description_override : $this->get_current_meta_description_for_post($post);
+        if ($description === '' && $schema_type === 'WebPage') {
+            $description = $this->extract_meta_summary_sentence($post);
+            if ($description === '' || $this->is_low_quality_meta_description($description)) {
+                $description = $this->build_on_brand_meta_summary($post, $site_name);
+            }
+            $description = trim($this->trim_text_to_max_length(trim($description), 160));
+        }
         if ($description !== '') {
             $schema['description'] = $description;
         }

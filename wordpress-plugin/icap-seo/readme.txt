@@ -132,6 +132,8 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 = 0.1.156 =
 * llms.txt and the IndexNow key file now return a normal success status, so crawlers and IndexNow accept them.
 * Google report tabs reuse results from the last 30 minutes instead of reloading on every visit.
+* The structured data fix now adds a description to page schema when the page has no meta description, so the "required properties" check can be fixed in one click.
+* After applying fixes, only the checks a fix actually changed are marked as applied; checks with no on-site fix stay listed.
 
 = 0.1.155 =
 * Every tab now shows its content in the same framed tiles.
