@@ -358,7 +358,7 @@ $notice_map = [
     'ai_credit_checkout_cancelled' => ['type' => 'error', 'message' => __('AI credit purchase was canceled before completion.', 'icap-seo')],
     'remediation_preview_ready' => ['type' => 'updated', 'message' => __('Remediation preview refreshed for this content item.', 'icap-seo')],
     'remediation_apply_title_updated' => ['type' => 'updated', 'message' => __('Remediation applied locally for this item. Open this page again to see its new score.', 'icap-seo')],
-    'remediation_apply_noop' => ['type' => 'error', 'message' => __('No local SEO field changes were applied for this recommendation.', 'icap-seo')],
+    'remediation_apply_noop' => ['type' => 'info', 'message' => __('Nothing changed on this page.', 'icap-seo')],
     'remediation_apply_title_update_failed' => ['type' => 'error', 'message' => __('Remediation request was accepted, but local field updates could not be applied. Verify edit permissions and content key mapping.', 'icap-seo')],
     'remediation_content_key_missing' => ['type' => 'error', 'message' => __('Remediation request failed: content key is required.', 'icap-seo')],
     'remediation_validation_error' => ['type' => 'error', 'message' => __('Remediation request failed validation. Refresh content details and retry.', 'icap-seo')],
@@ -366,7 +366,7 @@ $notice_map = [
     'remediation_preview_unavailable' => ['type' => 'error', 'message' => __('Remediation preview is temporarily unavailable. Please retry shortly.', 'icap-seo')],
     'remediation_preview_failed' => ['type' => 'error', 'message' => __('Remediation preview failed with an unexpected response.', 'icap-seo')],
     'content_depth_preview_ready' => ['type' => 'updated', 'message' => __('Content depth draft generated. Review it below before publishing.', 'icap-seo')],
-    'content_depth_already_sufficient' => ['type' => 'error', 'message' => __('No-op: this page already meets the content depth word-count target.', 'icap-seo')],
+    'content_depth_already_sufficient' => ['type' => 'info', 'message' => __('Nothing changed: this page already meets the word-count target.', 'icap-seo')],
     'content_depth_published' => ['type' => 'updated', 'message' => __('Content depth draft published to this page. Open this page again to see its new score.', 'icap-seo')],
     'content_depth_discarded' => ['type' => 'updated', 'message' => __('Content depth draft discarded.', 'icap-seo')],
     'content_depth_content_key_missing' => ['type' => 'error', 'message' => __('Content depth request failed: content key is required.', 'icap-seo')],
@@ -586,49 +586,51 @@ if ($notice_code === 'content_depth_published') {
 if ($notice_code === 'remediation_apply_noop') {
     $noop_reason = isset($_GET['noop_reason']) ? sanitize_key((string) wp_unslash($_GET['noop_reason'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
     if ($noop_reason === 'title_already_within_range') {
-        $notice_override_message = __('No-op: title is already within the recommended 20-65 character range.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: the title is already 20–65 characters, the recommended length.', 'icap-seo');
     } elseif ($noop_reason === 'title_generation_failed') {
-        $notice_override_message = __('No-op: a title could not be generated for this page.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: a new title couldn\'t be written for this page.', 'icap-seo');
     } elseif ($noop_reason === 'meta_description_already_optimized') {
-        $notice_override_message = __('No-op: meta description already matches the current page context and SEO target range.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: the meta description already fits this page and the recommended length.', 'icap-seo');
     } elseif ($noop_reason === 'meta_description_already_within_range') {
-        $notice_override_message = __('No-op: meta description is already within the recommended 120-170 character range.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: the meta description is already 120–170 characters, the recommended length.', 'icap-seo');
     } elseif ($noop_reason === 'meta_description_generation_failed') {
-        $notice_override_message = __('No-op: a replacement meta description could not be generated from this page content.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: a new meta description couldn\'t be written from this page\'s content.', 'icap-seo');
     } elseif ($noop_reason === 'issue_not_supported_for_local_apply') {
-        $notice_override_message = __('No-op: this recommendation is not yet supported by local apply logic.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: this check can\'t be fixed automatically. Make this change in the editor.', 'icap-seo');
     } elseif ($noop_reason === 'h1_already_present') {
-        $notice_override_message = __('No-op: an H1 heading is already present in this page content.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: this page already has an H1 heading.', 'icap-seo');
     } elseif ($noop_reason === 'h1_generation_failed') {
-        $notice_override_message = __('No-op: an H1 heading could not be generated from this page title.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: an H1 heading couldn\'t be made from this page\'s title.', 'icap-seo');
     } elseif ($noop_reason === 'images_alt_already_present') {
-        $notice_override_message = __('No-op: all images in this content already have alt text.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: every image on this page already has alt text.', 'icap-seo');
     } elseif ($noop_reason === 'no_images_in_content') {
-        $notice_override_message = __('No-op: no images were found in this content to add alt text to.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: this page has no images to add alt text to.', 'icap-seo');
     } elseif ($noop_reason === 'images_alt_generation_failed') {
-        $notice_override_message = __('No-op: alt text could not be generated for the images on this page.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: alt text couldn\'t be written for the images on this page.', 'icap-seo');
     } elseif ($noop_reason === 'canonical_already_set') {
-        $notice_override_message = __('No-op: a canonical URL matching this page is already set.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: this page already has the right canonical URL.', 'icap-seo');
     } elseif ($noop_reason === 'canonical_generation_failed') {
-        $notice_override_message = __('No-op: a canonical URL could not be generated for this page.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: a canonical URL couldn\'t be set for this page.', 'icap-seo');
     } elseif ($noop_reason === 'jsonld_schema_already_set') {
-        $notice_override_message = __('No-op: JSON-LD schema matching this page is already set.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: this page\'s structured data is already up to date.', 'icap-seo');
     } elseif ($noop_reason === 'jsonld_schema_generation_failed') {
-        $notice_override_message = __('No-op: JSON-LD schema could not be generated for this page.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: structured data couldn\'t be generated for this page.', 'icap-seo');
     } elseif ($noop_reason === 'heading_structure_already_present') {
-        $notice_override_message = __('No-op: this page already has enough H2/H3 headings.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: this page already has enough H2/H3 headings.', 'icap-seo');
     } elseif ($noop_reason === 'internal_linking_already_sufficient') {
-        $notice_override_message = __('No-op: this page already has enough internal links.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: this page already has enough internal links.', 'icap-seo');
     } elseif ($noop_reason === 'no_link_candidates_available') {
-        $notice_override_message = __('No-op: no other published pages were available to link to.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: there are no other published pages to link to.', 'icap-seo');
     } elseif ($noop_reason === 'paragraph_structure_already_sufficient') {
-        $notice_override_message = __('No-op: this page already has enough paragraph structure.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: this page already has enough paragraphs.', 'icap-seo');
     } elseif ($noop_reason === 'insufficient_plain_content_for_paragraph_split') {
-        $notice_override_message = __('No-op: this page\'s content could not be safely reformatted into more paragraphs without risking existing formatting (links, emphasis, etc.).', 'icap-seo');
+        $notice_override_message = __('Nothing changed: this page\'s text couldn\'t be split into more paragraphs without risking its links or formatting.', 'icap-seo');
+    } elseif ($noop_reason === 'nothing_to_change_for_any') {
+        $notice_override_message = __('Nothing changed: the fixes that can be applied automatically had nothing left to change on this page. Anything still listed needs a change in the editor.', 'icap-seo');
     } elseif ($noop_reason === 'no_effective_change_computed') {
-        $notice_override_message = __('No-op: remediation did not produce a different SEO field value to save.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: the fix produced the same result that\'s already on the page.', 'icap-seo');
     } else {
-        $notice_override_message = __('No-op: no changes were required for this recommendation.', 'icap-seo');
+        $notice_override_message = __('Nothing changed: no changes were needed.', 'icap-seo');
     }
 }
 ?>
@@ -639,7 +641,7 @@ if ($notice_code === 'remediation_apply_noop') {
     </h1>
     <p><?php esc_html_e('SEO intelligence for WordPress sites by iCapSolutions.', 'icap-seo'); ?></p>
     <?php if ($notice_code !== '' && isset($notice_map[$notice_code])) : ?>
-        <div class="notice <?php echo esc_attr($notice_map[$notice_code]['type'] === 'error' ? 'notice-error' : 'notice-success'); ?> is-dismissible">
+        <div class="notice <?php echo esc_attr(['error' => 'notice-error', 'info' => 'notice-info'][$notice_map[$notice_code]['type']] ?? 'notice-success'); ?> is-dismissible">
             <p><?php echo esc_html($notice_override_message !== '' ? $notice_override_message : $notice_map[$notice_code]['message']); ?></p>
         </div>
     <?php endif; ?>
@@ -890,11 +892,12 @@ if ($notice_code === 'remediation_apply_noop') {
                             <button type="submit" class="button"><?php esc_html_e('Manage billing', 'icap-seo'); ?></button>
                         </form>
                     <?php else : ?>
-                        <p><?php esc_html_e('Premium adds AI Improvements with 25 AI credits a year, plus scans and link checks from outside your site.', 'icap-seo'); ?></p>
+                        <p><?php esc_html_e('Premium adds AI Improvements, plus scans and link checks from outside your site. The annual plan includes 25 AI credits a year.', 'icap-seo'); ?></p>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-settings-form">
                             <input type="hidden" name="action" value="icap_seo_start_billing_checkout">
                             <?php wp_nonce_field('icap_seo_start_billing_checkout'); ?>
-                            <button type="submit" class="button button-primary"><?php esc_html_e('Upgrade to Premium', 'icap-seo'); ?></button>
+                            <button type="submit" name="plan" value="annual" class="button button-primary"><?php esc_html_e('Annual: $59.95/year (2 months free)', 'icap-seo'); ?></button>
+                            <button type="submit" name="plan" value="monthly" class="button"><?php esc_html_e('Monthly: $5.99/month', 'icap-seo'); ?></button>
                         </form>
                     <?php endif; ?>
                 </div>
@@ -1680,9 +1683,9 @@ if ($notice_code === 'remediation_apply_noop') {
                                                     <?php if (!empty($content_detail_is_posts_page) && $is_content_body_code) : ?>
                                                         <div style="margin-top:6px;"><em><?php esc_html_e('This page\'s content isn\'t displayed here (see the notice above) — applying this fix would have no visible effect.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($is_content_depth_code) : ?>
-                                                        <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use Content depth expansion on the AI Drafts tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Add more useful content to this page in the editor. Premium\'s AI Improvements can draft it for you.', 'icap-seo'); ?></em></div>
+                                                        <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use Content depth expansion on the AI Improvements tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Add more useful content to this page in the editor. Premium\'s AI Improvements can draft it for you.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($is_readability_code) : ?>
-                                                        <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use the Readability rewrite on the AI Drafts tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Edit this page using shorter sentences and simpler words. Premium\'s AI Improvements can rewrite it for you.', 'icap-seo'); ?></em></div>
+                                                        <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use the Readability rewrite on the AI Improvements tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Edit this page using shorter sentences and simpler words. Premium\'s AI Improvements can rewrite it for you.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($catalog_apply_type === 'auto') : ?>
                                                         <div style="margin-top:6px;">
                                                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -3458,7 +3461,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     </div>
                 </div>
             <?php else : ?>
-                <?php icap_seo_render_premium_panel(__('Premium improves your pages with AI, including 25 AI credits a year, and adds scans, broken-link, and reachability checks from outside your site. The 35 on-site checks, your site-wide score, and the Google reports are free.', 'icap-seo'), $overview_is_connected); ?>
+                <?php icap_seo_render_premium_panel(__('Premium improves your pages with AI, with 25 AI credits a year on the annual plan, and adds scans, broken-link, and reachability checks from outside your site. The 35 on-site checks, your site-wide score, and the Google reports are free.', 'icap-seo'), $overview_is_connected); ?>
             <?php endif; ?>
 
             <div class="icap-seo-feature-summary">
@@ -3475,7 +3478,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <li><?php esc_html_e('Broken-link check for any page, when you click Check links', 'icap-seo'); ?> <em>(<?php esc_html_e('Free, runs on this site', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Scans run from the iCap SEO service, from outside your site', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                     <li><?php esc_html_e('Page reachability and broken internal and external links, checked by crawling from outside your site', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
-                    <li><?php esc_html_e('AI Improvements — titles, descriptions, headings, alt text, internal links, expanded content, and rewrites, with 25 AI credits a year included', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
+                    <li><?php esc_html_e('AI Improvements — titles, descriptions, headings, alt text, internal links, expanded content, and rewrites, with 25 AI credits a year on the annual plan', 'icap-seo'); ?> <em>(<?php esc_html_e('Premium', 'icap-seo'); ?>)</em></li>
                 </ul>
                 <p><?php esc_html_e('Also included, free, outside the 38-check catalog: social sharing previews (Open Graph, X Cards), a redirect manager with a 404 log, optional IndexNow pings (off by default), an llms.txt file for AI assistants, and LocalBusiness structured data for businesses with a physical location.', 'icap-seo'); ?></p>
             </div>

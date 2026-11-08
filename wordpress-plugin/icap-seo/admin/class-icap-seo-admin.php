@@ -1531,7 +1531,12 @@ class ICap_SEO_Admin
             wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
         }
         check_admin_referer('icap_seo_start_billing_checkout');
+        $plan = isset($_POST['plan']) ? sanitize_key((string) wp_unslash($_POST['plan'])) : '';
+        if (!in_array($plan, ['annual', 'monthly'], true)) {
+            $plan = 'annual';
+        }
         $result = $this->service_client->create_billing_checkout_session([
+            'plan' => $plan,
             'success_url' => $this->build_billing_settings_return_url('success'),
             'cancel_url' => $this->build_billing_settings_return_url('cancel'),
         ]);
@@ -1914,7 +1919,10 @@ class ICap_SEO_Admin
                 'content-scores',
                 [
                     'content_key' => $content_key,
-                    'noop_reason' => isset($local_apply_result['reason']) ? (string) $local_apply_result['reason'] : '',
+                    // With several fixes selected, one fix's reason would read as the whole answer.
+                    'noop_reason' => count($approved_issue_codes) > 1
+                        ? 'nothing_to_change_for_any'
+                        : (isset($local_apply_result['reason']) ? (string) $local_apply_result['reason'] : ''),
                 ]
             );
             return;
