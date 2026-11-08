@@ -5715,7 +5715,9 @@ class ICap_SEO_Admin
      */
     private function summarize_first_paragraph(string $content, int $max_length): string
     {
+        // Classic-editor content only gets paragraph tags when WordPress displays it.
         $content = str_replace([self::SEO_CHANGE_COMMENT_START, self::SEO_CHANGE_COMMENT_END], ' ', $content);
+        $content = wpautop($content);
         if (!preg_match_all('/<p\b[^>]*>(.*?)<\/p>/is', $content, $matches)) {
             $matches = [1 => [$content]];
         }
