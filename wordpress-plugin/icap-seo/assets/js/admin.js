@@ -10,6 +10,15 @@
         form.addEventListener('submit', function () {
             var button = form.querySelector('button[type="submit"]');
             var progress = form.querySelector('.icap-seo-scan-progress');
+            // Forms that only carry data-progress-label (AI drafts, fixes) get the
+            // progress bar added next to their button on submit.
+            if (!progress && form.getAttribute('data-progress-label')) {
+                progress = document.createElement('div');
+                progress.className = 'icap-seo-scan-progress';
+                progress.setAttribute('data-scanning-label', form.getAttribute('data-progress-label'));
+                progress.innerHTML = '<span class="icap-seo-scan-progress-track"></span><span class="icap-seo-scan-progress-label"></span>';
+                form.appendChild(progress);
+            }
             var label = progress ? progress.querySelector('.icap-seo-scan-progress-label') : null;
             if (button) {
                 button.disabled = true;

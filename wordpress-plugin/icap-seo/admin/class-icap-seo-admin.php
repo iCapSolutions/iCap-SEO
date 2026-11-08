@@ -3569,7 +3569,7 @@ class ICap_SEO_Admin
             // despite the "no numbering" instruction (e.g. "1. ", "- ", "* ").
             $line = preg_replace('/^[\s\-\*\d\.\)]+/', '', $line);
             $line = trim((string) $line, " \t\n\r\0\x0B\"'");
-            if ($line === '') {
+            if (!$this->is_usable_ai_heading($line)) {
                 continue;
             }
             $headings[] = $this->trim_title_to_max_length($line, 60);
@@ -3579,6 +3579,24 @@ class ICap_SEO_Admin
         }
 
         return $headings;
+    }
+
+    /**
+     * Rejects lines that are the model talking rather than a heading (on very thin pages
+     * it sometimes explains instead of answering), so they are never written into a page.
+     */
+    private function is_usable_ai_heading(string $line): bool
+    {
+        if ($line === '' || $this->string_length($line) > 70 || substr($line, -1) === ':') {
+            return false;
+        }
+        if (preg_match('/["“”]/u', $line) === 1) {
+            return false;
+        }
+        return preg_match(
+            '/^(i\b|i[\'’]|here\b|sure\b|okay\b|ok\b|based on\b|let me\b|note\b|as an\b|unfortunately\b|the (current|existing|provided|given) (content|page|text)\b|this (content|page|text) (is|has|does)\b)/iu',
+            $line
+        ) !== 1;
     }
 
     private function build_content_with_heading_outline(
@@ -3631,35 +3649,13 @@ class ICap_SEO_Admin
         $site_name = trim((string) get_bloginfo('name'));
 
         if (empty($insert_before)) {
-            // Content too thin to have 2+ paragraph breaks to space headings across
-            // (e.g. a single short paragraph) - insert all $needed headings together
-            // at the top instead of just one, or a page needing 2 headings would
-            // never reach the >=2 threshold this function itself checks above, no
-            // matter how many times "Apply" gets clicked with unchanged content.
-            $ai_headings = $this->build_heading_texts_via_ai($post, $content_key, $site_name, $needed);
-            $fallback_texts = [
-                $this->trim_title_to_max_length($fallback_phrase, 60),
-                __('More Information', 'icap-seo'),
-                __('Additional Details', 'icap-seo'),
-            ];
-            $heading_texts = [];
-            for ($i = 0; $i < $needed; $i++) {
-                $heading_texts[] = !empty($ai_headings)
-                    ? array_shift($ai_headings)
-                    : ($fallback_texts[$i] ?? $fallback_texts[0]);
-            }
-            $heading_html = implode("\n\n", array_map(
-                static fn(string $text): string => '<h2>' . esc_html($text) . '</h2>',
-                $heading_texts
-            ));
-            $trimmed = ltrim($normalized_content);
-            $updated = $trimmed === '' ? $heading_html : $heading_html . "\n\n" . $normalized_content;
-
+            // Too short to have sections: headings stacked above a paragraph or two read
+            // as filler, not structure. Leave it until the page has more content.
             return [
-                'changed' => true,
-                'reason' => 'heading_inserted_top_fallback',
-                'content' => $updated,
-                'headings_added' => count($heading_texts),
+                'changed' => false,
+                'reason' => 'content_too_short_for_headings',
+                'content' => $normalized_content,
+                'headings_added' => 0,
             ];
         }
 
@@ -4619,7 +4615,15 @@ class ICap_SEO_Admin
         if (!is_array($paragraphs)) {
             return null;
         }
-        $paragraphs = array_filter($paragraphs, static fn(string $text): bool => trim($text) !== '');
+        // Drop markdown headings and one-line preambles the model sometimes adds despite
+        // being told not to ("# Additional Content for ...", "Here are the new paragraphs:").
+        $paragraphs = array_filter(
+            $paragraphs,
+            static fn(string $text): bool => trim($text) !== ''
+                && preg_match('/^\s*#/', $text) !== 1
+                && preg_match('/:\s*$/', $text) !== 1
+                && preg_match('/^\s*(here (is|are)|sure\b|okay\b|i\b|i[\'’])/iu', $text) !== 1
+        );
         if (empty($paragraphs)) {
             return null;
         }
@@ -5178,6 +5182,7 @@ class ICap_SEO_Admin
         $title_phrase = $this->clean_title_phrase((string) $post->post_title);
 
         $summary = $this->build_seo_meta_summary_via_ai($post, $content_key, $site_name);
+        $summary_from_ai = $summary !== null;
         if ($summary === null) {
             $summary = $this->extract_meta_summary_sentence($post, $force_regenerate);
 
@@ -5194,11 +5199,13 @@ class ICap_SEO_Admin
         $candidate = trim((string) $summary);
         $candidate = rtrim($candidate, " .\t\n\r\0\x0B");
 
-        // Prefer a natural page-intent sentence over token stuffing.
-        if ($title_phrase !== '' && stripos($candidate, $title_phrase) === false) {
+        // Prefer a natural page-intent sentence over token stuffing. The AI already writes
+        // a complete sentence for this page, so only the extracted fallbacks get the title
+        // and site name added.
+        if (!$summary_from_ai && $title_phrase !== '' && stripos($candidate, $title_phrase) === false) {
             $candidate = trim($title_phrase . ' — ' . $candidate);
         }
-        if ($site_name !== '' && stripos($candidate, $site_name) === false) {
+        if (!$summary_from_ai && $site_name !== '' && stripos($candidate, $site_name) === false) {
             $candidate = trim($candidate . ' from ' . $site_name);
         }
 
@@ -5226,11 +5233,15 @@ class ICap_SEO_Admin
                 ' Discover key highlights and practical details at a glance.',
                 ' Find clear context and next steps for this page.',
             ];
+            // A filler sentence is added only whole: cut off mid-way it reads as broken,
+            // and a slightly short description is better than that.
             foreach ($fillers as $filler) {
                 if ($this->string_length($candidate) >= 120) {
                     break;
                 }
-                $candidate = trim($candidate . $filler);
+                if ($this->string_length($candidate . $filler) <= 160) {
+                    $candidate = trim($candidate . $filler);
+                }
             }
         }
 
@@ -5245,8 +5256,9 @@ class ICap_SEO_Admin
 
         if ($this->is_low_quality_meta_description($candidate)) {
             $candidate = $this->build_on_brand_meta_summary($post, $site_name);
-            if ($this->string_length($candidate) < 120) {
-                $candidate = trim($candidate . ' Learn what makes this page useful and what visitors can expect next.');
+            $filler = ' Learn what makes this page useful and what visitors can expect next.';
+            if ($this->string_length($candidate) < 120 && $this->string_length($candidate . $filler) <= 160) {
+                $candidate = trim($candidate . $filler);
             }
             if ($this->string_length($candidate) > 160) {
                 $candidate = $this->trim_text_to_max_length($candidate, 160);
