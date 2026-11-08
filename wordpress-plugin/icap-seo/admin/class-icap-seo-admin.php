@@ -4818,11 +4818,10 @@ class ICap_SEO_Admin
         // this fix can never clear it.
         $description = $description_override !== '' ? $description_override : $this->get_current_meta_description_for_post($post);
         if ($description === '' && $schema_type === 'WebPage') {
-            $description = $this->extract_meta_summary_sentence($post);
+            $description = $this->summarize_first_paragraph($content, 160);
             if ($description === '' || $this->is_low_quality_meta_description($description)) {
                 $description = $this->build_on_brand_meta_summary($post, $site_name);
             }
-            $description = trim($this->trim_text_to_max_length(trim($description), 160));
         }
         if ($description !== '') {
             $schema['description'] = $description;
@@ -5707,6 +5706,41 @@ class ICap_SEO_Admin
         }
 
         return $assembled;
+    }
+
+    /**
+     * Whole sentences from the first real paragraph, up to $max_length characters.
+     * Headings are skipped so they don't run into the text; a first sentence longer
+     * than the limit is cut at a word and ends with an ellipsis.
+     */
+    private function summarize_first_paragraph(string $content, int $max_length): string
+    {
+        $content = str_replace([self::SEO_CHANGE_COMMENT_START, self::SEO_CHANGE_COMMENT_END], ' ', $content);
+        if (!preg_match_all('/<p\b[^>]*>(.*?)<\/p>/is', $content, $matches)) {
+            $matches = [1 => [$content]];
+        }
+        foreach ($matches[1] as $paragraph_html) {
+            // Editors often leave non-breaking spaces between sentences; treat them as spaces.
+            $text = html_entity_decode(wp_strip_all_tags((string) $paragraph_html, true), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $text = trim((string) preg_replace('/[\s\x{00A0}]+/u', ' ', $text));
+            if ($this->string_length($text) < 40) {
+                continue;
+            }
+            $summary = '';
+            $sentences = preg_split('/(?<=[.!?])\s+/', $text);
+            foreach (is_array($sentences) ? $sentences : [$text] as $sentence) {
+                $candidate = $summary === '' ? $sentence : $summary . ' ' . $sentence;
+                if ($this->string_length($candidate) > $max_length) {
+                    break;
+                }
+                $summary = $candidate;
+            }
+            if ($summary === '') {
+                $summary = rtrim($this->trim_text_to_max_length($text, $max_length - 1), " ,;:-") . '…';
+            }
+            return $summary;
+        }
+        return '';
     }
 
     private function trim_text_to_max_length(string $text, int $max_length): string
