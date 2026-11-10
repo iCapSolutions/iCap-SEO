@@ -1791,15 +1791,6 @@ if ($notice_code === 'remediation_apply_noop') {
                         <div class="icap-seo-panel">
                         <h4><?php esc_html_e('Content depth expansion', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates draft paragraphs to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft — unlike the other recommendations above.', 'icap-seo'); ?></p>
-                        <?php if (!empty($content_depth_open_issue_codes)) : ?>
-                            <p class="description"><?php
-                            echo esc_html(sprintf(
-                                /* translators: %s: comma-separated list of open issue codes */
-                                __('Open codes: %s', 'icap-seo'),
-                                implode(', ', $content_depth_open_issue_codes)
-                            ));
-                            ?></p>
-                        <?php endif; ?>
                         <?php if ($content_depth_draft_html !== '') : ?>
                             <div class="icap-seo-content-depth-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                                 <p class="description"><?php
@@ -1930,7 +1921,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     ?>
                     <div class="icap-seo-panel">
                     <h4><?php esc_html_e('Spelling & grammar', 'icap-seo'); ?></h4>
-                    <p class="description"><?php esc_html_e('Not tied to a scan finding - run this any time to check this page\'s prose for spelling and grammar mistakes. Uses an AI credit. Generates a draft to review before anything is saved.', 'icap-seo'); ?></p>
+                    <p class="description"><?php esc_html_e('Not tied to a scan finding - run this any time to check this page\'s prose for spelling and grammar mistakes. Uses 3 AI credits. Generates a draft to review before anything is saved.', 'icap-seo'); ?></p>
                     <?php if (!empty($spelling_grammar_draft_paragraphs)) : ?>
                         <div class="icap-seo-spelling-grammar-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                             <p class="description">
