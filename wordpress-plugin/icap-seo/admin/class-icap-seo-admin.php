@@ -5219,12 +5219,7 @@ class ICap_SEO_Admin
         }
 
         if ($this->string_length($candidate) > 160) {
-            $candidate = $this->trim_text_to_max_length($candidate, 160);
-            $candidate = rtrim($candidate, " .\t\n\r\0\x0B");
-            $candidate = $this->strip_dangling_site_name_suffix($candidate, $site_name);
-            if ($candidate !== '') {
-                $candidate .= '.';
-            }
+            $candidate = $this->clamp_meta_description($candidate, $site_name);
         }
 
         if ($this->string_length($candidate) < 120) {
@@ -5246,12 +5241,7 @@ class ICap_SEO_Admin
         }
 
         if ($this->string_length($candidate) > 160) {
-            $candidate = $this->trim_text_to_max_length($candidate, 160);
-            $candidate = rtrim($candidate, " .\t\n\r\0\x0B");
-            $candidate = $this->strip_dangling_site_name_suffix($candidate, $site_name);
-            if ($candidate !== '') {
-                $candidate .= '.';
-            }
+            $candidate = $this->clamp_meta_description($candidate, $site_name);
         }
 
         if ($this->is_low_quality_meta_description($candidate)) {
@@ -5261,14 +5251,39 @@ class ICap_SEO_Admin
                 $candidate = trim($candidate . $filler);
             }
             if ($this->string_length($candidate) > 160) {
-                $candidate = $this->trim_text_to_max_length($candidate, 160);
-                $candidate = rtrim($candidate, " .\t\n\r\0\x0B");
-                $candidate = $this->strip_dangling_site_name_suffix($candidate, $site_name);
-                $candidate .= '.';
+                $candidate = $this->clamp_meta_description($candidate, $site_name);
             }
         }
 
         return trim($candidate);
+    }
+
+    /**
+     * Brings a description down to 160 characters without leaving a broken sentence:
+     * keeps the whole sentences that fit, and only when not even the first one fits
+     * cuts at a word and ends with an ellipsis instead of a period.
+     */
+    private function clamp_meta_description(string $candidate, string $site_name): string
+    {
+        $sentences = preg_split('/(?<=[.!?])\s+/u', trim($candidate));
+        $kept = '';
+        foreach (is_array($sentences) ? $sentences : [] as $sentence) {
+            $next = trim($kept . ' ' . $sentence);
+            if ($this->string_length($next) > 160) {
+                break;
+            }
+            $kept = $next;
+        }
+        if ($kept !== '' && preg_match('/[.!?]$/u', $kept) === 1) {
+            return $kept;
+        }
+
+        $trimmed = $this->trim_text_to_max_length($candidate, 159);
+        $trimmed = $this->strip_dangling_site_name_suffix($trimmed, $site_name);
+        $trimmed = (string) preg_replace('/(\s+(a|an|and|as|at|but|by|for|from|in|of|on|or|the|to|with))+$/iu', '', $trimmed);
+        $trimmed = rtrim($trimmed, " ,;:-.\t\n\r\0\x0B");
+
+        return $trimmed !== '' ? $trimmed . '…' : '';
     }
 
     private function strip_dangling_site_name_suffix(string $candidate, string $site_name): string
