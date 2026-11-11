@@ -383,10 +383,11 @@ class ICap_SEO_Admin
                 $notice_code = 'google_connect_failed';
             }
         }
-        if (in_array($billing_state, ['success', 'ai_credit_success'], true) && $this->service_client->is_api_connection_configured_public()) {
+        if (in_array($billing_state, ['success', 'ai_credit_success', 'portal'], true) && $this->service_client->is_api_connection_configured_public()) {
             // Refresh the cached billing state and AI credit balance immediately on return
-            // from a completed purchase, so a new Premium subscription or credit total shows
-            // right away instead of waiting for the next billing-status check.
+            // from a completed purchase or the billing portal, so a new Premium subscription,
+            // plan switch, cancellation, or credit total shows right away instead of waiting
+            // for the next billing-status check.
             $this->service_client->get_subscription_status(true);
         } else {
             $this->service_client->refresh_billing_state_if_stale();

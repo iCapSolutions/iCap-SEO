@@ -138,6 +138,7 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 * The structured data fix now adds a description to page schema when the page has no meta description, so the "required properties" check can be fixed in one click.
 * After applying fixes, only the checks a fix actually changed are marked as applied; checks with no on-site fix stay listed.
 * Premium can now be billed monthly as well as yearly; the Account tab offers both.
+* Plan changes, cancellations, and AI credits show as soon as you return from the billing portal.
 * Clearer messages when a fix has nothing to change, shown as information rather than an error.
 * Fix notes now point to the AI Improvements tab by its current name.
 
