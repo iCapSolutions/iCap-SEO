@@ -358,6 +358,10 @@ class ICap_SEO_Admin
         $billing_state = isset($_GET['billing']) ? sanitize_key(wp_unslash($_GET['billing'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         $google_connected = isset($_GET['google_connected']) ? sanitize_key(wp_unslash($_GET['google_connected'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
         $google_connect_error = isset($_GET['google_connect_error']) ? sanitize_key(wp_unslash($_GET['google_connect_error'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+        if ($google_connected === '1') {
+            // Back from Google: the cached reports predate the connection.
+            $this->service_client->clear_seo_performance_cache();
+        }
         if ($notice_code === '') {
             if ($billing_state === 'success') {
                 $notice_code = 'billing_checkout_returned';
@@ -379,10 +383,11 @@ class ICap_SEO_Admin
                 $notice_code = 'google_connect_failed';
             }
         }
-        if (in_array($billing_state, ['success', 'ai_credit_success'], true) && $this->service_client->is_api_connection_configured_public()) {
+        if (in_array($billing_state, ['success', 'ai_credit_success', 'portal'], true) && $this->service_client->is_api_connection_configured_public()) {
             // Refresh the cached billing state and AI credit balance immediately on return
-            // from a completed purchase, so a new Premium subscription or credit total shows
-            // right away instead of waiting for the next billing-status check.
+            // from a completed purchase or the billing portal, so a new Premium subscription,
+            // plan switch, cancellation, or credit total shows right away instead of waiting
+            // for the next billing-status check.
             $this->service_client->get_subscription_status(true);
         } else {
             $this->service_client->refresh_billing_state_if_stale();
@@ -1527,7 +1532,12 @@ class ICap_SEO_Admin
             wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
         }
         check_admin_referer('icap_seo_start_billing_checkout');
+        $plan = isset($_POST['plan']) ? sanitize_key((string) wp_unslash($_POST['plan'])) : '';
+        if (!in_array($plan, ['annual', 'monthly'], true)) {
+            $plan = 'annual';
+        }
         $result = $this->service_client->create_billing_checkout_session([
+            'plan' => $plan,
             'success_url' => $this->build_billing_settings_return_url('success'),
             'cancel_url' => $this->build_billing_settings_return_url('cancel'),
         ]);
@@ -1669,6 +1679,7 @@ class ICap_SEO_Admin
             $this->redirect_with_notice('google_disconnect_failed', 'account');
             return;
         }
+        $this->service_client->clear_seo_performance_cache();
         $this->redirect_with_notice('google_disconnected', 'account');
     }
 
@@ -1693,6 +1704,7 @@ class ICap_SEO_Admin
             $this->redirect_with_notice('analytics_property_save_failed', 'account');
             return;
         }
+        $this->service_client->clear_seo_performance_cache();
         $this->redirect_with_notice('analytics_property_saved', 'account');
     }
 
@@ -1717,6 +1729,7 @@ class ICap_SEO_Admin
             $this->redirect_with_notice('search_console_property_save_failed', 'account');
             return;
         }
+        $this->service_client->clear_seo_performance_cache();
         $this->redirect_with_notice('search_console_property_saved', 'account');
     }
 
@@ -1907,7 +1920,10 @@ class ICap_SEO_Admin
                 'content-scores',
                 [
                     'content_key' => $content_key,
-                    'noop_reason' => isset($local_apply_result['reason']) ? (string) $local_apply_result['reason'] : '',
+                    // With several fixes selected, one fix's reason would read as the whole answer.
+                    'noop_reason' => count($approved_issue_codes) > 1
+                        ? 'nothing_to_change_for_any'
+                        : (isset($local_apply_result['reason']) ? (string) $local_apply_result['reason'] : ''),
                 ]
             );
             return;
@@ -2628,7 +2644,11 @@ class ICap_SEO_Admin
         $jsonld_schema_no_op_reason = '';
         $generated_jsonld_schema_json = '';
         if ($apply_jsonld_schema_recommendation) {
-            $jsonld_schema_generated = $this->build_jsonld_schema_for_post($post, $content_key);
+            $jsonld_schema_generated = $this->build_jsonld_schema_for_post(
+                $post,
+                $content_key,
+                $meta_description_was_updated ? $updated_meta_description : ''
+            );
             $generated_jsonld_schema_json = $jsonld_schema_generated['json'];
             $jsonld_schema_was_updated = $generated_jsonld_schema_json !== '' && (
                 $force_regenerate || $generated_jsonld_schema_json !== $current_jsonld_schema['json']
@@ -2780,7 +2800,28 @@ class ICap_SEO_Admin
             update_post_meta($post_id, self::JSONLD_SCHEMA_JSON_META_KEY, wp_slash($generated_jsonld_schema_json));
         }
 
-        $this->mark_issue_codes_applied($post_id, $normalized_codes);
+        // Only the codes a fix actually changed count as applied. Codes with no local fix
+        // (security headers, readability, images to add) stay open for the next check.
+        $codes_fixed_by = [
+            [$title_was_updated, ['title_length_out_of_range', 'missing_title_tag']],
+            [$meta_description_was_updated, ['missing_meta_description', 'meta_description_length_out_of_range']],
+            [$h1_was_updated, ['missing_h1']],
+            [$images_alt_was_updated, ['images_missing_alt']],
+            [$images_dimensions_was_updated, ['images_missing_dimensions']],
+            [$images_lazy_was_updated, ['images_not_lazy_loaded']],
+            [$canonical_was_updated, ['missing_canonical']],
+            [$jsonld_schema_was_updated, ['missing_jsonld_schema', 'schema_type_missing', 'schema_missing_required_properties']],
+            [$heading_structure_was_updated, ['limited_heading_structure']],
+            [$internal_linking_was_updated, ['low_internal_linking', 'no_links_detected']],
+            [$paragraph_structure_was_updated, ['limited_paragraph_structure']],
+        ];
+        $applied_codes = [];
+        foreach ($codes_fixed_by as [$was_updated, $codes]) {
+            if ($was_updated) {
+                $applied_codes = array_merge($applied_codes, array_intersect($codes, $normalized_codes));
+            }
+        }
+        $this->mark_issue_codes_applied($post_id, $applied_codes);
 
         $this->store_remediation_history_entry(
             $post_id,
@@ -3529,7 +3570,7 @@ class ICap_SEO_Admin
             // despite the "no numbering" instruction (e.g. "1. ", "- ", "* ").
             $line = preg_replace('/^[\s\-\*\d\.\)]+/', '', $line);
             $line = trim((string) $line, " \t\n\r\0\x0B\"'");
-            if ($line === '') {
+            if (!$this->is_usable_ai_heading($line)) {
                 continue;
             }
             $headings[] = $this->trim_title_to_max_length($line, 60);
@@ -3539,6 +3580,24 @@ class ICap_SEO_Admin
         }
 
         return $headings;
+    }
+
+    /**
+     * Rejects lines that are the model talking rather than a heading (on very thin pages
+     * it sometimes explains instead of answering), so they are never written into a page.
+     */
+    private function is_usable_ai_heading(string $line): bool
+    {
+        if ($line === '' || $this->string_length($line) > 70 || substr($line, -1) === ':') {
+            return false;
+        }
+        if (preg_match('/["“”]/u', $line) === 1) {
+            return false;
+        }
+        return preg_match(
+            '/^(i\b|i[\'’]|here\b|sure\b|okay\b|ok\b|based on\b|let me\b|note\b|as an\b|unfortunately\b|the (current|existing|provided|given) (content|page|text)\b|this (content|page|text) (is|has|does)\b)/iu',
+            $line
+        ) !== 1;
     }
 
     private function build_content_with_heading_outline(
@@ -3591,35 +3650,13 @@ class ICap_SEO_Admin
         $site_name = trim((string) get_bloginfo('name'));
 
         if (empty($insert_before)) {
-            // Content too thin to have 2+ paragraph breaks to space headings across
-            // (e.g. a single short paragraph) - insert all $needed headings together
-            // at the top instead of just one, or a page needing 2 headings would
-            // never reach the >=2 threshold this function itself checks above, no
-            // matter how many times "Apply" gets clicked with unchanged content.
-            $ai_headings = $this->build_heading_texts_via_ai($post, $content_key, $site_name, $needed);
-            $fallback_texts = [
-                $this->trim_title_to_max_length($fallback_phrase, 60),
-                __('More Information', 'icap-seo'),
-                __('Additional Details', 'icap-seo'),
-            ];
-            $heading_texts = [];
-            for ($i = 0; $i < $needed; $i++) {
-                $heading_texts[] = !empty($ai_headings)
-                    ? array_shift($ai_headings)
-                    : ($fallback_texts[$i] ?? $fallback_texts[0]);
-            }
-            $heading_html = implode("\n\n", array_map(
-                static fn(string $text): string => '<h2>' . esc_html($text) . '</h2>',
-                $heading_texts
-            ));
-            $trimmed = ltrim($normalized_content);
-            $updated = $trimmed === '' ? $heading_html : $heading_html . "\n\n" . $normalized_content;
-
+            // Too short to have sections: headings stacked above a paragraph or two read
+            // as filler, not structure. Leave it until the page has more content.
             return [
-                'changed' => true,
-                'reason' => 'heading_inserted_top_fallback',
-                'content' => $updated,
-                'headings_added' => count($heading_texts),
+                'changed' => false,
+                'reason' => 'content_too_short_for_headings',
+                'content' => $normalized_content,
+                'headings_added' => 0,
             ];
         }
 
@@ -4579,7 +4616,15 @@ class ICap_SEO_Admin
         if (!is_array($paragraphs)) {
             return null;
         }
-        $paragraphs = array_filter($paragraphs, static fn(string $text): bool => trim($text) !== '');
+        // Drop markdown headings and one-line preambles the model sometimes adds despite
+        // being told not to ("# Additional Content for ...", "Here are the new paragraphs:").
+        $paragraphs = array_filter(
+            $paragraphs,
+            static fn(string $text): bool => trim($text) !== ''
+                && preg_match('/^\s*#/', $text) !== 1
+                && preg_match('/:\s*$/', $text) !== 1
+                && preg_match('/^\s*(here (is|are)|sure\b|okay\b|i\b|i[\'’])/iu', $text) !== 1
+        );
         if (empty($paragraphs)) {
             return null;
         }
@@ -4699,7 +4744,7 @@ class ICap_SEO_Admin
         return strpos($answer, 'YES') === 0;
     }
 
-    private function build_jsonld_schema_for_post(WP_Post $post, string $content_key = ''): array
+    private function build_jsonld_schema_for_post(WP_Post $post, string $content_key = '', string $description_override = ''): array
     {
         $title = sanitize_text_field((string) $post->post_title);
         if ($title === '') {
@@ -4781,7 +4826,16 @@ class ICap_SEO_Admin
             $schema['name'] = $title;
         }
 
-        $description = $this->get_current_meta_description_for_post($post);
+        // WebPage requires a description, so a page without a meta description or excerpt
+        // gets one summarized from its content; otherwise the check keeps flagging it and
+        // this fix can never clear it.
+        $description = $description_override !== '' ? $description_override : $this->get_current_meta_description_for_post($post);
+        if ($description === '' && $schema_type === 'WebPage') {
+            $description = $this->summarize_first_paragraph($content, 160);
+            if ($description === '' || $this->is_low_quality_meta_description($description)) {
+                $description = $this->build_on_brand_meta_summary($post, $site_name);
+            }
+        }
         if ($description !== '') {
             $schema['description'] = $description;
         }
@@ -5129,6 +5183,7 @@ class ICap_SEO_Admin
         $title_phrase = $this->clean_title_phrase((string) $post->post_title);
 
         $summary = $this->build_seo_meta_summary_via_ai($post, $content_key, $site_name);
+        $summary_from_ai = $summary !== null;
         if ($summary === null) {
             $summary = $this->extract_meta_summary_sentence($post, $force_regenerate);
 
@@ -5145,11 +5200,13 @@ class ICap_SEO_Admin
         $candidate = trim((string) $summary);
         $candidate = rtrim($candidate, " .\t\n\r\0\x0B");
 
-        // Prefer a natural page-intent sentence over token stuffing.
-        if ($title_phrase !== '' && stripos($candidate, $title_phrase) === false) {
+        // Prefer a natural page-intent sentence over token stuffing. The AI already writes
+        // a complete sentence for this page, so only the extracted fallbacks get the title
+        // and site name added.
+        if (!$summary_from_ai && $title_phrase !== '' && stripos($candidate, $title_phrase) === false) {
             $candidate = trim($title_phrase . ' — ' . $candidate);
         }
-        if ($site_name !== '' && stripos($candidate, $site_name) === false) {
+        if (!$summary_from_ai && $site_name !== '' && stripos($candidate, $site_name) === false) {
             $candidate = trim($candidate . ' from ' . $site_name);
         }
 
@@ -5163,12 +5220,7 @@ class ICap_SEO_Admin
         }
 
         if ($this->string_length($candidate) > 160) {
-            $candidate = $this->trim_text_to_max_length($candidate, 160);
-            $candidate = rtrim($candidate, " .\t\n\r\0\x0B");
-            $candidate = $this->strip_dangling_site_name_suffix($candidate, $site_name);
-            if ($candidate !== '') {
-                $candidate .= '.';
-            }
+            $candidate = $this->clamp_meta_description($candidate, $site_name);
         }
 
         if ($this->string_length($candidate) < 120) {
@@ -5177,37 +5229,62 @@ class ICap_SEO_Admin
                 ' Discover key highlights and practical details at a glance.',
                 ' Find clear context and next steps for this page.',
             ];
+            // A filler sentence is added only whole: cut off mid-way it reads as broken,
+            // and a slightly short description is better than that.
             foreach ($fillers as $filler) {
                 if ($this->string_length($candidate) >= 120) {
                     break;
                 }
-                $candidate = trim($candidate . $filler);
+                if ($this->string_length($candidate . $filler) <= 160) {
+                    $candidate = trim($candidate . $filler);
+                }
             }
         }
 
         if ($this->string_length($candidate) > 160) {
-            $candidate = $this->trim_text_to_max_length($candidate, 160);
-            $candidate = rtrim($candidate, " .\t\n\r\0\x0B");
-            $candidate = $this->strip_dangling_site_name_suffix($candidate, $site_name);
-            if ($candidate !== '') {
-                $candidate .= '.';
-            }
+            $candidate = $this->clamp_meta_description($candidate, $site_name);
         }
 
         if ($this->is_low_quality_meta_description($candidate)) {
             $candidate = $this->build_on_brand_meta_summary($post, $site_name);
-            if ($this->string_length($candidate) < 120) {
-                $candidate = trim($candidate . ' Learn what makes this page useful and what visitors can expect next.');
+            $filler = ' Learn what makes this page useful and what visitors can expect next.';
+            if ($this->string_length($candidate) < 120 && $this->string_length($candidate . $filler) <= 160) {
+                $candidate = trim($candidate . $filler);
             }
             if ($this->string_length($candidate) > 160) {
-                $candidate = $this->trim_text_to_max_length($candidate, 160);
-                $candidate = rtrim($candidate, " .\t\n\r\0\x0B");
-                $candidate = $this->strip_dangling_site_name_suffix($candidate, $site_name);
-                $candidate .= '.';
+                $candidate = $this->clamp_meta_description($candidate, $site_name);
             }
         }
 
         return trim($candidate);
+    }
+
+    /**
+     * Brings a description down to 160 characters without leaving a broken sentence:
+     * keeps the whole sentences that fit, and only when not even the first one fits
+     * cuts at a word and ends with an ellipsis instead of a period.
+     */
+    private function clamp_meta_description(string $candidate, string $site_name): string
+    {
+        $sentences = preg_split('/(?<=[.!?])\s+/u', trim($candidate));
+        $kept = '';
+        foreach (is_array($sentences) ? $sentences : [] as $sentence) {
+            $next = trim($kept . ' ' . $sentence);
+            if ($this->string_length($next) > 160) {
+                break;
+            }
+            $kept = $next;
+        }
+        if ($kept !== '' && preg_match('/[.!?]$/u', $kept) === 1) {
+            return $kept;
+        }
+
+        $trimmed = $this->trim_text_to_max_length($candidate, 159);
+        $trimmed = $this->strip_dangling_site_name_suffix($trimmed, $site_name);
+        $trimmed = (string) preg_replace('/(\s+(a|an|and|as|at|but|by|for|from|in|of|on|or|the|to|with))+$/iu', '', $trimmed);
+        $trimmed = rtrim($trimmed, " ,;:-.\t\n\r\0\x0B");
+
+        return $trimmed !== '' ? $trimmed . '…' : '';
     }
 
     private function strip_dangling_site_name_suffix(string $candidate, string $site_name): string
@@ -5665,6 +5742,43 @@ class ICap_SEO_Admin
         }
 
         return $assembled;
+    }
+
+    /**
+     * Whole sentences from the first real paragraph, up to $max_length characters.
+     * Headings are skipped so they don't run into the text; a first sentence longer
+     * than the limit is cut at a word and ends with an ellipsis.
+     */
+    private function summarize_first_paragraph(string $content, int $max_length): string
+    {
+        // Classic-editor content only gets paragraph tags when WordPress displays it.
+        $content = str_replace([self::SEO_CHANGE_COMMENT_START, self::SEO_CHANGE_COMMENT_END], ' ', $content);
+        $content = wpautop($content);
+        if (!preg_match_all('/<p\b[^>]*>(.*?)<\/p>/is', $content, $matches)) {
+            $matches = [1 => [$content]];
+        }
+        foreach ($matches[1] as $paragraph_html) {
+            // Editors often leave non-breaking spaces between sentences; treat them as spaces.
+            $text = html_entity_decode(wp_strip_all_tags((string) $paragraph_html, true), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $text = trim((string) preg_replace('/[\s\x{00A0}]+/u', ' ', $text));
+            if ($this->string_length($text) < 40) {
+                continue;
+            }
+            $summary = '';
+            $sentences = preg_split('/(?<=[.!?])\s+/', $text);
+            foreach (is_array($sentences) ? $sentences : [$text] as $sentence) {
+                $candidate = $summary === '' ? $sentence : $summary . ' ' . $sentence;
+                if ($this->string_length($candidate) > $max_length) {
+                    break;
+                }
+                $summary = $candidate;
+            }
+            if ($summary === '') {
+                $summary = rtrim($this->trim_text_to_max_length($text, $max_length - 1), " ,;:-") . '…';
+            }
+            return $summary;
+        }
+        return '';
     }
 
     private function trim_text_to_max_length(string $text, int $max_length): string

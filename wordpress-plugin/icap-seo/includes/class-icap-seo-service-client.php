@@ -1302,6 +1302,18 @@ class ICap_SEO_Service_Client
         );
     }
 
+    /**
+     * Drops the cached Google reports, so the next report tab shows a change to the Google
+     * connection or chosen properties straight away instead of after the cache window.
+     */
+    public function clear_seo_performance_cache(): void
+    {
+        $site_id = $this->get_connection_settings()['site_id'];
+        if ($site_id !== '') {
+            delete_transient(sprintf('icap_seo_performance_%s', md5($site_id)));
+        }
+    }
+
     public function get_seo_performance(bool $allow_live_fetch = true): array
     {
         $settings = $this->get_connection_settings();
@@ -1309,7 +1321,7 @@ class ICap_SEO_Service_Client
         $cache_key = $site_id !== '' ? sprintf('icap_seo_performance_%s', md5($site_id)) : '';
         $cached = $cache_key !== '' ? get_transient($cache_key) : false;
 
-        if (!$allow_live_fetch) {
+        if (!$allow_live_fetch || is_array($cached)) {
             return is_array($cached) ? $cached : $this->empty_seo_performance_payload();
         }
 

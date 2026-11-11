@@ -4,7 +4,7 @@ Tags: seo, schema, meta description, structured data, ai
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.155
+Stable tag: 0.1.156
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -35,7 +35,7 @@ A Premium subscription adds, on top of that:
 
 * **Scans from outside your site**: up to 100 pages per scan, requested from our servers.
 * **3 checks that need an outside view of your site**: whether each page is reachable by a crawler, and broken links across your pages, requested from our servers, within a limit per scan.
-* **AI Improvements**: AI-drafted titles, descriptions, headings, alt text, internal links, expanded content, rewrites, and grammar fixes. 25 AI credits are included each Premium year, and you can buy more.
+* **AI Improvements**: AI-drafted titles, descriptions, headings, alt text, internal links, expanded content, rewrites, and grammar fixes. Premium is billed yearly or monthly; the yearly plan includes 25 AI credits a year, and anyone on Premium can buy more.
 
 Everything in the "Runs on your site" list above works the same with or without Premium, and without registering.
 
@@ -76,7 +76,7 @@ Used for site registration, subscription status, the free Google reports, and th
 * Registration data: the site URL and name, the site's admin email address, the WordPress and plugin versions, and the site's time zone, plus the email address you enter when requesting a token.
 * Requests after registration: the site ID and access token issued at registration and the plugin version, with the post IDs or page keys involved. Scans fetch your public pages from our servers. Fix previews send the issue codes you select.
 * AI draft requests: the page's title and text, the site name, the post type, the target length, the titles of related posts offered as links, and the page's image URLs.
-* Billing and Google connections: the address of your WordPress dashboard, so you can be sent back to it.
+* Billing and Google connections: the address of your WordPress dashboard, so you can be sent back to it. Starting a checkout also sends the plan you chose (yearly or monthly).
 * When: when you click Get started, request a token, register, test the connection, run a scan, preview a fix, request an AI draft, or check billing status. Once the site is registered, opening the plugin's pages also refreshes billing status and loads saved results. Nothing is sent until you take one of these actions.
 * Privacy policy: https://www.icapsolutions.com/about/privacy-policy.html
 * Terms of service: https://www.icapsolutions.com/about/terms-of-service.html
@@ -123,11 +123,24 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 
 == Screenshots ==
 
-1. Account — connect a site in a few steps.
-2. Overview dashboard — full-site health score across all 6 categories.
-3. Content Scores — per-page recommendations with one-click and preview-before-publish fixes.
+1. Overview — site-wide SEO score, Google connections and AI credits at a glance.
+2. Content Scores — every page scored, with Search Console and Analytics numbers alongside.
+3. Page detail — what to fix on each page, with one-click and preview-before-publish fixes.
+4. SEO Performance — clicks, impressions, CTR and position from Google Search Console.
+5. Site Analytics — users, sessions and traffic channels from Google Analytics.
+6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.156 =
+* llms.txt and the IndexNow key file now return a normal success status, so crawlers and IndexNow accept them.
+* Google report tabs reuse results from the last 30 minutes instead of reloading on every visit.
+* The structured data fix now adds a description to page schema when the page has no meta description, so the "required properties" check can be fixed in one click.
+* After applying fixes, only the checks a fix actually changed are marked as applied; checks with no on-site fix stay listed.
+* Premium can now be billed monthly as well as yearly; the Account tab offers both.
+* Plan changes, cancellations, and AI credits show as soon as you return from the billing portal.
+* Clearer messages when a fix has nothing to change, shown as information rather than an error.
+* Fix notes now point to the AI Improvements tab by its current name.
 
 = 0.1.155 =
 * Every tab now shows its content in the same framed tiles.
@@ -135,7 +148,3 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 = 0.1.154 =
 * Overview tiles that aren't connected now have a button to connect them, and the page is easier to scan.
 * Softer button styling throughout.
-
-= 0.1.153 =
-* A single Account tab replaces Setup Wizard and Settings.
-* Page results lead with what to fix.
