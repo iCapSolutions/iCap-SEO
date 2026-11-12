@@ -33,9 +33,15 @@ gets fixed.
 
 ## Installation
 
-1. Download the latest release ZIP from [Releases](https://github.com/iCapSolutions/iCap-SEO/releases).
-2. In your WordPress admin, go to **Plugins → Add New → Upload Plugin**.
-3. Upload the ZIP, install, and activate **iCap SEO**.
+iCap SEO is in the [WordPress.org plugin directory](https://wordpress.org/plugins/icap-seo/).
+
+1. In your WordPress admin, go to **Plugins → Add New Plugin**.
+2. Search for **iCap SEO**, click **Install Now**, then **Activate**.
+
+To install from a ZIP instead, download it from the
+[WordPress.org page](https://wordpress.org/plugins/icap-seo/) or from
+[Releases](https://github.com/iCapSolutions/iCap-SEO/releases), then upload it under
+**Plugins → Add New Plugin → Upload Plugin**.
 
 ## Getting started
 
