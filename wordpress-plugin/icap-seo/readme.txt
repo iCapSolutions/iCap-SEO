@@ -1,5 +1,5 @@
 === iCap SEO – SEO Audit & One-Click SEO Fixes, Schema & AI SEO ===
-Contributors: ikirko
+Contributors: icapsolutions, ikirko
 Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.1
