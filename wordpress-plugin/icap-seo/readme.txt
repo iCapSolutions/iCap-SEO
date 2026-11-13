@@ -1,6 +1,6 @@
-=== iCap SEO ===
+=== iCap SEO – SEO Audit & One-Click SEO Fixes, Schema & AI SEO ===
 Contributors: ikirko
-Tags: seo, schema, meta description, structured data, ai
+Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
@@ -8,7 +8,7 @@ Stable tag: 0.1.156
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Site-wide SEO checks and one-click fixes that run on your site, free Google reports, and an optional service for AI improvements and outside scans.
+SEO audit for every page with one-click fixes for titles, meta descriptions, schema, alt text and links. Free Search Console reports. Optional AI SEO.
 
 == Description ==
 
