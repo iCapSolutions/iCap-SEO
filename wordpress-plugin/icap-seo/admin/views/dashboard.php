@@ -236,7 +236,8 @@ if (!function_exists('icap_seo_format_credits')) {
         if (abs($credits - round($credits)) < 0.00005) {
             return number_format_i18n((int) round($credits));
         }
-        return number_format_i18n($credits, 2);
+        // Round down so a balance never shows more than is there (0.005 reads 0.00, not 0.01).
+        return number_format_i18n(floor($credits * 100 + 0.00001) / 100, 2);
     }
 }
 
