@@ -1827,6 +1827,30 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; // content_detail_tab === 'recommendations' ?>
                     <?php if ($content_detail_tab === 'ai-drafts') : ?>
                     <?php
+                    $ai_action_cost_labels = [
+                        'page_title' => [__('Title', 'icap-seo'), 1],
+                        'meta_description' => [__('Meta description', 'icap-seo'), 1],
+                        'heading_outline' => [__('Headings', 'icap-seo'), 2],
+                        'internal_links' => [__('Internal links', 'icap-seo'), 2],
+                        'spelling_grammar' => [__('Spelling & grammar', 'icap-seo'), 3],
+                        'content_depth' => [__('Expanded content', 'icap-seo'), 4],
+                        'readability_rewrite' => [__('Readability rewrite', 'icap-seo'), 5],
+                        'image_alt_text' => [__('Image alt text', 'icap-seo'), 6],
+                    ];
+                    $ai_action_cost_parts = [];
+                    foreach ($ai_action_cost_labels as $ai_action_generator => $ai_action_label) {
+                        $ai_action_estimate = isset($ai_credit_pricing['estimates'][$ai_action_generator]) ? (float) $ai_credit_pricing['estimates'][$ai_action_generator] : 0.0;
+                        $ai_action_credits = (!empty($ai_credit_pricing['metered']) && $ai_action_estimate > 0) ? $ai_action_estimate : (float) $ai_action_label[1];
+                        $ai_action_cost_parts[] = $ai_action_label[0] . ' ' . icap_seo_format_credits($ai_action_credits);
+                    }
+                    ?>
+                    <p class="description icap-seo-ai-action-costs">
+                        <?php echo esc_html(!empty($ai_credit_pricing['metered'])
+                            ? __('Usual AI credits per action (you are charged for the AI work each one actually takes; a failed draft costs nothing):', 'icap-seo')
+                            : __('AI credits per action:', 'icap-seo')); ?>
+                        <?php echo esc_html(implode(' · ', $ai_action_cost_parts)); ?>
+                    </p>
+                    <?php
                     $content_depth_open_issue_codes = array_values(array_intersect(
                         array_map(
                             static fn($issue_row): string => is_array($issue_row) && isset($issue_row['issue_code']) ? sanitize_key((string) $issue_row['issue_code']) : '',

@@ -62,7 +62,7 @@ Nothing, until you start registration on the Account tab. Registering sends basi
 
 = How are AI credits charged? =
 
-Each AI action uses credits based on the AI work it actually takes, so short drafts like a meta description cost a small fraction of a credit and longer rewrites cost more. Your balance can show decimals, the Overview tab shows about how many actions it still covers, and each AI action shows its usual cost before you run it. If an AI draft fails, no credits are used.
+Each AI action uses credits based on the AI work it actually takes, so short drafts like a meta description cost a small fraction of a credit and longer rewrites cost more. Your balance can show decimals, the Overview tab shows about how many actions it still covers, and the AI Improvements tab lists the usual cost of each action. If an AI draft fails, no credits are used.
 
 = How do I report a bug, request a feature, or report a security issue? =
 
@@ -139,7 +139,7 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 = 0.1.157 =
 * AI credit balances can now show decimals, for AI actions priced by the work they take.
 * The Overview tab shows about how many AI actions your balance still covers.
-* AI actions show their usual credit cost before you run one.
+* The AI Improvements tab lists the usual credit cost of each AI action.
 
 = 0.1.156 =
 * llms.txt and the IndexNow key file now return a normal success status, so crawlers and IndexNow accept them.
