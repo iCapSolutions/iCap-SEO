@@ -57,6 +57,7 @@ class ICap_SEO_Service_Client
                 'last_billing_checked_at' => '',
                 'ai_credits_remaining' => 0,
                 'ai_credits_checked_at' => '',
+                'ai_credit_pricing' => self::default_ai_credit_pricing(),
             ],
             $saved
         );
@@ -65,6 +66,50 @@ class ICap_SEO_Service_Client
         $settings['api_base_url'] = $default_api_base_url;
 
         return $settings;
+    }
+
+    /**
+     * How AI actions are priced, as last reported by the service: fixed whole credits per
+     * action, or metered from real AI cost (fractional credits). Until the service reports
+     * it, assume the fixed prices.
+     */
+    public static function default_ai_credit_pricing(): array
+    {
+        return [
+            'metered' => false,
+            'minimum_credits' => 1.0,
+            'estimates' => [],
+        ];
+    }
+
+    /**
+     * Credit balances and charges can be fractional (to 4 places) once pricing is metered.
+     */
+    public static function normalize_credit_amount($value): float
+    {
+        return is_numeric($value) ? round(max(0.0, (float) $value), 4) : 0.0;
+    }
+
+    private static function normalize_ai_credit_pricing($raw): array
+    {
+        $pricing = self::default_ai_credit_pricing();
+        if (!is_array($raw)) {
+            return $pricing;
+        }
+        $pricing['metered'] = !empty($raw['metered']);
+        if (isset($raw['minimum_credits']) && is_numeric($raw['minimum_credits'])) {
+            $pricing['minimum_credits'] = self::normalize_credit_amount($raw['minimum_credits']);
+        }
+        if (isset($raw['estimates']) && is_array($raw['estimates'])) {
+            foreach ($raw['estimates'] as $generator => $credits) {
+                $generator = sanitize_key((string) $generator);
+                if ($generator !== '' && is_numeric($credits)) {
+                    $pricing['estimates'][$generator] = self::normalize_credit_amount($credits);
+                }
+            }
+        }
+
+        return $pricing;
     }
 
     public function update_connection_settings(array $partial_settings): void
@@ -664,7 +709,7 @@ class ICap_SEO_Service_Client
         // going stale every time a generator is actually used.
         if (isset($data['credits_remaining']) && is_numeric($data['credits_remaining'])) {
             $this->update_connection_settings([
-                'ai_credits_remaining' => (int) $data['credits_remaining'],
+                'ai_credits_remaining' => self::normalize_credit_amount($data['credits_remaining']),
                 'ai_credits_checked_at' => current_time('mysql'),
             ]);
         }
@@ -674,8 +719,8 @@ class ICap_SEO_Service_Client
             'draft_text' => isset($data['draft_text']) ? (string) $data['draft_text'] : '',
             'draft_word_count' => isset($data['draft_word_count']) ? (int) $data['draft_word_count'] : 0,
             'model' => isset($data['model']) ? sanitize_text_field((string) $data['model']) : '',
-            'credits_charged' => isset($data['credits_charged']) ? (int) $data['credits_charged'] : 0,
-            'credits_remaining' => isset($data['credits_remaining']) ? (int) $data['credits_remaining'] : 0,
+            'credits_charged' => self::normalize_credit_amount($data['credits_charged'] ?? 0),
+            'credits_remaining' => self::normalize_credit_amount($data['credits_remaining'] ?? 0),
         ];
 
         return $result;
@@ -1027,17 +1072,17 @@ class ICap_SEO_Service_Client
             $result['data']['plan_code'] = sanitize_text_field($result['data']['plan_code']);
         }
 
-        $ai_credits_remaining = 0;
-        if (isset($result['data']['ai_credits_remaining']) && is_numeric($result['data']['ai_credits_remaining'])) {
-            $ai_credits_remaining = (int) $result['data']['ai_credits_remaining'];
-        }
+        $ai_credits_remaining = self::normalize_credit_amount($result['data']['ai_credits_remaining'] ?? 0);
         $result['data']['ai_credits_remaining'] = $ai_credits_remaining;
+        $ai_credit_pricing = self::normalize_ai_credit_pricing($result['data']['ai_credit_pricing'] ?? null);
+        $result['data']['ai_credit_pricing'] = $ai_credit_pricing;
 
         $this->update_connection_settings([
             'last_billing_state' => $state,
             'last_billing_checked_at' => current_time('mysql'),
             'ai_credits_remaining' => $ai_credits_remaining,
             'ai_credits_checked_at' => current_time('mysql'),
+            'ai_credit_pricing' => $ai_credit_pricing,
         ]);
 
         return $result;

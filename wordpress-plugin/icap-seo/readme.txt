@@ -4,7 +4,7 @@ Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.156
+Stable tag: 0.1.157
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -59,6 +59,10 @@ No. Nothing changes until you click Apply. Larger content changes (expanded cont
 = What is sent to the iCap SEO service? =
 
 Nothing, until you start registration on the Account tab. Registering sends basic site details, scans read your public pages, and AI drafts send the relevant page content. See "External services" below for details.
+
+= How are AI credits charged? =
+
+Each AI action uses credits based on the AI work it actually takes, so short drafts like a meta description cost a small fraction of a credit and longer rewrites cost more. Your balance can show decimals, the Overview tab shows about how many actions it still covers, and each AI action shows its usual cost before you run it. If an AI draft fails, no credits are used.
 
 = How do I report a bug, request a feature, or report a security issue? =
 
@@ -131,6 +135,11 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.157 =
+* AI credit balances can now show decimals, for AI actions priced by the work they take.
+* The Overview tab shows about how many AI actions your balance still covers.
+* AI actions show their usual credit cost before you run one.
 
 = 0.1.156 =
 * llms.txt and the IndexNow key file now return a normal success status, so crawlers and IndexNow accept them.
