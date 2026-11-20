@@ -229,6 +229,54 @@ if (!function_exists('icap_seo_render_connect_button')) {
     }
 }
 
+if (!function_exists('icap_seo_format_credits')) {
+    // Whole balances read as before ("25"); metered balances show two decimals ("24.87").
+    function icap_seo_format_credits(float $credits): string
+    {
+        if (abs($credits - round($credits)) < 0.00005) {
+            return number_format_i18n((int) round($credits));
+        }
+        // Round down so a balance never shows more than is there (0.005 reads 0.00, not 0.01).
+        return number_format_i18n(floor($credits * 100 + 0.00001) / 100, 2);
+    }
+}
+
+if (!function_exists('icap_seo_ai_credit_cost_text')) {
+    // What one AI action costs, in the words the service's pricing allows: a fixed price,
+    // or a typical charge when actions are metered from real AI cost.
+    function icap_seo_ai_credit_cost_text(array $pricing, string $generator, int $fixed_credits): string
+    {
+        $estimate = isset($pricing['estimates'][$generator]) ? (float) $pricing['estimates'][$generator] : 0.0;
+        if (!empty($pricing['metered']) && $estimate > 0) {
+            /* translators: %s: typical number of AI credits, e.g. 0.16 */
+            return sprintf(__('Usually about %s AI credits.', 'icap-seo'), icap_seo_format_credits($estimate));
+        }
+        $credits = $estimate > 0 ? (int) round($estimate) : $fixed_credits;
+        /* translators: %d: number of AI credits */
+        return sprintf(_n('Uses %d AI credit.', 'Uses %d AI credits.', $credits, 'icap-seo'), $credits);
+    }
+}
+
+if (!function_exists('icap_seo_ai_actions_left')) {
+    // Rough count of AI actions a metered balance still covers, from the median typical
+    // charge across actions. Null when pricing is fixed or no estimates are known yet.
+    function icap_seo_ai_actions_left(array $pricing, float $credits): ?int
+    {
+        if (empty($pricing['metered']) || empty($pricing['estimates'])) {
+            return null;
+        }
+        $estimates = array_values(array_filter(array_map('floatval', $pricing['estimates']), static function ($value) {
+            return $value > 0;
+        }));
+        if (empty($estimates)) {
+            return null;
+        }
+        sort($estimates);
+        $median = $estimates[intdiv(count($estimates), 2)];
+        return (int) floor($credits / $median);
+    }
+}
+
 if (!function_exists('icap_seo_render_register_panel')) {
     // Shown where a free-with-registration feature (Google Search Console and Google
     // Analytics reports) would be, on a site that hasn't registered with the service yet.
@@ -245,6 +293,9 @@ if (!function_exists('icap_seo_render_register_panel')) {
 }
 
 $service_is_registered = $connection_settings['site_id'] !== '' && $connection_settings['site_token'] !== '';
+$ai_credit_pricing = isset($connection_settings['ai_credit_pricing']) && is_array($connection_settings['ai_credit_pricing'])
+    ? $connection_settings['ai_credit_pricing']
+    : ICap_SEO_Service_Client::default_ai_credit_pricing();
 
 $icap_seo_tabs = [
     'overview' => __('Overview', 'icap-seo'),
@@ -1776,6 +1827,30 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; // content_detail_tab === 'recommendations' ?>
                     <?php if ($content_detail_tab === 'ai-drafts') : ?>
                     <?php
+                    $ai_action_cost_labels = [
+                        'page_title' => [__('Title', 'icap-seo'), 1],
+                        'meta_description' => [__('Meta description', 'icap-seo'), 1],
+                        'heading_outline' => [__('Headings', 'icap-seo'), 2],
+                        'internal_links' => [__('Internal links', 'icap-seo'), 2],
+                        'spelling_grammar' => [__('Spelling & grammar', 'icap-seo'), 3],
+                        'content_depth' => [__('Expanded content', 'icap-seo'), 4],
+                        'readability_rewrite' => [__('Readability rewrite', 'icap-seo'), 5],
+                        'image_alt_text' => [__('Image alt text', 'icap-seo'), 6],
+                    ];
+                    $ai_action_cost_parts = [];
+                    foreach ($ai_action_cost_labels as $ai_action_generator => $ai_action_label) {
+                        $ai_action_estimate = isset($ai_credit_pricing['estimates'][$ai_action_generator]) ? (float) $ai_credit_pricing['estimates'][$ai_action_generator] : 0.0;
+                        $ai_action_credits = (!empty($ai_credit_pricing['metered']) && $ai_action_estimate > 0) ? $ai_action_estimate : (float) $ai_action_label[1];
+                        $ai_action_cost_parts[] = $ai_action_label[0] . ' ' . icap_seo_format_credits($ai_action_credits);
+                    }
+                    ?>
+                    <p class="description icap-seo-ai-action-costs">
+                        <?php echo esc_html(!empty($ai_credit_pricing['metered'])
+                            ? __('Usual AI credits per action (you are charged for the AI work each one actually takes; a failed draft costs nothing):', 'icap-seo')
+                            : __('AI credits per action:', 'icap-seo')); ?>
+                        <?php echo esc_html(implode(' · ', $ai_action_cost_parts)); ?>
+                    </p>
+                    <?php
                     $content_depth_open_issue_codes = array_values(array_intersect(
                         array_map(
                             static fn($issue_row): string => is_array($issue_row) && isset($issue_row['issue_code']) ? sanitize_key((string) $issue_row['issue_code']) : '',
@@ -1921,7 +1996,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     ?>
                     <div class="icap-seo-panel">
                     <h4><?php esc_html_e('Spelling & grammar', 'icap-seo'); ?></h4>
-                    <p class="description"><?php esc_html_e('Not tied to a scan finding - run this any time to check this page\'s prose for spelling and grammar mistakes. Uses 3 AI credits. Generates a draft to review before anything is saved.', 'icap-seo'); ?></p>
+                    <p class="description"><?php esc_html_e('Not tied to a scan finding - run this any time to check this page\'s prose for spelling and grammar mistakes.', 'icap-seo'); ?> <?php echo esc_html(icap_seo_ai_credit_cost_text($ai_credit_pricing, 'spelling_grammar', 3)); ?> <?php esc_html_e('Generates a draft to review before anything is saved.', 'icap-seo'); ?></p>
                     <?php if (!empty($spelling_grammar_draft_paragraphs)) : ?>
                         <div class="icap-seo-spelling-grammar-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                             <p class="description">
@@ -3151,10 +3226,11 @@ if ($notice_code === 'remediation_apply_noop') {
                 $overview_latest_scan_id_display = $latest_scores_scan_id;
             }
             $overview_is_premium = $service_is_premium;
-            $overview_ai_credits_remaining = isset($connection_settings['ai_credits_remaining'])
-                ? (int) $connection_settings['ai_credits_remaining']
-                : 0;
-            $overview_ai_credits_exhausted = $overview_is_premium && $overview_ai_credits_remaining <= 0;
+            $overview_ai_credits_remaining = ICap_SEO_Service_Client::normalize_credit_amount($connection_settings['ai_credits_remaining'] ?? 0);
+            // Out of credits once the balance can't cover the smallest possible charge.
+            $overview_ai_credit_minimum = max(0.0001, (float) ($ai_credit_pricing['minimum_credits'] ?? 1));
+            $overview_ai_credits_exhausted = $overview_is_premium && $overview_ai_credits_remaining < $overview_ai_credit_minimum;
+            $overview_ai_actions_left = icap_seo_ai_actions_left($ai_credit_pricing, $overview_ai_credits_remaining);
 
             $overview_score_percent = null;
             if (!empty($score_snapshot['score']) && preg_match('/(\d+)\s*\/\s*100/', (string) $score_snapshot['score'], $overview_score_match)) {
@@ -3165,7 +3241,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $overview_score_gradient = $overview_score_percent !== null ? icap_seo_score_gradient($overview_score_fill) : '#e5e5e5';
             $overview_score_display = $overview_score_percent !== null ? $overview_score_percent . '%' : __('Pending', 'icap-seo');
 
-            $overview_ai_credit_fill = $overview_is_premium ? max(0, min(100, $overview_ai_credits_remaining)) : 0;
+            $overview_ai_credit_fill = $overview_is_premium ? (int) max(0, min(100, round($overview_ai_credits_remaining))) : 0;
             $overview_ai_credit_color = $overview_is_premium ? icap_seo_meter_color($overview_ai_credit_fill, 0, 100) : '#dcdcde';
 
             $overview_scored_items_count = count(array_filter(array_column($content_scores, 'icap_score_numeric'), 'is_numeric'));
@@ -3409,9 +3485,17 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php if ($overview_is_premium) : ?>
                         <div class="icap-seo-meter" style="background: conic-gradient(<?php echo esc_attr($overview_ai_credit_color); ?> 0% <?php echo esc_attr((string) $overview_ai_credit_fill); ?>%, #e5e5e5 <?php echo esc_attr((string) $overview_ai_credit_fill); ?>% 100%);">
                             <div class="icap-seo-meter-inner">
-                                <span class="icap-seo-meter-value"><?php echo esc_html((string) $overview_ai_credits_remaining); ?></span>
+                                <span class="icap-seo-meter-value"><?php echo esc_html(icap_seo_format_credits($overview_ai_credits_remaining)); ?></span>
                             </div>
                         </div>
+                        <?php if ($overview_ai_actions_left !== null && !$overview_ai_credits_exhausted) : ?>
+                            <p class="description">
+                                <?php
+                                /* translators: %s: approximate number of AI actions */
+                                echo esc_html(sprintf(_n('About %s AI action left', 'About %s AI actions left', $overview_ai_actions_left, 'icap-seo'), number_format_i18n($overview_ai_actions_left)));
+                                ?>
+                            </p>
+                        <?php endif; ?>
                     <?php else : ?>
                         <p class="icap-seo-card-value icap-seo-card-value--muted"><?php esc_html_e('Requires Premium', 'icap-seo'); ?></p>
                     <?php endif; ?>
