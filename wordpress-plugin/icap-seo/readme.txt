@@ -138,6 +138,7 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 
 = 0.1.158 =
 * The page link check now lists links it couldn't check separately from broken ones, with the reason (for example, the other site refused an automated check or your server couldn't verify its security certificate), so a connection problem doesn't look like a broken link.
+* AI Improvements are easier to find: Content Scores has an Improve with AI link on every page, the Fixes tab says which fixes AI can write, and the AI Improvements tab shows every AI action as a card with what it does, its usual cost, and whether it applies to the page.
 
 = 0.1.157 =
 * AI credit balances can now show decimals, for AI actions priced by the work they take.
