@@ -1283,6 +1283,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
                             <?php icap_seo_render_sortable_th(__('iCap Score', 'icap-seo'), $content_scores_orderby === 'score', $content_scores_order, true, $content_scores_sort_link('score', true)); ?>
                             <th><?php esc_html_e('Search Console', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('AI', 'icap-seo'); ?></th>
                             <?php icap_seo_render_sortable_th(__('Clicks (28d)', 'icap-seo'), $content_scores_orderby === 'clicks', $content_scores_order, true, $content_scores_sort_link('clicks', true)); ?>
                             <?php icap_seo_render_sortable_th(__('Avg Position', 'icap-seo'), $content_scores_orderby === 'position', $content_scores_order, false, $content_scores_sort_link('position', false)); ?>
                             <?php icap_seo_render_sortable_th(__('Sessions (28d)', 'icap-seo'), $content_scores_orderby === 'sessions', $content_scores_order, true, $content_scores_sort_link('sessions', true)); ?>
@@ -1293,7 +1294,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <tbody>
                         <?php if (empty($content_scores)) : ?>
                             <tr>
-                                <td colspan="10">
+                                <td colspan="11">
                                     <?php if ($latest_scores_source === 'api') : ?>
                                         <?php esc_html_e('No scored content rows were returned for the latest scan yet.', 'icap-seo'); ?>
                                     <?php else : ?>
@@ -1361,6 +1362,13 @@ if ($notice_code === 'remediation_apply_noop') {
                                         </span>
                                     </td>
                                     <td>
+                                        <?php if ($row_content_key !== '') : ?>
+                                            <a class="icap-seo-ai-button" href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'content-scores', 'content_key' => $row_content_key, 'detail_tab' => 'ai-drafts'], admin_url('admin.php'))); ?>">
+                                                <?php echo wp_kses(icap_seo_ai_icon('sparkle', 14), $tab_icon_allowed_html); ?><?php esc_html_e('Improve with AI', 'icap-seo'); ?>
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
                                         <?php
                                         // null means "no data for this window", never rendered as 0 - a real
                                         // zero-click page (google_clicks === 0) must still show "0", not "—".
@@ -1405,9 +1413,6 @@ if ($notice_code === 'remediation_apply_noop') {
                                             ?>
                                             <a href="<?php echo esc_url($detail_link); ?>">
                                                 <?php esc_html_e('View details', 'icap-seo'); ?>
-                                            </a>
-                                            <a class="icap-seo-ai-link" href="<?php echo esc_url(add_query_arg('detail_tab', 'ai-drafts', $detail_link)); ?>">
-                                                <?php echo wp_kses(icap_seo_ai_icon('sparkle', 14), $tab_icon_allowed_html); ?><?php esc_html_e('Improve with AI', 'icap-seo'); ?>
                                             </a>
                                         <?php else : ?>
                                             <span>&mdash;</span>

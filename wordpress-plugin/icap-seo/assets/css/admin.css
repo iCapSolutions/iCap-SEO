@@ -854,19 +854,31 @@
     font-size: 12px;
 }
 
-.icap-seo-ai-link {
+.icap-seo-ai-button {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    margin-left: 10px;
-    color: #6a32c9;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #2271b1 0%, #7b3fe4 100%);
+    box-shadow: 0 2px 6px rgba(123, 63, 228, 0.25);
+    color: #ffffff;
+    font-size: 12px;
     font-weight: 600;
+    line-height: 1.6;
+    text-decoration: none;
     white-space: nowrap;
 }
 
-.icap-seo-ai-link:hover,
-.icap-seo-ai-link:focus {
-    color: #4c1fa0;
+.icap-seo-ai-button:hover,
+.icap-seo-ai-button:focus {
+    color: #ffffff;
+    background: linear-gradient(135deg, #1b5d93 0%, #6630c8 100%);
+}
+
+.icap-seo-ai-button:focus {
+    outline: 2px solid #7b3fe4;
+    outline-offset: 2px;
 }
 
 .icap-seo-subnav-link--ai {
