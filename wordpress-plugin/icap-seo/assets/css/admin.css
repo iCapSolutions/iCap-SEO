@@ -806,7 +806,8 @@
     margin-bottom: 8px;
 }
 
-.icap-seo-link-check-results {
+.icap-seo-link-check-results,
+.icap-seo-link-check-unchecked {
     list-style: disc;
     margin-left: 20px;
 }
