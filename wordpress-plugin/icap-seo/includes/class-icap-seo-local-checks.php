@@ -1184,10 +1184,13 @@ class ICap_SEO_Local_Checks
 
     /**
      * Request one link: HEAD first, then a one-byte GET if the server rejects HEAD.
-     * Mirrors the scan service's rule, where any status from 400 up, or no response,
-     * counts as broken. The safe request functions refuse private network addresses.
+     * A status from 400 up counts as broken, except 401, 403 and 429, which mean the
+     * other site refused an automated request, not that the page is gone. Those, and
+     * requests that got no answer at all, come back as "unchecked" with a reason, since
+     * the problem may be this server's connection rather than the link. The safe request
+     * functions refuse private network addresses.
      *
-     * @return array{broken: bool, status: int}
+     * @return array{outcome: string, status: int, reason: string}
      */
     private static function link_status(string $url): array
     {
@@ -1200,18 +1203,56 @@ class ICap_SEO_Local_Checks
             ]);
         }
         if (is_wp_error($response)) {
-            return ['broken' => true, 'status' => 0];
+            return ['outcome' => 'unchecked', 'status' => 0, 'reason' => self::link_error_reason($response)];
         }
 
         $status = (int) wp_remote_retrieve_response_code($response);
+        if (in_array($status, [401, 403, 429], true)) {
+            return ['outcome' => 'unchecked', 'status' => $status, 'reason' => 'refused'];
+        }
+        if ($status === 0) {
+            return ['outcome' => 'unchecked', 'status' => 0, 'reason' => 'no_response'];
+        }
 
-        return ['broken' => $status >= 400 || $status === 0, 'status' => $status];
+        return ['outcome' => $status >= 400 ? 'broken' : 'ok', 'status' => $status, 'reason' => ''];
+    }
+
+    /**
+     * Why a request got no answer, as a short code the admin screen turns into words.
+     * WordPress reports cURL failures as text, so this matches the cURL error numbers.
+     */
+    private static function link_error_reason(WP_Error $error): string
+    {
+        $message = $error->get_error_message();
+        if ($error->get_error_code() === 'http_request_reject_unsafe_urls' || stripos($message, 'valid URL') !== false) {
+            return 'not_allowed';
+        }
+        if (preg_match('/cURL error (\d+)/', $message, $match) === 1) {
+            $curl_error = (int) $match[1];
+            if (in_array($curl_error, [35, 51, 53, 54, 58, 59, 60, 77, 80, 82, 83, 90, 91], true)) {
+                return 'certificate';
+            }
+            if ($curl_error === 28) {
+                return 'timeout';
+            }
+            if (in_array($curl_error, [5, 6], true)) {
+                return 'dns';
+            }
+            if (in_array($curl_error, [7, 52, 55, 56], true)) {
+                return 'connection';
+            }
+        }
+        if (stripos($message, 'timed out') !== false) {
+            return 'timeout';
+        }
+
+        return 'no_response';
     }
 
     /**
      * Check the links on one post, up to the per-click limit and time budget.
      *
-     * @return array{total: int, checked: int, broken: array<int, array{url: string, status: int}>}|null
+     * @return array{total: int, checked: int, broken: array<int, array{url: string, status: int}>, unchecked: array<int, array{url: string, status: int, reason: string}>}|null
      */
     public static function check_links(int $post_id): ?array
     {
@@ -1227,18 +1268,21 @@ class ICap_SEO_Local_Checks
         $deadline = microtime(true) + self::LINK_CHECK_SECONDS;
         $checked = 0;
         $broken = [];
+        $unchecked = [];
         foreach (array_slice($urls, 0, self::MAX_LINKS_PER_CHECK) as $url) {
             if (microtime(true) >= $deadline) {
                 break;
             }
             $result = self::link_status($url);
             $checked++;
-            if ($result['broken']) {
+            if ($result['outcome'] === 'broken') {
                 $broken[] = ['url' => $url, 'status' => $result['status']];
+            } elseif ($result['outcome'] === 'unchecked') {
+                $unchecked[] = ['url' => $url, 'status' => $result['status'], 'reason' => $result['reason']];
             }
         }
 
-        return ['total' => count($urls), 'checked' => $checked, 'broken' => $broken];
+        return ['total' => count($urls), 'checked' => $checked, 'broken' => $broken, 'unchecked' => $unchecked];
     }
 
     private static function normalize_text(string $text): string

@@ -1806,13 +1806,22 @@ if ($notice_code === 'remediation_apply_noop') {
                                     data-broken="<?php esc_attr_e('%d broken:', 'icap-seo'); ?>"
                                     data-clean="<?php esc_attr_e('None are broken.', 'icap-seo'); ?>"
                                     data-not-found="<?php esc_attr_e('page not found', 'icap-seo'); ?>"
-                                    data-blocked="<?php esc_attr_e('that site blocked the check, so the link may be fine', 'icap-seo'); ?>"
                                     data-server-error="<?php esc_attr_e('that site had an error', 'icap-seo'); ?>"
+                                    <?php /* translators: %d: number of links that could not be checked */ ?>
+                                    data-unchecked="<?php esc_attr_e('%d couldn\'t be checked, so they may be fine:', 'icap-seo'); ?>"
+                                    data-reason-refused="<?php esc_attr_e('that site refused an automated check', 'icap-seo'); ?>"
+                                    data-reason-certificate="<?php esc_attr_e('your server couldn\'t verify that site\'s security certificate', 'icap-seo'); ?>"
+                                    data-reason-timeout="<?php esc_attr_e('that site took too long to answer', 'icap-seo'); ?>"
+                                    data-reason-dns="<?php esc_attr_e('your server couldn\'t look up that address', 'icap-seo'); ?>"
+                                    data-reason-connection="<?php esc_attr_e('your server couldn\'t connect to that site', 'icap-seo'); ?>"
+                                    data-reason-not-allowed="<?php esc_attr_e('WordPress doesn\'t request this kind of address', 'icap-seo'); ?>"
                                     data-no-response="<?php esc_attr_e('no response', 'icap-seo'); ?>"
                                     data-error="<?php esc_attr_e('The link check stopped because of a connection problem. Click to try again.', 'icap-seo'); ?>"><?php esc_html_e('Check links', 'icap-seo'); ?></button>
                                 <span class="icap-seo-link-check-status" role="status"></span>
                             </p>
                             <ul class="icap-seo-link-check-results"></ul>
+                            <p class="icap-seo-link-check-unchecked-summary" hidden></p>
+                            <ul class="icap-seo-link-check-unchecked"></ul>
                             <p class="icap-seo-link-check-fix" hidden>
                                 <?php esc_html_e('To fix a broken link, update or remove it in the page editor. If the address moved within your own site, add a redirect.', 'icap-seo'); ?>
                                 <?php $link_check_edit_url = get_edit_post_link($link_check_post_id, ''); ?>

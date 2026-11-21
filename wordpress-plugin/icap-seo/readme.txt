@@ -4,7 +4,7 @@ Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.157
+Stable tag: 0.1.158
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -135,6 +135,9 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.158 =
+* The page link check now lists links it couldn't check separately from broken ones, with the reason (for example, the other site refused an automated check or your server couldn't verify its security certificate), so a connection problem doesn't look like a broken link.
 
 = 0.1.157 =
 * AI credit balances can now show decimals, for AI actions priced by the work they take.
