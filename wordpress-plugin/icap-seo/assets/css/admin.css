@@ -1085,3 +1085,28 @@ a.icap-seo-ai-card-state {
     gap: 8px;
     margin: 0 0 12px;
 }
+
+.icap-seo-indexing {
+    border-left: 4px solid #dba617;
+}
+
+.icap-seo-indexing.is-indexed {
+    border-left-color: #1e7f4f;
+}
+
+.icap-seo-indexing h3 {
+    margin-top: 0;
+}
+
+.icap-seo-indexing-state {
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+.icap-seo-indexing-steps li {
+    margin-bottom: 6px;
+}
+
+.icap-seo-indexing-steps .description {
+    display: block;
+}

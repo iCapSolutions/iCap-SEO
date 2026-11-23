@@ -367,6 +367,45 @@ if (!function_exists('icap_seo_ai_actions_for_issues')) {
     }
 }
 
+if (!function_exists('icap_seo_indexing_guidance')) {
+    // What a Google Search Console coverage state means for this page, and which of the
+    // plugin's fixes help. Google sends the state as display text, so it's matched on
+    // phrases. 'fixes' keys: content_depth, internal_links, title_meta, redirect.
+    // 'indexed' => true means there's nothing to fix.
+    function icap_seo_indexing_guidance(string $coverage_state): array
+    {
+        $state = strtolower($coverage_state);
+        $rules = [
+            ['crawled - currently not indexed', false, ['content_depth', 'internal_links', 'title_meta'], __('Google read this page but decided not to add it to search results, usually because it looks thin or too similar to other pages. Make the page more useful, then ask Google to index it again.', 'icap-seo')],
+            ['discovered - currently not indexed', false, ['internal_links', 'content_depth'], __('Google knows this page exists but hasn\'t read it yet. Links from your other pages and stronger content help Google decide it\'s worth reading.', 'icap-seo')],
+            ['soft 404', false, ['content_depth', 'redirect'], __('The page loads, but Google thinks it looks empty or like an error page. Add real content, or redirect it if the page is gone.', 'icap-seo')],
+            ['not found', false, ['redirect'], __('Google got a "not found" (404) error for this address. If the page moved, redirect the old address to its new one.', 'icap-seo')],
+            ['indexed, though blocked by robots.txt', false, [], __('The page is in search results, but robots.txt stops Google from reading it, so its listing may show no description. Remove the robots.txt rule that blocks it.', 'icap-seo')],
+            ['page indexed without content', false, [], __('The page is in search results, but Google couldn\'t read its content. Check the page doesn\'t rely on content that only loads in the browser.', 'icap-seo')],
+            ['noindex', false, [], __('The page tells search engines not to index it. If that isn\'t intended, check Settings > Reading ("Discourage search engines") and any other SEO plugin\'s settings for this page.', 'icap-seo')],
+            ['robots.txt', false, [], __('Your robots.txt file stops Google from reading this page. Remove the rule that blocks it if the page should be in search.', 'icap-seo')],
+            ['page with redirect', false, [], __('This address redirects to another page, so Google indexes the destination instead. That\'s expected. Make sure your links point at the destination.', 'icap-seo')],
+            ['redirect error', false, [], __('Google couldn\'t follow this page\'s redirect: it loops, is too long, or points at a bad address. Check the redirect on the Redirects tab or your server.', 'icap-seo')],
+            ['alternate page with proper canonical', true, [], __('This page points Google at another version as the main one, and Google agreed. Nothing to fix.', 'icap-seo')],
+            ['duplicate without user-selected canonical', false, [], __('Google sees this page as a copy of another and picked a different one to show. Make this page clearly different, or point it at the main version.', 'icap-seo')],
+            ['google chose different canonical', false, [], __('This page names itself as the main version, but Google picked another page instead. Make the content more distinct, or point this page at the one Google chose.', 'icap-seo')],
+            ['server error', false, [], __('Your server returned an error when Google tried to read this page. Check with your host if it keeps happening.', 'icap-seo')],
+            ['unauthorized', false, [], __('The page asks for a login, so Google can\'t read it. Make it public if it should be in search.', 'icap-seo')],
+            ['forbidden', false, [], __('Your server refused Google access to this page (403). A security plugin or firewall may be blocking Google.', 'icap-seo')],
+            ['4xx', false, [], __('Your server returned an error when Google tried to read this page. Check the page loads for logged-out visitors.', 'icap-seo')],
+            ['removal tool', false, [], __('This page was hidden with Search Console\'s Removals tool. Cancel the request in Search Console if it should come back.', 'icap-seo')],
+            ['unknown to google', false, [], __('Google hasn\'t found this page yet. Link to it from your other pages, then ask Google to index it.', 'icap-seo')],
+            ['indexed', true, [], __('This page is in Google\'s search results.', 'icap-seo')],
+        ];
+        foreach ($rules as [$phrase, $indexed, $fixes, $meaning]) {
+            if (strpos($state, $phrase) !== false) {
+                return ['indexed' => $indexed, 'fixes' => $fixes, 'meaning' => $meaning];
+            }
+        }
+        return ['indexed' => false, 'fixes' => [], 'meaning' => __('Open the page in Search Console for details on this status.', 'icap-seo')];
+    }
+}
+
 if (!function_exists('icap_seo_ai_icon')) {
     // Line icons for the AI actions, drawn in the same 24px style as the tab icons.
     function icap_seo_ai_icon(string $name, int $size = 20): string
@@ -1371,9 +1410,16 @@ if ($notice_code === 'remediation_apply_noop') {
                                             $row_google_label = $row_google_coverage_state;
                                         }
                                         ?>
-                                        <span style="display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; background:<?php echo esc_attr($row_google_bg); ?>; color:<?php echo esc_attr($row_google_fg); ?>;">
+                                        <?php $row_google_style = 'display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; text-decoration:none; background:' . $row_google_bg . '; color:' . $row_google_fg . ';'; ?>
+                                        <?php if ($row_google_coverage_state !== '' && $row_content_key !== '') : ?>
+                                            <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'content-scores', 'content_key' => $row_content_key], admin_url('admin.php')) . '#icap-seo-indexing'); ?>" style="<?php echo esc_attr($row_google_style); ?>">
+                                                <?php echo esc_html($row_google_label); ?>
+                                            </a>
+                                        <?php else : ?>
+                                        <span style="<?php echo esc_attr($row_google_style); ?>">
                                             <?php echo esc_html($row_google_label); ?>
                                         </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php if ($row_content_key !== '') : ?>
@@ -1559,21 +1605,6 @@ if ($notice_code === 'remediation_apply_noop') {
                         ? $content_score_detail['google_verification']
                         : null;
                     ?>
-                    <?php if ($detail_google_verification !== null && ($detail_google_verification['coverage_state'] ?? '') !== '') : ?>
-                        <p class="description">
-                            <?php
-                            echo esc_html(
-                                sprintf(
-                                    /* translators: 1: Google Search Console coverage state, 2: verdict, 3: when it was checked */
-                                    __('Google Search Console says: %1$s (verdict: %2$s, checked %3$s)', 'icap-seo'),
-                                    $detail_google_verification['coverage_state'],
-                                    $detail_google_verification['verdict'] !== '' ? $detail_google_verification['verdict'] : 'n/a',
-                                    $detail_google_verification['checked_at'] !== '' ? $detail_google_verification['checked_at'] : 'n/a'
-                                )
-                            );
-                            ?>
-                        </p>
-                    <?php endif; ?>
                     <?php if ($detail_permalink !== '') : ?>
                         <p><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View published URL', 'icap-seo'); ?></a></p>
                     <?php endif; ?>
@@ -1584,6 +1615,90 @@ if ($notice_code === 'remediation_apply_noop') {
                         </p>
                     <?php endif; ?>
                     </div>
+                    <?php
+                    $detail_coverage_state = $detail_google_verification !== null ? (string) ($detail_google_verification['coverage_state'] ?? '') : '';
+                    ?>
+                    <?php if ($detail_coverage_state !== '') : ?>
+                        <?php
+                        $detail_indexing = icap_seo_indexing_guidance($detail_coverage_state);
+                        $detail_indexing_checked = (string) ($detail_google_verification['checked_at'] ?? '');
+                        $detail_indexing_checked_ts = $detail_indexing_checked !== '' ? strtotime($detail_indexing_checked) : false;
+                        $detail_indexing_codes = array_map(
+                            static fn($issue_row): string => is_array($issue_row) && isset($issue_row['issue_code']) ? sanitize_key((string) $issue_row['issue_code']) : '',
+                            $open_detail_issues
+                        );
+                        $detail_indexing_base_url = add_query_arg(
+                            ['page' => 'icap-seo', 'tab' => 'content-scores', 'content_key' => $selected_content_key],
+                            admin_url('admin.php')
+                        );
+                        $detail_gsc_property = (string) ($google_connection_status['search_console_property_url'] ?? '');
+                        $detail_gsc_inspect_url = ($detail_gsc_property !== '' && $detail_permalink !== '')
+                            ? add_query_arg(['resource_id' => rawurlencode($detail_gsc_property), 'id' => rawurlencode($detail_permalink)], 'https://search.google.com/search-console/inspect')
+                            : 'https://search.google.com/search-console';
+                        // Each step links to the plugin tool that does it; steps whose finding
+                        // isn't open on this page are left out rather than shown as no-ops.
+                        $detail_indexing_steps = [];
+                        foreach ($detail_indexing['fixes'] as $indexing_fix) {
+                            if ($indexing_fix === 'content_depth') {
+                                $detail_indexing_steps[] = [
+                                    'label' => __('Expand the page\'s content with AI', 'icap-seo'),
+                                    'href' => add_query_arg('detail_tab', 'ai-drafts', $detail_indexing_base_url) . '#icap-seo-ai-content_depth',
+                                    'note' => $service_is_premium ? '' : __('Premium', 'icap-seo'),
+                                ];
+                            } elseif ($indexing_fix === 'internal_links' && array_intersect(['low_internal_linking', 'no_links_detected'], $detail_indexing_codes)) {
+                                $detail_indexing_steps[] = [
+                                    'label' => __('Add internal links to this page\'s content', 'icap-seo'),
+                                    'href' => add_query_arg('detail_tab', 'recommendations', $detail_indexing_base_url),
+                                    'note' => '',
+                                ];
+                            } elseif ($indexing_fix === 'title_meta' && array_intersect(['title_length_out_of_range', 'missing_title_tag', 'missing_meta_description', 'meta_description_length_out_of_range'], $detail_indexing_codes)) {
+                                $detail_indexing_steps[] = [
+                                    'label' => __('Fix the title and meta description', 'icap-seo'),
+                                    'href' => add_query_arg('detail_tab', 'recommendations', $detail_indexing_base_url),
+                                    'note' => '',
+                                ];
+                            } elseif ($indexing_fix === 'redirect' && $detail_permalink !== '') {
+                                $detail_indexing_path = (string) wp_parse_url($detail_permalink, PHP_URL_PATH);
+                                $detail_indexing_steps[] = [
+                                    'label' => __('Redirect this address to another page', 'icap-seo'),
+                                    'href' => add_query_arg(['page' => 'icap-seo', 'tab' => 'redirects', 'prefill_source' => $detail_indexing_path !== '' ? $detail_indexing_path : '/'], admin_url('admin.php')),
+                                    'note' => '',
+                                ];
+                            }
+                        }
+                        ?>
+                        <div class="icap-seo-panel icap-seo-indexing<?php echo $detail_indexing['indexed'] ? ' is-indexed' : ''; ?>" id="icap-seo-indexing">
+                            <h3><?php esc_html_e('Google indexing', 'icap-seo'); ?></h3>
+                            <p>
+                                <span class="icap-seo-indexing-state"><?php echo esc_html($detail_coverage_state); ?></span>
+                                <?php if ($detail_indexing_checked_ts) : ?>
+                                    <span class="description">
+                                        <?php
+                                        /* translators: %s: date Google Search Console was last checked */
+                                        echo esc_html(sprintf(__('Checked %s', 'icap-seo'), date_i18n(get_option('date_format'), $detail_indexing_checked_ts)));
+                                        ?>
+                                    </span>
+                                <?php endif; ?>
+                            </p>
+                            <p><?php echo esc_html($detail_indexing['meaning']); ?></p>
+                            <?php if (!$detail_indexing['indexed']) : ?>
+                                <ol class="icap-seo-indexing-steps">
+                                    <?php foreach ($detail_indexing_steps as $indexing_step) : ?>
+                                        <li>
+                                            <a href="<?php echo esc_url($indexing_step['href']); ?>"><?php echo esc_html($indexing_step['label']); ?></a>
+                                            <?php if ($indexing_step['note'] !== '') : ?>
+                                                <span class="icap-seo-ai-badge"><?php echo esc_html($indexing_step['note']); ?></span>
+                                            <?php endif; ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                    <li>
+                                        <a href="<?php echo esc_url($detail_gsc_inspect_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html(empty($detail_indexing_steps) ? __('Open this page in Search Console', 'icap-seo') : __('Then ask Google to index it again in Search Console', 'icap-seo')); ?></a>
+                                        <span class="description"><?php esc_html_e('Click "Request indexing" there. Google only allows this from Search Console.', 'icap-seo'); ?></span>
+                                    </li>
+                                </ol>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                     <?php
                     // Type/Status/Overall score plus per-page Search Console/Analytics
                     // stats as icon cards, matching the Overview tab's .icap-seo-cards
@@ -2160,7 +2275,13 @@ if ($notice_code === 'remediation_apply_noop') {
                     $content_depth_draft_html = isset($content_depth_draft['html']) && is_string($content_depth_draft['html']) ? $content_depth_draft['html'] : '';
                     $content_depth_draft_word_count = isset($content_depth_draft['word_count']) ? (int) $content_depth_draft['word_count'] : 0;
                     ?>
-                    <?php if (!empty($content_depth_open_issue_codes) || $content_depth_draft_html !== '') : ?>
+                    <?php
+                    // Google not indexing a page is usually about thin content, so the
+                    // indexing panel's "Expand the content" step lands here even when the
+                    // scan didn't flag content depth.
+                    $content_depth_for_indexing = isset($detail_indexing) && in_array('content_depth', $detail_indexing['fixes'], true);
+                    ?>
+                    <?php if (!empty($content_depth_open_issue_codes) || $content_depth_draft_html !== '' || $content_depth_for_indexing) : ?>
                         <div class="icap-seo-panel" id="icap-seo-ai-content_depth">
                         <h4><?php esc_html_e('Content depth expansion', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates draft paragraphs to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft.', 'icap-seo'); ?></p>

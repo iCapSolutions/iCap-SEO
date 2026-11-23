@@ -4,7 +4,7 @@ Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.159
+Stable tag: 0.1.160
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -135,6 +135,10 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.160 =
+* A page's Google indexing status now has its own panel on the page's Content Scores screen. It explains what Google's status means and links to the fixes that help, such as expanding the content with AI, adding internal links or adding a redirect, then to the page in Search Console so you can ask Google to index it again.
+* The Google status on the Content Scores list now opens that panel.
 
 = 0.1.159 =
 * The iCap SEO panel on the edit screen now shows the page's Content Scores score, with a Check now button to re-check the page.
