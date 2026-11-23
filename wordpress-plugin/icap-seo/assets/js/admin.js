@@ -1,6 +1,21 @@
 (function () {
     'use strict';
 
+    // The review button opens WordPress.org in a new tab; hide the request in
+    // this tab too, since the click already recorded the answer.
+    document.querySelectorAll('.icap-seo-review-prompt-form').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (event.submitter && event.submitter.value === 'review') {
+                window.setTimeout(function () {
+                    var prompt = form.closest('.icap-seo-review-prompt');
+                    if (prompt) {
+                        prompt.remove();
+                    }
+                }, 0);
+            }
+        });
+    });
+
     // Scan requests run synchronously on the backend and the page can't report
     // real progress percentage - this shows an indeterminate progress bar plus
     // an elapsed-seconds counter so it's clear a scan is running in the

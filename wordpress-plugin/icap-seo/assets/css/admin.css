@@ -811,3 +811,271 @@
     list-style: disc;
     margin-left: 20px;
 }
+
+/* AI guidance: the Content Scores banner, the page detail call-out and the AI Improvements cards. */
+.icap-seo-ai-banner,
+.icap-seo-ai-intro {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin: 16px 0;
+    padding: 16px 20px;
+    border: 1px solid #d9d2fb;
+    border-radius: 8px;
+    background: linear-gradient(120deg, #eef4fd 0%, #f4effe 100%);
+}
+
+.icap-seo-ai-banner h3,
+.icap-seo-ai-intro h3 {
+    margin: 0 0 4px;
+}
+
+.icap-seo-ai-banner p,
+.icap-seo-ai-intro p {
+    margin: 4px 0 0;
+}
+
+.icap-seo-ai-banner-art,
+.icap-seo-ai-callout-art {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #2271b1 0%, #7b3fe4 100%);
+    box-shadow: 0 4px 12px rgba(123, 63, 228, 0.25);
+}
+
+.icap-seo-ai-banner-meta {
+    color: #50575e;
+    font-size: 12px;
+}
+
+.icap-seo-ai-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #2271b1 0%, #7b3fe4 100%);
+    box-shadow: 0 2px 6px rgba(123, 63, 228, 0.25);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.icap-seo-ai-button:hover,
+.icap-seo-ai-button:focus {
+    color: #ffffff;
+    background: linear-gradient(135deg, #1b5d93 0%, #6630c8 100%);
+}
+
+.icap-seo-ai-button:focus {
+    outline: 2px solid #7b3fe4;
+    outline-offset: 2px;
+}
+
+.icap-seo-subnav-link--ai {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #6a32c9;
+}
+
+.icap-seo-subnav-link--ai.is-active {
+    color: #4c1fa0;
+    border-bottom-color: #7b3fe4;
+}
+
+.icap-seo-subnav-count {
+    display: inline-block;
+    min-width: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #7b3fe4;
+    color: #ffffff;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+}
+
+.icap-seo-ai-callout {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border: 1px solid #d9d2fb;
+    border-radius: 8px;
+    background: #f7f4ff;
+}
+
+.icap-seo-ai-callout .icap-seo-ai-callout-art {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+}
+
+.icap-seo-ai-callout-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.icap-seo-ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #efe8fd;
+    color: #6a32c9;
+    font-size: 11px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.icap-seo-ai-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin: 12px 0;
+}
+
+.icap-seo-ai-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.icap-seo-ai-card.is-ready {
+    border-color: #b9a6f5;
+    box-shadow: 0 1px 4px rgba(123, 63, 228, 0.12);
+}
+
+.icap-seo-ai-card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: #f0f0f1;
+    color: #50575e;
+}
+
+.icap-seo-ai-card.is-ready .icap-seo-ai-card-icon {
+    background: linear-gradient(135deg, #2271b1 0%, #7b3fe4 100%);
+    color: #ffffff;
+}
+
+.icap-seo-ai-card-benefit {
+    color: #3c434a;
+}
+
+.icap-seo-ai-card-cost {
+    color: #646970;
+    font-size: 12px;
+}
+
+.icap-seo-ai-card-state {
+    margin-top: auto;
+    color: #646970;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+a.icap-seo-ai-card-state {
+    color: #6a32c9;
+    text-decoration: none;
+}
+
+.icap-seo-ai-example {
+    margin: 12px 0;
+    padding: 14px 16px;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.icap-seo-ai-example h4 {
+    margin: 0 0 10px;
+}
+
+.icap-seo-ai-example-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.icap-seo-ai-example-before,
+.icap-seo-ai-example-after {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 6px;
+}
+
+.icap-seo-ai-example-before {
+    background: #f6f7f7;
+    color: #646970;
+}
+
+.icap-seo-ai-example-after {
+    background: #f4effe;
+    color: #1d2327;
+    border: 1px solid #d9d2fb;
+}
+
+.icap-seo-ai-example-before span,
+.icap-seo-ai-example-after span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.icap-seo-ai-example-row p {
+    margin: 4px 0 0;
+    font-size: 14px;
+}
+
+.icap-seo-ai-example-arrow {
+    align-self: center;
+    color: #7b3fe4;
+    font-size: 20px;
+}
+
+@media (max-width: 782px) {
+    .icap-seo-ai-callout,
+    .icap-seo-ai-example-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .icap-seo-ai-example-arrow {
+        transform: rotate(90deg);
+    }
+}
+
+.icap-seo-review-prompt-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+}
