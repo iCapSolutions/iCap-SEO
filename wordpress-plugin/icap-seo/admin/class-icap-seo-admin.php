@@ -1314,6 +1314,10 @@ class ICap_SEO_Admin
         }
         $error_code = $this->extract_error_code($result);
 
+        if ($error_code === 'registration_unavailable') {
+            $this->redirect_with_notice('registration_request_unavailable', 'account', ['account_step' => 'token']);
+            return;
+        }
         if ($error_code === 'registration_token_missing') {
             $this->redirect_with_notice('registration_token_missing', 'account', ['account_step' => 'token']);
             return;
@@ -1394,6 +1398,10 @@ class ICap_SEO_Admin
         }
         if ($error_code === 'disposable_email_blocked') {
             $this->redirect_with_notice('registration_request_disposable_email', 'account');
+            return;
+        }
+        if ($error_code === 'registration_unavailable') {
+            $this->redirect_with_notice('registration_request_unavailable', 'account');
             return;
         }
 
@@ -5960,6 +5968,12 @@ class ICap_SEO_Admin
      */
     private function redirect_with_notice(string $notice_code, string $tab, array $extra_query_args = []): void
     {
+        // A suspended site gets account_suspended from nearly every service route.
+        // Whatever the action was, say that plainly instead of that action's
+        // generic "failed" message.
+        if ($this->service_client->last_error_code() === 'account_suspended') {
+            $notice_code = 'account_suspended';
+        }
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- detail_tab is a hidden field on nonce-protected forms; every caller runs check_admin_referer() before reaching this helper.
         $posted_detail_tab = isset($_POST['detail_tab']) ? sanitize_key((string) wp_unslash($_POST['detail_tab'])) : '';
         $extra_query_args = array_filter(
