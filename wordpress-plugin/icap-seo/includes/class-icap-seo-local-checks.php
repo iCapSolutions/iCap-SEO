@@ -54,6 +54,13 @@ class ICap_SEO_Local_Checks
     ];
 
     private const CACHE_SECONDS = 600;
+    // Limits shared with the editor panel's live checks, so the two can't disagree.
+    public const TITLE_MIN_LENGTH = 20;
+    public const TITLE_MAX_LENGTH = 65;
+    public const DESCRIPTION_MIN_LENGTH = 120;
+    public const DESCRIPTION_MAX_LENGTH = 170;
+    public const THIN_CONTENT_WORDS = 250;
+    public const MIN_SECONDARY_HEADINGS = 2;
 
     /** Post meta holding a page's latest on-site result: score, failed-check count, and time. */
     private const SCORE_META_KEY = '_icap_seo_local_score';
@@ -409,12 +416,31 @@ class ICap_SEO_Local_Checks
     }
 
     /**
+     * A page's title as WordPress prints it in the <title> tag by default:
+     * the page title, then the site name.
+     */
+    public static function document_title(string $page_title): string
+    {
+        return trim($page_title . ' - ' . get_bloginfo('name'), ' -');
+    }
+
+    /**
+     * When a page's saved score was recorded (ISO 8601), or '' if it has none.
+     */
+    public static function stored_checked_at(int $post_id): string
+    {
+        $stored = get_post_meta($post_id, self::SCORE_META_KEY, true);
+
+        return is_array($stored) && isset($stored['checked_at']) ? (string) $stored['checked_at'] : '';
+    }
+
+    /**
      * The page as far as WordPress data can describe it, for hosts where a site can't
      * request itself. Mirrors what this plugin and core print in the head.
      */
     private static function page_from_wordpress(WP_Post $post, string $permalink, string $body_html): string
     {
-        $title = trim(get_the_title($post) . ' - ' . get_bloginfo('name'), ' -');
+        $title = self::document_title(get_the_title($post));
         $description = (new ICap_SEO_Output())->get_effective_meta_description($post, 160);
         $canonical = (new ICap_SEO_Output())->get_effective_canonical_url($post);
         $schema = get_post_meta((int) $post->ID, '_icap_seo_jsonld_schema_json', true);
@@ -807,7 +833,7 @@ class ICap_SEO_Local_Checks
                 'Title tag is missing.',
                 'Set a unique <title> tag for this page.'
             );
-        } elseif ($title_length < 20 || $title_length > 65) {
+        } elseif ($title_length < self::TITLE_MIN_LENGTH || $title_length > self::TITLE_MAX_LENGTH) {
             $issues[] = self::issue(
                 'title_length_out_of_range',
                 'medium',
@@ -829,7 +855,7 @@ class ICap_SEO_Local_Checks
                 'Meta description is missing.',
                 'Add a 120-170 character meta description summarizing page intent.'
             );
-        } elseif ($description_length < 120 || $description_length > 170) {
+        } elseif ($description_length < self::DESCRIPTION_MIN_LENGTH || $description_length > self::DESCRIPTION_MAX_LENGTH) {
             $issues[] = self::issue(
                 'meta_description_length_out_of_range',
                 'low',
@@ -848,7 +874,7 @@ class ICap_SEO_Local_Checks
         }
 
         $word_count = self::count_words(self::visible_text($html));
-        if ($word_count < 250) {
+        if ($word_count < self::THIN_CONTENT_WORDS) {
             $issues[] = self::issue(
                 'thin_content',
                 'medium',
@@ -965,7 +991,7 @@ class ICap_SEO_Local_Checks
     {
         $secondary_headings = preg_match_all('/<h[23][\s>]/i', $html);
 
-        if ($secondary_headings < 2) {
+        if ($secondary_headings < self::MIN_SECONDARY_HEADINGS) {
             return [self::issue(
                 'limited_heading_structure',
                 'low',
@@ -1301,6 +1327,12 @@ class ICap_SEO_Local_Checks
         $text = (string) preg_replace('/<(script|style)\b[^>]*>.*?<\/\1>/is', ' ', $html);
 
         return self::normalize_text((string) preg_replace('/<[^>]+>/s', ' ', $text));
+    }
+
+    /** Words of visible text in a piece of HTML, counted the way the content checks count them. */
+    public static function visible_word_count(string $html): int
+    {
+        return self::count_words(self::visible_text($html));
     }
 
     private static function count_words(string $text): int

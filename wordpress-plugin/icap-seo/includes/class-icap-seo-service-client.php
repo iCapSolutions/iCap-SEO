@@ -227,6 +227,38 @@ class ICap_SEO_Service_Client
     }
 
     /**
+     * The score Content Scores shows for a post, without contacting the service:
+     * the last full scan's score when that scan covered the post, else the saved
+     * on-site check score.
+     *
+     * @return array{score: ?int, source: string, partial: bool, content_key: string} source is scan, local or none.
+     */
+    public function get_saved_content_score(int $post_id): array
+    {
+        if ($this->is_premium()) {
+            foreach ($this->get_content_scores_overview(false) as $row) {
+                if ((int) ($row['id'] ?? 0) === $post_id && ($row['source'] ?? '') === 'api' && isset($row['icap_score_numeric']) && is_numeric($row['icap_score_numeric'])) {
+                    return [
+                        'score' => (int) $row['icap_score_numeric'],
+                        'source' => 'scan',
+                        'partial' => false,
+                        'content_key' => isset($row['content_key']) ? (string) $row['content_key'] : sprintf('post_%d', $post_id),
+                    ];
+                }
+            }
+        }
+
+        $local = ICap_SEO_Local_Checks::stored_score($post_id);
+
+        return [
+            'score' => $local,
+            'source' => $local !== null ? 'local' : 'none',
+            'partial' => ICap_SEO_Local_Checks::stored_score_is_partial($post_id),
+            'content_key' => sprintf('post_%d', $post_id),
+        ];
+    }
+
+    /**
      * Rows for the Content Scores table. Pages a service scan didn't reach are added with
      * their on-site result, so Check all pages covers them on Premium sites too.
      */

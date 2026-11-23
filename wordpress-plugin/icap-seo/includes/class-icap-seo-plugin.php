@@ -18,9 +18,10 @@ class ICap_SEO_Plugin
 
     public function __construct()
     {
-        $this->admin = new ICap_SEO_Admin(new ICap_SEO_Service_Client());
+        $service_client = new ICap_SEO_Service_Client();
+        $this->admin = new ICap_SEO_Admin($service_client);
         $this->output = new ICap_SEO_Output();
-        $this->editor_panel = new ICap_SEO_Editor_Panel($this->output);
+        $this->editor_panel = new ICap_SEO_Editor_Panel($this->output, $service_client);
     }
     public function run(): void
     {
