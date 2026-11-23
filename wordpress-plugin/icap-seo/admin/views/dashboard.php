@@ -2110,11 +2110,12 @@ if ($notice_code === 'remediation_apply_noop') {
                                 $ai_action_state = __('Ready on the Fixes tab', 'icap-seo');
                                 $ai_action_href = $fixes_tab_url;
                             } else {
-                                $ai_action_state = __('Ready below', 'icap-seo');
+                                $ai_action_state = $ai_action_suggested ? __('Ready below', 'icap-seo') : __('Available below for any page', 'icap-seo');
                                 $ai_action_href = '#icap-seo-ai-' . $ai_generator;
                             }
                             ?>
-                            <div class="icap-seo-ai-card<?php echo $ai_action_ready ? ' is-ready' : ''; ?>">
+                            <?php // Highlight only the actions the scan suggested, so the highlighted cards match the tab's count. ?>
+                            <div class="icap-seo-ai-card<?php echo $ai_action_suggested ? ' is-ready' : ''; ?>">
                                 <span class="icap-seo-ai-card-icon" aria-hidden="true"><?php echo wp_kses(icap_seo_ai_icon($ai_action['icon'], 20), $tab_icon_allowed_html); ?></span>
                                 <strong class="icap-seo-ai-card-title"><?php echo esc_html($ai_action['label']); ?></strong>
                                 <span class="icap-seo-ai-card-benefit"><?php echo esc_html($ai_action['benefit']); ?></span>

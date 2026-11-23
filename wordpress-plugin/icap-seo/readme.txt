@@ -140,6 +140,7 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 * The iCap SEO panel on the edit screen now shows the page's Content Scores score, with a Check now button to re-check the page.
 * The panel's live checks use the same rules and limits as Content Scores, including the site name in the title length, so the two no longer disagree. Headline suggestions are shown as tips and aren't scored.
 * When a page has no featured image, social sites are now offered the first image in the page, then the site logo, then the site icon, skipping images smaller than 200 × 200 pixels, which Facebook ignores. The social preview shows that picture and says where it came from.
+* On a page's AI Improvements tab, only the improvements the scan suggested are highlighted, so the highlighted cards match the count on the tab. Spelling & grammar stays available on every page.
 
 = 0.1.158 =
 * The page link check now lists links it couldn't check separately from broken ones, with the reason (for example, the other site refused an automated check or your server couldn't verify its security certificate), so a connection problem doesn't look like a broken link.
