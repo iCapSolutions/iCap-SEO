@@ -3538,7 +3538,7 @@ if ($notice_code === 'remediation_apply_noop') {
             $overview_score_color = $overview_score_percent !== null ? icap_seo_score_text_color($overview_score_percent) : '#8c8f94';
             $overview_score_fill = $overview_score_percent ?? 0;
             $overview_score_gradient = $overview_score_percent !== null ? icap_seo_score_gradient($overview_score_fill) : '#e5e5e5';
-            $overview_score_display = $overview_score_percent !== null ? $overview_score_percent . '%' : __('Pending', 'icap-seo');
+            $overview_score_display = $overview_score_percent !== null ? (string) $overview_score_percent : __('Pending', 'icap-seo');
 
             $overview_ai_credit_fill = $overview_is_premium ? (int) max(0, min(100, round($overview_ai_credits_remaining))) : 0;
             $overview_ai_credit_color = $overview_is_premium ? icap_seo_meter_color($overview_ai_credit_fill, 0, 100) : '#dcdcde';
@@ -3772,7 +3772,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php if ($overview_is_premium || $overview_score_percent !== null) : ?>
                         <div class="icap-seo-meter" style="background: <?php echo esc_attr($overview_score_gradient); ?>;">
                             <div class="icap-seo-meter-inner">
-                                <span class="icap-seo-meter-value" style="color: <?php echo esc_attr($overview_score_color); ?>;"><?php echo esc_html($overview_score_display); ?></span>
+                                <span class="icap-seo-meter-value" style="color: <?php echo esc_attr($overview_score_color); ?>;"><?php echo esc_html($overview_score_display); ?><?php if ($overview_score_percent !== null) : ?><span class="icap-seo-meter-suffix">/100</span><?php endif; ?></span>
                             </div>
                         </div>
                     <?php else : ?>
