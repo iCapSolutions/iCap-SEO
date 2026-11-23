@@ -1,6 +1,21 @@
 (function () {
     'use strict';
 
+    // The review button opens WordPress.org in a new tab; hide the request in
+    // this tab too, since the click already recorded the answer.
+    document.querySelectorAll('.icap-seo-review-prompt-form').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (event.submitter && event.submitter.value === 'review') {
+                window.setTimeout(function () {
+                    var prompt = form.closest('.icap-seo-review-prompt');
+                    if (prompt) {
+                        prompt.remove();
+                    }
+                }, 0);
+            }
+        });
+    });
+
     // Scan requests run synchronously on the backend and the page can't report
     // real progress percentage - this shows an indeterminate progress bar plus
     // an elapsed-seconds counter so it's clear a scan is running in the
@@ -327,6 +342,8 @@
         var status = panel.querySelector('.icap-seo-link-check-status');
         var results = panel.querySelector('.icap-seo-link-check-results');
         var fixHelp = panel.querySelector('.icap-seo-link-check-fix');
+        var uncheckedSummary = panel.querySelector('.icap-seo-link-check-unchecked-summary');
+        var uncheckedList = panel.querySelector('.icap-seo-link-check-unchecked');
         if (!settings || !button || !status || !results) {
             return;
         }
@@ -338,15 +355,24 @@
             if (code === 404 || code === 410) {
                 return code + ', ' + button.getAttribute('data-not-found');
             }
-            if (code === 401 || code === 403 || code === 429) {
-                return code + ', ' + button.getAttribute('data-blocked');
-            }
             return code >= 500 ? code + ', ' + button.getAttribute('data-server-error') : String(code);
+        }
+
+        function describeReason(link) {
+            var label = button.getAttribute('data-reason-' + String(link.reason || '').replace(/_/g, '-'))
+                || button.getAttribute('data-no-response');
+            return link.status ? link.status + ', ' + label : label;
         }
 
         button.addEventListener('click', function () {
             button.disabled = true;
             results.textContent = '';
+            if (uncheckedList) {
+                uncheckedList.textContent = '';
+            }
+            if (uncheckedSummary) {
+                uncheckedSummary.hidden = true;
+            }
             status.textContent = button.getAttribute('data-checking');
 
             fetch(settings.linksUrl, {
@@ -372,6 +398,16 @@
                     item.textContent = link.url + ' (' + describeStatus(link.status) + ')';
                     results.appendChild(item);
                 });
+                var unchecked = Array.isArray(result.unchecked) ? result.unchecked : [];
+                if (uncheckedSummary && uncheckedList && unchecked.length > 0) {
+                    uncheckedSummary.textContent = button.getAttribute('data-unchecked').replace('%d', unchecked.length);
+                    uncheckedSummary.hidden = false;
+                    unchecked.forEach(function (link) {
+                        var item = document.createElement('li');
+                        item.textContent = link.url + ' (' + describeReason(link) + ')';
+                        uncheckedList.appendChild(item);
+                    });
+                }
                 if (fixHelp) {
                     fixHelp.hidden = result.broken.length === 0;
                 }

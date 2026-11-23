@@ -277,6 +277,120 @@ if (!function_exists('icap_seo_ai_actions_left')) {
     }
 }
 
+if (!function_exists('icap_seo_ai_action_catalog')) {
+    // Every AI action, in the order the AI Improvements tab shows them. 'codes' are the
+    // findings it fixes (empty = runs on any page); 'tab' is where it runs: the Fixes tab
+    // writes these with AI on Premium, the AI Improvements tab drafts the rest for review.
+    // 'credits' is the fixed price, used until the service reports metered estimates.
+    function icap_seo_ai_action_catalog(): array
+    {
+        return [
+            'page_title' => [
+                'label' => __('Title', 'icap-seo'),
+                'benefit' => __('A title written for searchers, sized to show in full on Google.', 'icap-seo'),
+                'codes' => ['title_length_out_of_range', 'missing_title_tag'],
+                'tab' => 'recommendations',
+                'icon' => 'title',
+                'credits' => 1,
+            ],
+            'meta_description' => [
+                'label' => __('Meta description', 'icap-seo'),
+                'benefit' => __('A search snippet that sums up the page and earns the click.', 'icap-seo'),
+                'codes' => ['missing_meta_description', 'meta_description_length_out_of_range'],
+                'tab' => 'recommendations',
+                'icon' => 'snippet',
+                'credits' => 1,
+            ],
+            'heading_outline' => [
+                'label' => __('Headings', 'icap-seo'),
+                'benefit' => __('Section headings that break up long text, so readers and Google can scan it.', 'icap-seo'),
+                'codes' => ['limited_heading_structure'],
+                'tab' => 'recommendations',
+                'icon' => 'headings',
+                'credits' => 2,
+            ],
+            'internal_links' => [
+                'label' => __('Internal links', 'icap-seo'),
+                'benefit' => __('Links to your related pages, so visitors stay and Google finds them.', 'icap-seo'),
+                'codes' => ['low_internal_linking', 'no_links_detected'],
+                'tab' => 'recommendations',
+                'icon' => 'links',
+                'credits' => 2,
+            ],
+            'image_alt_text' => [
+                'label' => __('Image alt text', 'icap-seo'),
+                'benefit' => __('Descriptions of each image, for screen readers and image search.', 'icap-seo'),
+                'codes' => ['images_missing_alt'],
+                'tab' => 'recommendations',
+                'icon' => 'image',
+                'credits' => 6,
+            ],
+            'content_depth' => [
+                'label' => __('Expanded content', 'icap-seo'),
+                'benefit' => __('New paragraphs that fill out a thin page, drafted for you to review.', 'icap-seo'),
+                'codes' => ['thin_content', 'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement'],
+                'tab' => 'ai-drafts',
+                'icon' => 'expand',
+                'credits' => 4,
+            ],
+            'readability_rewrite' => [
+                'label' => __('Readability rewrite', 'icap-seo'),
+                'benefit' => __('Long, dense paragraphs rewritten in plainer words, so visitors keep reading.', 'icap-seo'),
+                'codes' => ['readability_score_low'],
+                'tab' => 'ai-drafts',
+                'icon' => 'readability',
+                'credits' => 5,
+            ],
+            'spelling_grammar' => [
+                'label' => __('Spelling & grammar', 'icap-seo'),
+                'benefit' => __('Typos and grammar slips found and corrected, on any page, any time.', 'icap-seo'),
+                'codes' => [],
+                'tab' => 'ai-drafts',
+                'icon' => 'spelling',
+                'credits' => 3,
+            ],
+        ];
+    }
+}
+
+if (!function_exists('icap_seo_ai_actions_for_issues')) {
+    // The AI actions that would fix any of these open findings, in catalog order.
+    function icap_seo_ai_actions_for_issues(array $issue_codes): array
+    {
+        $matched = [];
+        foreach (icap_seo_ai_action_catalog() as $generator => $action) {
+            if (!empty($action['codes']) && !empty(array_intersect($action['codes'], $issue_codes))) {
+                $matched[] = $generator;
+            }
+        }
+        return $matched;
+    }
+}
+
+if (!function_exists('icap_seo_ai_icon')) {
+    // Line icons for the AI actions, drawn in the same 24px style as the tab icons.
+    function icap_seo_ai_icon(string $name, int $size = 20): string
+    {
+        $paths = [
+            'sparkle' => '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/>',
+            'title' => '<path d="M4 6h16"/><path d="M12 6v13"/><path d="M8 19h8"/>',
+            'snippet' => '<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="15" y2="13"/><line x1="7" y1="16" x2="12" y2="16"/>',
+            'headings' => '<path d="M5 5v14"/><path d="M13 5v14"/><path d="M5 12h8"/><path d="M17 10l2-1v10"/>',
+            'links' => '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+            'image' => '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+            'expand' => '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="14" x2="12" y2="14"/><path d="M17 13v6"/><path d="M14 16h6"/>',
+            'readability' => '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+            'spelling' => '<path d="M4 16l4-11 4 11"/><line x1="5.5" y1="12" x2="10.5" y2="12"/><polyline points="13 15 16 18 21 11"/>',
+        ];
+        $inner = $paths[$name] ?? $paths['sparkle'];
+        return sprintf(
+            '<svg viewBox="0 0 24 24" width="%1$d" height="%1$d" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">%2$s</svg>',
+            $size,
+            $inner
+        );
+    }
+}
+
 if (!function_exists('icap_seo_render_register_panel')) {
     // Shown where a free-with-registration feature (Google Search Console and Google
     // Analytics reports) would be, on a site that hasn't registered with the service yet.
@@ -346,6 +460,7 @@ $notice_map = [
     'registration_request_captcha_failed' => ['type' => 'error', 'message' => __('Registration request could not be verified. Reload the page and try again.', 'icap-seo')],
     'registration_request_already_pending' => ['type' => 'error', 'message' => __('A registration request for this email is already pending. Check your inbox (including spam), or try again in a few minutes.', 'icap-seo')],
     'registration_request_disposable_email' => ['type' => 'error', 'message' => __('Please use a permanent email address to register.', 'icap-seo')],
+    'registration_request_unavailable' => ['type' => 'error', 'message' => __('Registration isn\'t available for this site. Contact iCap SEO support if you think this is a mistake.', 'icap-seo')],
     'connection_ok_authenticated' => ['type' => 'updated', 'message' => __('Connection test succeeded. API and saved site credentials are valid.', 'icap-seo')],
     'connection_ok_reachable' => ['type' => 'updated', 'message' => __('Connection test reached the API. Next step: register this site to provision credentials.', 'icap-seo')],
     'connection_api_base_url_missing' => ['type' => 'error', 'message' => __('Connection test failed. The iCap SEO service address is not configured.', 'icap-seo')],
@@ -362,7 +477,7 @@ $notice_map = [
     'content_rescan_failed' => ['type' => 'error', 'message' => __('Page rescan failed. Confirm API connectivity and retry.', 'icap-seo')],
     'payment_required' => ['type' => 'error', 'message' => __('Scan request blocked: payment is required for this site subscription. Resolve billing and retry.', 'icap-seo')],
     'subscription_required' => ['type' => 'error', 'message' => __('Scan request blocked: no active subscription is associated with this site. Activate a plan and retry.', 'icap-seo')],
-    'account_suspended' => ['type' => 'error', 'message' => __('Scan request blocked: account is suspended. Contact iCap SEO support to restore access.', 'icap-seo')],
+    'account_suspended' => ['type' => 'error', 'message' => __('This site\'s iCap SEO account is suspended, so that request was blocked. Contact iCap SEO support to restore access.', 'icap-seo')],
     'invalid_token' => ['type' => 'error', 'message' => __('Scan request failed: this site needs reconnecting. Use Advanced on the Account tab.', 'icap-seo')],
     'rate_limited' => ['type' => 'error', 'message' => __('Scan request was rate-limited. Wait and retry.', 'icap-seo')],
     'scan_failed' => ['type' => 'error', 'message' => __('Scan request failed. Confirm site is registered and billing/auth are active.', 'icap-seo')],
@@ -696,6 +811,19 @@ if ($notice_code === 'remediation_apply_noop') {
     <?php if ($notice_code !== '' && isset($notice_map[$notice_code])) : ?>
         <div class="notice <?php echo esc_attr(['error' => 'notice-error', 'info' => 'notice-info'][$notice_map[$notice_code]['type']] ?? 'notice-success'); ?> is-dismissible">
             <p><?php echo esc_html($notice_override_message !== '' ? $notice_override_message : $notice_map[$notice_code]['message']); ?></p>
+        </div>
+    <?php endif; ?>
+    <?php if (!empty($show_review_prompt)) : ?>
+        <div class="notice notice-info icap-seo-review-prompt">
+            <p><strong><?php esc_html_e('Is iCap SEO helping your site?', 'icap-seo'); ?></strong></p>
+            <p><?php esc_html_e('You\'ve been using iCap SEO for a couple of weeks. If it\'s been useful, a short review on WordPress.org helps other site owners find it. It takes about a minute.', 'icap-seo'); ?></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-review-prompt-form">
+                <input type="hidden" name="action" value="icap_seo_review_prompt">
+                <?php wp_nonce_field('icap_seo_review_prompt'); ?>
+                <button type="submit" name="review_choice" value="review" class="button button-primary" formtarget="_blank"><?php esc_html_e('Leave a review', 'icap-seo'); ?></button>
+                <button type="submit" name="review_choice" value="later" class="button"><?php esc_html_e('Maybe later', 'icap-seo'); ?></button>
+                <button type="submit" name="review_choice" value="never" class="button-link"><?php esc_html_e('Don\'t ask again', 'icap-seo'); ?></button>
+            </form>
         </div>
     <?php endif; ?>
 
@@ -1115,6 +1243,51 @@ if ($notice_code === 'remediation_apply_noop') {
                     </ul>
                 </div>
             <?php endif; ?>
+            <?php
+            $ai_banner_pages_to_improve = !empty($content_scores_rollup)
+                ? (int) (($content_scores_rollup['bands']['warn'] ?? 0) + ($content_scores_rollup['bands']['poor'] ?? 0))
+                : 0;
+            $ai_banner_credits = ICap_SEO_Service_Client::normalize_credit_amount($connection_settings['ai_credits_remaining'] ?? 0);
+            $ai_banner_actions_left = icap_seo_ai_actions_left($ai_credit_pricing, $ai_banner_credits);
+            ?>
+            <div class="icap-seo-ai-banner">
+                <span class="icap-seo-ai-banner-art" aria-hidden="true"><?php echo wp_kses(icap_seo_ai_icon('sparkle', 36), $tab_icon_allowed_html); ?></span>
+                <div class="icap-seo-ai-banner-body">
+                    <h3><?php esc_html_e('Let AI do the rewriting', 'icap-seo'); ?></h3>
+                    <p>
+                        <?php
+                        if ($ai_banner_pages_to_improve > 0) {
+                            echo esc_html(sprintf(
+                                /* translators: %d: number of pages scoring below 80 */
+                                _n('%d page scores below 80.', '%d pages score below 80.', $ai_banner_pages_to_improve, 'icap-seo'),
+                                $ai_banner_pages_to_improve
+                            )) . ' ';
+                        }
+                        esc_html_e('Choose Improve with AI on any page to draft its title, description, headings, alt text, links, and rewrites. Nothing on the page changes until you apply it.', 'icap-seo');
+                        ?>
+                    </p>
+                    <?php if ($service_is_premium) : ?>
+                        <p class="icap-seo-ai-banner-meta">
+                            <?php
+                            echo esc_html(sprintf(
+                                /* translators: %s: AI credit balance */
+                                __('%s AI credits', 'icap-seo'),
+                                icap_seo_format_credits($ai_banner_credits)
+                            ));
+                            if ($ai_banner_actions_left !== null) {
+                                echo ' &middot; ' . esc_html(sprintf(
+                                    /* translators: %s: approximate number of AI actions */
+                                    _n('About %s AI action left', 'About %s AI actions left', $ai_banner_actions_left, 'icap-seo'),
+                                    number_format_i18n($ai_banner_actions_left)
+                                ));
+                            }
+                            ?>
+                        </p>
+                    <?php else : ?>
+                        <p><a class="button button-primary" href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'account'], admin_url('admin.php')) . ($service_is_registered ? '#icap-seo-billing' : '')); ?>"><?php echo $service_is_registered ? esc_html__('Upgrade to Premium', 'icap-seo') : esc_html__('Register to connect', 'icap-seo'); ?></a></p>
+                    <?php endif; ?>
+                </div>
+            </div>
             <div class="icap-seo-table-wrap">
                 <table class="widefat striped">
                     <thead>
@@ -1124,6 +1297,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
                             <?php icap_seo_render_sortable_th(__('iCap Score', 'icap-seo'), $content_scores_orderby === 'score', $content_scores_order, true, $content_scores_sort_link('score', true)); ?>
                             <th><?php esc_html_e('Search Console', 'icap-seo'); ?></th>
+                            <th><?php esc_html_e('AI', 'icap-seo'); ?></th>
                             <?php icap_seo_render_sortable_th(__('Clicks (28d)', 'icap-seo'), $content_scores_orderby === 'clicks', $content_scores_order, true, $content_scores_sort_link('clicks', true)); ?>
                             <?php icap_seo_render_sortable_th(__('Avg Position', 'icap-seo'), $content_scores_orderby === 'position', $content_scores_order, false, $content_scores_sort_link('position', false)); ?>
                             <?php icap_seo_render_sortable_th(__('Sessions (28d)', 'icap-seo'), $content_scores_orderby === 'sessions', $content_scores_order, true, $content_scores_sort_link('sessions', true)); ?>
@@ -1134,7 +1308,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <tbody>
                         <?php if (empty($content_scores)) : ?>
                             <tr>
-                                <td colspan="10">
+                                <td colspan="11">
                                     <?php if ($latest_scores_source === 'api') : ?>
                                         <?php esc_html_e('No scored content rows were returned for the latest scan yet.', 'icap-seo'); ?>
                                     <?php else : ?>
@@ -1200,6 +1374,13 @@ if ($notice_code === 'remediation_apply_noop') {
                                         <span style="display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; background:<?php echo esc_attr($row_google_bg); ?>; color:<?php echo esc_attr($row_google_fg); ?>;">
                                             <?php echo esc_html($row_google_label); ?>
                                         </span>
+                                    </td>
+                                    <td>
+                                        <?php if ($row_content_key !== '') : ?>
+                                            <a class="icap-seo-ai-button" href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'content-scores', 'content_key' => $row_content_key, 'detail_tab' => 'ai-drafts'], admin_url('admin.php'))); ?>">
+                                                <?php echo wp_kses(icap_seo_ai_icon('sparkle', 14), $tab_icon_allowed_html); ?><?php esc_html_e('Improve with AI', 'icap-seo'); ?>
+                                            </a>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php
@@ -1540,6 +1721,25 @@ if ($notice_code === 'remediation_apply_noop') {
                         'ai-drafts' => __('AI Improvements', 'icap-seo'),
                         'history' => __('History', 'icap-seo'),
                     ];
+                    $open_detail_issue_codes = array_map(
+                        static fn($issue_row): string => is_array($issue_row) && isset($issue_row['issue_code']) ? sanitize_key((string) $issue_row['issue_code']) : '',
+                        $open_detail_issues
+                    );
+                    // Findings on this page that an AI action fixes. Posts-page body fixes have
+                    // no visible effect (see the notice above), so they don't count here.
+                    $detail_ai_actions = empty($content_detail_is_posts_page)
+                        ? icap_seo_ai_actions_for_issues($open_detail_issue_codes)
+                        : array_values(array_intersect(icap_seo_ai_actions_for_issues($open_detail_issue_codes), ['page_title', 'meta_description']));
+                    $ai_action_catalog = icap_seo_ai_action_catalog();
+                    $ai_drafts_tab_url = add_query_arg(
+                        [
+                            'page' => 'icap-seo',
+                            'tab' => 'content-scores',
+                            'content_key' => $selected_content_key,
+                            'detail_tab' => 'ai-drafts',
+                        ],
+                        admin_url('admin.php')
+                    );
                     ?>
                     <nav class="icap-seo-subnav">
                         <?php foreach ($content_detail_tabs as $detail_tab_key => $detail_tab_label) : ?>
@@ -1555,11 +1755,45 @@ if ($notice_code === 'remediation_apply_noop') {
                             );
                             $detail_tab_active = $content_detail_tab === $detail_tab_key;
                             ?>
-                            <a href="<?php echo esc_url($detail_tab_url); ?>" class="icap-seo-subnav-link<?php echo $detail_tab_active ? ' is-active' : ''; ?>">
+                            <a href="<?php echo esc_url($detail_tab_url); ?>" class="icap-seo-subnav-link<?php echo $detail_tab_active ? ' is-active' : ''; ?><?php echo $detail_tab_key === 'ai-drafts' ? ' icap-seo-subnav-link--ai' : ''; ?>">
+                                <?php if ($detail_tab_key === 'ai-drafts') : ?>
+                                    <?php echo wp_kses(icap_seo_ai_icon('sparkle', 14), $tab_icon_allowed_html); ?>
+                                <?php endif; ?>
                                 <?php echo esc_html($detail_tab_label); ?>
+                                <?php if ($detail_tab_key === 'ai-drafts' && !empty($detail_ai_actions)) : ?>
+                                    <span class="icap-seo-subnav-count">
+                                        <?php echo esc_html(number_format_i18n(count($detail_ai_actions))); ?>
+                                        <span class="screen-reader-text"><?php esc_html_e('AI improvements suggested', 'icap-seo'); ?></span>
+                                    </span>
+                                <?php endif; ?>
                             </a>
                         <?php endforeach; ?>
                     </nav>
+                    <?php if ($content_detail_tab === 'recommendations' && !empty($detail_ai_actions)) : ?>
+                        <div class="icap-seo-ai-callout">
+                            <span class="icap-seo-ai-callout-art" aria-hidden="true"><?php echo wp_kses(icap_seo_ai_icon('sparkle', 24), $tab_icon_allowed_html); ?></span>
+                            <div class="icap-seo-ai-callout-body">
+                                <strong>
+                                    <?php
+                                    echo esc_html(sprintf(
+                                        /* translators: %d: number of fixes AI can write on this page */
+                                        _n('AI can write %d of these fixes for you', 'AI can write %d of these fixes for you', count($detail_ai_actions), 'icap-seo'),
+                                        count($detail_ai_actions)
+                                    ));
+                                    ?>
+                                </strong>
+                                <span>
+                                    <?php
+                                    echo esc_html(implode(', ', array_map(static fn(string $generator): string => $ai_action_catalog[$generator]['label'], $detail_ai_actions)));
+                                    echo $service_is_premium
+                                        ? ' &mdash; ' . esc_html__('marked AI below.', 'icap-seo')
+                                        : ' &mdash; ' . esc_html__('with Premium.', 'icap-seo');
+                                    ?>
+                                </span>
+                            </div>
+                            <a class="button button-primary" href="<?php echo esc_url($ai_drafts_tab_url); ?>"><?php esc_html_e('See AI Improvements', 'icap-seo'); ?></a>
+                        </div>
+                    <?php endif; ?>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
                     <?php if (!empty($detail_category_scores)) : ?>
                         <div class="icap-seo-panel">
@@ -1690,7 +1924,12 @@ if ($notice_code === 'remediation_apply_noop') {
                                         }
                                         ?>
                                         <tr>
-                                            <td><?php echo esc_html($catalog_label); ?></td>
+                                            <td>
+                                                <?php echo esc_html($catalog_label); ?>
+                                                <?php if ($catalog_section === 'fix' && $service_is_premium && !empty(array_intersect(icap_seo_ai_actions_for_issues([$catalog_code]), $detail_ai_actions))) : ?>
+                                                    <span class="icap-seo-ai-badge" title="<?php esc_attr_e('AI writes this fix', 'icap-seo'); ?>"><?php echo wp_kses(icap_seo_ai_icon('sparkle', 12), $tab_icon_allowed_html); ?><?php esc_html_e('AI', 'icap-seo'); ?></span>
+                                                <?php endif; ?>
+                                            </td>
                                             <?php if ($catalog_section === 'other') : ?>
                                             <td><?php echo $catalog_premium ? esc_html__('Premium', 'icap-seo') : esc_html__('Free', 'icap-seo'); ?></td>
                                             <td>
@@ -1806,13 +2045,22 @@ if ($notice_code === 'remediation_apply_noop') {
                                     data-broken="<?php esc_attr_e('%d broken:', 'icap-seo'); ?>"
                                     data-clean="<?php esc_attr_e('None are broken.', 'icap-seo'); ?>"
                                     data-not-found="<?php esc_attr_e('page not found', 'icap-seo'); ?>"
-                                    data-blocked="<?php esc_attr_e('that site blocked the check, so the link may be fine', 'icap-seo'); ?>"
                                     data-server-error="<?php esc_attr_e('that site had an error', 'icap-seo'); ?>"
+                                    <?php /* translators: %d: number of links that could not be checked */ ?>
+                                    data-unchecked="<?php esc_attr_e('%d couldn\'t be checked, so they may be fine:', 'icap-seo'); ?>"
+                                    data-reason-refused="<?php esc_attr_e('that site refused an automated check', 'icap-seo'); ?>"
+                                    data-reason-certificate="<?php esc_attr_e('your server couldn\'t verify that site\'s security certificate', 'icap-seo'); ?>"
+                                    data-reason-timeout="<?php esc_attr_e('that site took too long to answer', 'icap-seo'); ?>"
+                                    data-reason-dns="<?php esc_attr_e('your server couldn\'t look up that address', 'icap-seo'); ?>"
+                                    data-reason-connection="<?php esc_attr_e('your server couldn\'t connect to that site', 'icap-seo'); ?>"
+                                    data-reason-not-allowed="<?php esc_attr_e('WordPress doesn\'t request this kind of address', 'icap-seo'); ?>"
                                     data-no-response="<?php esc_attr_e('no response', 'icap-seo'); ?>"
                                     data-error="<?php esc_attr_e('The link check stopped because of a connection problem. Click to try again.', 'icap-seo'); ?>"><?php esc_html_e('Check links', 'icap-seo'); ?></button>
                                 <span class="icap-seo-link-check-status" role="status"></span>
                             </p>
                             <ul class="icap-seo-link-check-results"></ul>
+                            <p class="icap-seo-link-check-unchecked-summary" hidden></p>
+                            <ul class="icap-seo-link-check-unchecked"></ul>
                             <p class="icap-seo-link-check-fix" hidden>
                                 <?php esc_html_e('To fix a broken link, update or remove it in the page editor. If the address moved within your own site, add a redirect.', 'icap-seo'); ?>
                                 <?php $link_check_edit_url = get_edit_post_link($link_check_post_id, ''); ?>
@@ -1827,29 +2075,78 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; // content_detail_tab === 'recommendations' ?>
                     <?php if ($content_detail_tab === 'ai-drafts') : ?>
                     <?php
-                    $ai_action_cost_labels = [
-                        'page_title' => [__('Title', 'icap-seo'), 1],
-                        'meta_description' => [__('Meta description', 'icap-seo'), 1],
-                        'heading_outline' => [__('Headings', 'icap-seo'), 2],
-                        'internal_links' => [__('Internal links', 'icap-seo'), 2],
-                        'spelling_grammar' => [__('Spelling & grammar', 'icap-seo'), 3],
-                        'content_depth' => [__('Expanded content', 'icap-seo'), 4],
-                        'readability_rewrite' => [__('Readability rewrite', 'icap-seo'), 5],
-                        'image_alt_text' => [__('Image alt text', 'icap-seo'), 6],
-                    ];
-                    $ai_action_cost_parts = [];
-                    foreach ($ai_action_cost_labels as $ai_action_generator => $ai_action_label) {
-                        $ai_action_estimate = isset($ai_credit_pricing['estimates'][$ai_action_generator]) ? (float) $ai_credit_pricing['estimates'][$ai_action_generator] : 0.0;
-                        $ai_action_credits = (!empty($ai_credit_pricing['metered']) && $ai_action_estimate > 0) ? $ai_action_estimate : (float) $ai_action_label[1];
-                        $ai_action_cost_parts[] = $ai_action_label[0] . ' ' . icap_seo_format_credits($ai_action_credits);
-                    }
+                    $fixes_tab_url = add_query_arg('detail_tab', 'recommendations', $ai_drafts_tab_url);
                     ?>
-                    <p class="description icap-seo-ai-action-costs">
-                        <?php echo esc_html(!empty($ai_credit_pricing['metered'])
-                            ? __('Usual AI credits per action (you are charged for the AI work each one actually takes; a failed draft costs nothing):', 'icap-seo')
-                            : __('AI credits per action:', 'icap-seo')); ?>
-                        <?php echo esc_html(implode(' · ', $ai_action_cost_parts)); ?>
-                    </p>
+                    <div class="icap-seo-ai-intro">
+                        <span class="icap-seo-ai-banner-art" aria-hidden="true"><?php echo wp_kses(icap_seo_ai_icon('sparkle', 32), $tab_icon_allowed_html); ?></span>
+                        <div>
+                            <h3><?php esc_html_e('What AI can do for this page', 'icap-seo'); ?></h3>
+                            <p>
+                                <?php
+                                if (!empty($detail_ai_actions)) {
+                                    echo esc_html(sprintf(
+                                        /* translators: %d: number of AI actions suggested for this page */
+                                        _n('%d improvement is suggested for this page from its scan.', '%d improvements are suggested for this page from its scan.', count($detail_ai_actions), 'icap-seo'),
+                                        count($detail_ai_actions)
+                                    )) . ' ';
+                                }
+                                esc_html_e('Spelling & grammar works on any page. Nothing on the page changes until you apply it.', 'icap-seo');
+                                ?>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="icap-seo-ai-grid">
+                        <?php foreach ($ai_action_catalog as $ai_generator => $ai_action) : ?>
+                            <?php
+                            $ai_action_suggested = in_array($ai_generator, $detail_ai_actions, true);
+                            $ai_action_ready = $ai_action_suggested || $ai_generator === 'spelling_grammar';
+                            if (!$service_is_premium) {
+                                $ai_action_state = $ai_action_suggested ? __('Suggested for this page', 'icap-seo') : __('Premium', 'icap-seo');
+                                $ai_action_href = '';
+                            } elseif (!$ai_action_ready) {
+                                $ai_action_state = __('Nothing to fix on this page', 'icap-seo');
+                                $ai_action_href = '';
+                            } elseif ($ai_action['tab'] === 'recommendations') {
+                                $ai_action_state = __('Ready on the Fixes tab', 'icap-seo');
+                                $ai_action_href = $fixes_tab_url;
+                            } else {
+                                $ai_action_state = __('Ready below', 'icap-seo');
+                                $ai_action_href = '#icap-seo-ai-' . $ai_generator;
+                            }
+                            ?>
+                            <div class="icap-seo-ai-card<?php echo $ai_action_ready ? ' is-ready' : ''; ?>">
+                                <span class="icap-seo-ai-card-icon" aria-hidden="true"><?php echo wp_kses(icap_seo_ai_icon($ai_action['icon'], 20), $tab_icon_allowed_html); ?></span>
+                                <strong class="icap-seo-ai-card-title"><?php echo esc_html($ai_action['label']); ?></strong>
+                                <span class="icap-seo-ai-card-benefit"><?php echo esc_html($ai_action['benefit']); ?></span>
+                                <span class="icap-seo-ai-card-cost"><?php echo esc_html(icap_seo_ai_credit_cost_text($ai_credit_pricing, $ai_generator, (int) $ai_action['credits'])); ?></span>
+                                <?php if ($ai_action_href !== '') : ?>
+                                    <a class="icap-seo-ai-card-state" href="<?php echo esc_url($ai_action_href); ?>"><?php echo esc_html($ai_action_state); ?> &rarr;</a>
+                                <?php else : ?>
+                                    <span class="icap-seo-ai-card-state"><?php echo esc_html($ai_action_state); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if (!empty($ai_credit_pricing['metered'])) : ?>
+                        <p class="description icap-seo-ai-action-costs"><?php esc_html_e('You are charged for the AI work each action actually takes, and a failed draft costs nothing.', 'icap-seo'); ?></p>
+                    <?php endif; ?>
+                    <?php if (!$service_is_premium) : ?>
+                        <div class="icap-seo-ai-example">
+                            <h4><?php esc_html_e('Example: a title rewritten by AI', 'icap-seo'); ?></h4>
+                            <div class="icap-seo-ai-example-row">
+                                <div class="icap-seo-ai-example-before">
+                                    <span><?php esc_html_e('Before', 'icap-seo'); ?></span>
+                                    <p><?php esc_html_e('Home', 'icap-seo'); ?></p>
+                                </div>
+                                <span class="icap-seo-ai-example-arrow" aria-hidden="true">&rarr;</span>
+                                <div class="icap-seo-ai-example-after">
+                                    <span><?php echo wp_kses(icap_seo_ai_icon('sparkle', 12), $tab_icon_allowed_html); ?><?php esc_html_e('After', 'icap-seo'); ?></span>
+                                    <p><?php esc_html_e('Handmade Leather Dog Collars, Made to Order | Your Shop', 'icap-seo'); ?></p>
+                                </div>
+                            </div>
+                        </div>
+                        <?php icap_seo_render_premium_panel(__('Premium writes these improvements with AI, with 25 AI credits a year on the annual plan.', 'icap-seo'), $service_is_registered); ?>
+                    <?php else : ?>
                     <?php
                     $content_depth_open_issue_codes = array_values(array_intersect(
                         array_map(
@@ -1863,9 +2160,9 @@ if ($notice_code === 'remediation_apply_noop') {
                     $content_depth_draft_word_count = isset($content_depth_draft['word_count']) ? (int) $content_depth_draft['word_count'] : 0;
                     ?>
                     <?php if (!empty($content_depth_open_issue_codes) || $content_depth_draft_html !== '') : ?>
-                        <div class="icap-seo-panel">
+                        <div class="icap-seo-panel" id="icap-seo-ai-content_depth">
                         <h4><?php esc_html_e('Content depth expansion', 'icap-seo'); ?></h4>
-                        <p class="description"><?php esc_html_e('Generates draft paragraphs to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft — unlike the other recommendations above.', 'icap-seo'); ?></p>
+                        <p class="description"><?php esc_html_e('Generates draft paragraphs to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft.', 'icap-seo'); ?></p>
                         <?php if ($content_depth_draft_html !== '') : ?>
                             <div class="icap-seo-content-depth-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                                 <p class="description"><?php
@@ -1923,9 +2220,9 @@ if ($notice_code === 'remediation_apply_noop') {
                     $readability_draft_paragraphs = isset($readability_draft_paragraphs) && is_array($readability_draft_paragraphs) ? $readability_draft_paragraphs : [];
                     ?>
                     <?php if ($readability_open || !empty($readability_draft_paragraphs)) : ?>
-                        <div class="icap-seo-panel">
+                        <div class="icap-seo-panel" id="icap-seo-ai-readability_rewrite">
                         <h4><?php esc_html_e('Readability rewrite', 'icap-seo'); ?></h4>
-                        <p class="description"><?php esc_html_e('Generates simplified paragraph drafts to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft — unlike the other recommendations above.', 'icap-seo'); ?></p>
+                        <p class="description"><?php esc_html_e('Generates simplified paragraph drafts to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft.', 'icap-seo'); ?></p>
                         <?php if (!empty($readability_draft_paragraphs)) : ?>
                             <div class="icap-seo-readability-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                                 <p class="description">
@@ -1994,7 +2291,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php
                     $spelling_grammar_draft_paragraphs = isset($spelling_grammar_draft_paragraphs) && is_array($spelling_grammar_draft_paragraphs) ? $spelling_grammar_draft_paragraphs : [];
                     ?>
-                    <div class="icap-seo-panel">
+                    <div class="icap-seo-panel" id="icap-seo-ai-spelling_grammar">
                     <h4><?php esc_html_e('Spelling & grammar', 'icap-seo'); ?></h4>
                     <p class="description"><?php esc_html_e('Not tied to a scan finding - run this any time to check this page\'s prose for spelling and grammar mistakes.', 'icap-seo'); ?> <?php echo esc_html(icap_seo_ai_credit_cost_text($ai_credit_pricing, 'spelling_grammar', 3)); ?> <?php esc_html_e('Generates a draft to review before anything is saved.', 'icap-seo'); ?></p>
                     <?php if (!empty($spelling_grammar_draft_paragraphs)) : ?>
@@ -2061,6 +2358,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             </form>
                         </div>
                     <?php endif; ?>
+                    <?php endif; // service_is_premium ?>
                     <?php endif; // content_detail_tab === 'ai-drafts' ?>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
                     <?php if (!empty($applied_detail_issues)) : ?>

@@ -4,7 +4,7 @@ Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.157
+Stable tag: 0.1.158
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -135,6 +135,12 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.158 =
+* The page link check now lists links it couldn't check separately from broken ones, with the reason (for example, the other site refused an automated check or your server couldn't verify its security certificate), so a connection problem doesn't look like a broken link.
+* AI Improvements are easier to find: Content Scores has an Improve with AI link on every page, the Fixes tab says which fixes AI can write, and the AI Improvements tab shows every AI action as a card with what it does, its usual cost, and whether it applies to the page.
+* After two weeks of use, the iCap SEO page asks once whether you'd leave a review on WordPress.org. Choose Maybe later to be asked again in 30 days, or Don't ask again to hide it for good.
+* Clearer messages when registration isn't available for a site, and when a suspended account blocks any request, not just scans.
 
 = 0.1.157 =
 * AI credit balances can now show decimals, for AI actions priced by the work they take.
