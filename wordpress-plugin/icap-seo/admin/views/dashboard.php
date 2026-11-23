@@ -460,6 +460,7 @@ $notice_map = [
     'registration_request_captcha_failed' => ['type' => 'error', 'message' => __('Registration request could not be verified. Reload the page and try again.', 'icap-seo')],
     'registration_request_already_pending' => ['type' => 'error', 'message' => __('A registration request for this email is already pending. Check your inbox (including spam), or try again in a few minutes.', 'icap-seo')],
     'registration_request_disposable_email' => ['type' => 'error', 'message' => __('Please use a permanent email address to register.', 'icap-seo')],
+    'registration_request_unavailable' => ['type' => 'error', 'message' => __('Registration isn\'t available for this site. Contact iCap SEO support if you think this is a mistake.', 'icap-seo')],
     'connection_ok_authenticated' => ['type' => 'updated', 'message' => __('Connection test succeeded. API and saved site credentials are valid.', 'icap-seo')],
     'connection_ok_reachable' => ['type' => 'updated', 'message' => __('Connection test reached the API. Next step: register this site to provision credentials.', 'icap-seo')],
     'connection_api_base_url_missing' => ['type' => 'error', 'message' => __('Connection test failed. The iCap SEO service address is not configured.', 'icap-seo')],
@@ -476,7 +477,7 @@ $notice_map = [
     'content_rescan_failed' => ['type' => 'error', 'message' => __('Page rescan failed. Confirm API connectivity and retry.', 'icap-seo')],
     'payment_required' => ['type' => 'error', 'message' => __('Scan request blocked: payment is required for this site subscription. Resolve billing and retry.', 'icap-seo')],
     'subscription_required' => ['type' => 'error', 'message' => __('Scan request blocked: no active subscription is associated with this site. Activate a plan and retry.', 'icap-seo')],
-    'account_suspended' => ['type' => 'error', 'message' => __('Scan request blocked: account is suspended. Contact iCap SEO support to restore access.', 'icap-seo')],
+    'account_suspended' => ['type' => 'error', 'message' => __('This site\'s iCap SEO account is suspended, so that request was blocked. Contact iCap SEO support to restore access.', 'icap-seo')],
     'invalid_token' => ['type' => 'error', 'message' => __('Scan request failed: this site needs reconnecting. Use Advanced on the Account tab.', 'icap-seo')],
     'rate_limited' => ['type' => 'error', 'message' => __('Scan request was rate-limited. Wait and retry.', 'icap-seo')],
     'scan_failed' => ['type' => 'error', 'message' => __('Scan request failed. Confirm site is registered and billing/auth are active.', 'icap-seo')],
@@ -810,6 +811,19 @@ if ($notice_code === 'remediation_apply_noop') {
     <?php if ($notice_code !== '' && isset($notice_map[$notice_code])) : ?>
         <div class="notice <?php echo esc_attr(['error' => 'notice-error', 'info' => 'notice-info'][$notice_map[$notice_code]['type']] ?? 'notice-success'); ?> is-dismissible">
             <p><?php echo esc_html($notice_override_message !== '' ? $notice_override_message : $notice_map[$notice_code]['message']); ?></p>
+        </div>
+    <?php endif; ?>
+    <?php if (!empty($show_review_prompt)) : ?>
+        <div class="notice notice-info icap-seo-review-prompt">
+            <p><strong><?php esc_html_e('Is iCap SEO helping your site?', 'icap-seo'); ?></strong></p>
+            <p><?php esc_html_e('You\'ve been using iCap SEO for a couple of weeks. If it\'s been useful, a short review on WordPress.org helps other site owners find it. It takes about a minute.', 'icap-seo'); ?></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-review-prompt-form">
+                <input type="hidden" name="action" value="icap_seo_review_prompt">
+                <?php wp_nonce_field('icap_seo_review_prompt'); ?>
+                <button type="submit" name="review_choice" value="review" class="button button-primary" formtarget="_blank"><?php esc_html_e('Leave a review', 'icap-seo'); ?></button>
+                <button type="submit" name="review_choice" value="later" class="button"><?php esc_html_e('Maybe later', 'icap-seo'); ?></button>
+                <button type="submit" name="review_choice" value="never" class="button-link"><?php esc_html_e('Don\'t ask again', 'icap-seo'); ?></button>
+            </form>
         </div>
     <?php endif; ?>
 
