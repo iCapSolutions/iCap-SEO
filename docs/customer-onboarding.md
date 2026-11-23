@@ -28,7 +28,7 @@ Everything that runs on your own site works without an account:
   and one-click fixes.
 - On-page output (meta description, canonical URL, JSON-LD schema, social sharing tags) generated from your
   existing content.
-- The editor panel's quick checks and search and social previews.
+- The editor panel: the page's Content Scores score, live checks as you type, and search and social previews.
 - The redirect manager and 404 log, `/llms.txt`, Local SEO, and optional IndexNow pings (off by default).
 
 ## What registration adds, free

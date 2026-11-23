@@ -16,6 +16,9 @@ if (!defined('ABSPATH')) {
 if (!class_exists('ICap_SEO_Output')) {
     class ICap_SEO_Output
     {
+        // Facebook ignores share images smaller than this on either side.
+        private const SOCIAL_IMAGE_MIN_SIZE = 200;
+
         public function register(): void
         {
             add_action('wp_head', [$this, 'output_meta_description_fallback'], 20);
@@ -80,8 +83,10 @@ if (!class_exists('ICap_SEO_Output')) {
         /**
          * The picture social sites show when this page is shared: the featured
          * image, else the first image in the page's content, else the site logo,
-         * else the site icon. Shared with the editor panel's social preview so it
-         * shows the same picture.
+         * else the site icon. A content image or logo from the media library
+         * smaller than SOCIAL_IMAGE_MIN_SIZE on either side is skipped, since
+         * Facebook ignores those. Shared with the editor panel's social preview so
+         * it shows the same picture.
          *
          * $featured_id overrides the saved featured image (0 = none), for a draft
          * in the editor.
@@ -105,8 +110,8 @@ if (!class_exists('ICap_SEO_Output')) {
             }
 
             $logo_id = (int) get_theme_mod('custom_logo');
-            $logo = $logo_id > 0 ? wp_get_attachment_image_url($logo_id, 'full') : false;
-            if (is_string($logo) && $logo !== '') {
+            $logo = $logo_id > 0 ? $this->large_enough_attachment_url($logo_id, 'full') : '';
+            if ($logo !== '') {
                 return ['url' => $logo, 'source' => 'logo'];
             }
 
@@ -120,7 +125,7 @@ if (!class_exists('ICap_SEO_Output')) {
 
         /**
          * First image in post content: a media library image at its large size,
-         * or any other image with a full http(s) address.
+         * if it's big enough to share, or any other image with a full http(s) address.
          */
         public function first_content_image_url(string $content): string
         {
@@ -128,16 +133,31 @@ if (!class_exists('ICap_SEO_Output')) {
                 return '';
             }
             if (preg_match('/\bwp-image-(\d+)\b/', $match[0], $id_match) === 1) {
-                $url = wp_get_attachment_image_url((int) $id_match[1], 'large');
-                if (is_string($url) && $url !== '') {
-                    return $url;
-                }
+                // A media library image too small to share isn't used; nor is its tag's src below.
+                return $this->large_enough_attachment_url((int) $id_match[1], 'large');
             }
             if (preg_match('/\bsrc\s*=\s*["\'](https?:\/\/[^"\']+)["\']/i', $match[0], $src_match) === 1) {
                 return esc_url_raw(html_entity_decode($src_match[1], ENT_QUOTES));
             }
 
             return '';
+        }
+
+        /**
+         * A media library image's URL at $size, or '' when it's missing or
+         * smaller than SOCIAL_IMAGE_MIN_SIZE on either side.
+         */
+        private function large_enough_attachment_url(int $attachment_id, string $size): string
+        {
+            $image = wp_get_attachment_image_src($attachment_id, $size);
+            if (!is_array($image) || empty($image[0])) {
+                return '';
+            }
+            if ((int) $image[1] < self::SOCIAL_IMAGE_MIN_SIZE || (int) $image[2] < self::SOCIAL_IMAGE_MIN_SIZE) {
+                return '';
+            }
+
+            return (string) $image[0];
         }
 
         /**
