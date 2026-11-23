@@ -20,6 +20,9 @@ class ICap_SEO_Service_Client
     private const PREMIUM_BILLING_STATES = ['active', 'past_due'];
 
     private ?array $content_scores_index_cache = null;
+    // Error code from the most recent service response, so the admin page can
+    // show one clear message for codes that any route can return.
+    private string $last_error_code = '';
     private array $latest_content_scores_meta = [
         'scan_id' => '',
         'scan_tier' => '',
@@ -1974,8 +1977,14 @@ class ICap_SEO_Service_Client
         return $status_code >= 500;
     }
 
+    public function last_error_code(): string
+    {
+        return $this->last_error_code;
+    }
+
     private function api_request(string $method, string $path, array $body = [], array $query = [], bool $requires_auth = true, array $extra_headers = [], int $timeout_seconds = 3): array
     {
+        $this->last_error_code = '';
         $settings = $this->get_connection_settings();
 
         if (empty($settings['api_base_url'])) {
@@ -2049,6 +2058,7 @@ class ICap_SEO_Service_Client
                     'last_billing_checked_at' => '',
                 ]);
             }
+            $this->last_error_code = isset($error_payload['code']) ? sanitize_key((string) $error_payload['code']) : 'api_error';
             return [
                 'success' => false,
                 'error' => [
@@ -2060,6 +2070,9 @@ class ICap_SEO_Service_Client
         }
 
         if (is_array($decoded_body) && array_key_exists('success', $decoded_body)) {
+            if (empty($decoded_body['success']) && isset($decoded_body['error']['code']) && is_string($decoded_body['error']['code'])) {
+                $this->last_error_code = sanitize_key($decoded_body['error']['code']);
+            }
             return [
                 'success' => (bool) $decoded_body['success'],
                 'data' => isset($decoded_body['data']) && is_array($decoded_body['data']) ? $decoded_body['data'] : [],
