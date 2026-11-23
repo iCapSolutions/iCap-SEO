@@ -812,6 +812,19 @@ if ($notice_code === 'remediation_apply_noop') {
             <p><?php echo esc_html($notice_override_message !== '' ? $notice_override_message : $notice_map[$notice_code]['message']); ?></p>
         </div>
     <?php endif; ?>
+    <?php if (!empty($show_review_prompt)) : ?>
+        <div class="notice notice-info icap-seo-review-prompt">
+            <p><strong><?php esc_html_e('Is iCap SEO helping your site?', 'icap-seo'); ?></strong></p>
+            <p><?php esc_html_e('You\'ve been using iCap SEO for a couple of weeks. If it\'s been useful, a short review on WordPress.org helps other site owners find it. It takes about a minute.', 'icap-seo'); ?></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-review-prompt-form">
+                <input type="hidden" name="action" value="icap_seo_review_prompt">
+                <?php wp_nonce_field('icap_seo_review_prompt'); ?>
+                <button type="submit" name="review_choice" value="review" class="button button-primary" formtarget="_blank"><?php esc_html_e('Leave a review', 'icap-seo'); ?></button>
+                <button type="submit" name="review_choice" value="later" class="button"><?php esc_html_e('Maybe later', 'icap-seo'); ?></button>
+                <button type="submit" name="review_choice" value="never" class="button-link"><?php esc_html_e('Don\'t ask again', 'icap-seo'); ?></button>
+            </form>
+        </div>
+    <?php endif; ?>
 
     <nav class="nav-tab-wrapper">
         <?php foreach ($icap_seo_tabs as $tab_key => $label) : ?>

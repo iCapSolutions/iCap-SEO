@@ -1071,3 +1071,11 @@ a.icap-seo-ai-card-state {
         transform: rotate(90deg);
     }
 }
+
+.icap-seo-review-prompt-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+}

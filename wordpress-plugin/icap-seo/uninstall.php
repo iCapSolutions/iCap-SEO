@@ -8,9 +8,9 @@
  * Scope: this clears connection/operational state (the registration token,
  * site token, and site ID that let this install talk to the iCap SEO
  * service, plus the scan-results caches derived from them), the IndexNow
- * key and setting, redirects, the 404 log, Local SEO details, and dismissed
- * notifications - state that is
- * useless without the plugin and would otherwise sit in wp_options forever.
+ * key and setting, redirects, the 404 log, Local SEO details, dismissed
+ * notifications, and the review request's start date and per-user answers -
+ * state that is useless without the plugin and would otherwise sit in wp_options forever.
  *
  * It intentionally does NOT delete per-post SEO postmeta (meta descriptions,
  * canonical URLs, JSON-LD schema, content/readability drafts, remediation
@@ -42,4 +42,6 @@ delete_option('icap_seo_404_log_rate');
 delete_option('icap_seo_local_business');
 delete_option('icap_seo_dismissed_notifications');
 delete_option('icap_seo_local_last_check');
+delete_option('icap_seo_first_used');
+delete_metadata('user', 0, '_icap_seo_review_prompt', '', true);
 delete_post_meta_by_key('_icap_seo_local_score');

@@ -26,6 +26,13 @@ class ICap_SEO_Admin
     private const CONTENT_DEPTH_TARGET_WORD_COUNT = 600;
     private const CONTENT_DEPTH_ISSUE_CODES = ['thin_content', 'no_visible_content', 'insufficient_content_depth', 'content_depth_improvement'];
     private const REMEDIATION_HISTORY_MAX_ENTRIES = 15;
+    // Review request: shown on this plugin's own page only, per admin user,
+    // after two weeks of use and at least one on-site check run.
+    private const REVIEW_PROMPT_META_KEY = '_icap_seo_review_prompt';
+    private const FIRST_USED_OPTION = 'icap_seo_first_used';
+    private const REVIEW_PROMPT_MIN_DAYS = 14;
+    private const REVIEW_PROMPT_SNOOZE_DAYS = 30;
+    private const REVIEW_URL = 'https://wordpress.org/support/plugin/icap-seo/reviews/#new-post';
     private const READABILITY_DRAFT_META_KEY = '_icap_seo_readability_draft';
     private const READABILITY_ISSUE_CODES = [
         'readability_score_low',
@@ -280,6 +287,7 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_delete_redirect', [$this, 'handle_delete_redirect']);
         add_action('admin_post_icap_seo_dismiss_404', [$this, 'handle_dismiss_404']);
         add_action('admin_post_icap_seo_dismiss_notification', [$this, 'handle_dismiss_notification']);
+        add_action('admin_post_icap_seo_review_prompt', [$this, 'handle_review_prompt']);
         add_action('admin_post_icap_seo_save_local_business', [$this, 'handle_save_local_business']);
         add_action('add_meta_boxes', [$this, 'register_remediation_meta_boxes']);
         add_filter('allowed_redirect_hosts', [$this, 'add_allowed_redirect_hosts']);
@@ -289,9 +297,10 @@ class ICap_SEO_Admin
      * wp_safe_redirect() only allows same-host redirects unless the target
      * host is explicitly allowlisted here. The four redirects this plugin
      * issues (Stripe Checkout, Stripe Billing Portal, Google OAuth) all go
-     * to one of these three hosts - never to anything user- or
+     * to one of these hosts - never to anything user- or
      * attacker-controlled, since each URL comes from our own backend API's
-     * response, not directly from request input.
+     * response, not directly from request input. wordpress.org is the review
+     * request's fixed REVIEW_URL.
      */
     public function add_allowed_redirect_hosts(array $hosts): array
     {
@@ -299,6 +308,7 @@ class ICap_SEO_Admin
             'checkout.stripe.com',
             'billing.stripe.com',
             'accounts.google.com',
+            'wordpress.org',
         ]);
     }
     public function register_list_table_columns(): void
@@ -786,7 +796,69 @@ class ICap_SEO_Admin
             $spelling_grammar_draft_paragraphs = [];
         }
 
+        $show_review_prompt = $this->should_show_review_prompt();
+
         include ICAP_SEO_PLUGIN_DIR . 'admin/views/dashboard.php';
+    }
+
+    /**
+     * WordPress.org review request. No activation hook records an install
+     * date, so the first visit to this page starts the two-week clock (for
+     * existing installs too). It also waits for the on-site checks to have
+     * run at least once, so it never asks before the plugin has done anything.
+     * "Maybe later" snoozes it for this user; a review or "Don't ask again"
+     * hides it for this user for good. The icap_seo_show_review_prompt filter
+     * lets a test site force it on to see it.
+     */
+    private function should_show_review_prompt(): bool
+    {
+        $first_used = (int) get_option(self::FIRST_USED_OPTION, 0);
+        if ($first_used === 0) {
+            $first_used = time();
+            update_option(self::FIRST_USED_OPTION, $first_used, false);
+        }
+
+        $eligible = time() - $first_used >= self::REVIEW_PROMPT_MIN_DAYS * DAY_IN_SECONDS
+            && ICap_SEO_Local_Checks::last_check_time() !== '';
+
+        $state = get_user_meta(get_current_user_id(), self::REVIEW_PROMPT_META_KEY, true);
+        if (is_array($state)) {
+            if (($state['state'] ?? '') === 'done') {
+                $eligible = false;
+            } elseif (($state['state'] ?? '') === 'later' && (int) ($state['until'] ?? 0) > time()) {
+                $eligible = false;
+            }
+        }
+
+        return (bool) apply_filters('icap_seo_show_review_prompt', $eligible);
+    }
+
+    public function handle_review_prompt(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer('icap_seo_review_prompt');
+
+        $choice = isset($_POST['review_choice']) ? sanitize_key(wp_unslash($_POST['review_choice'])) : '';
+        $user_id = get_current_user_id();
+        if ($choice === 'later') {
+            update_user_meta($user_id, self::REVIEW_PROMPT_META_KEY, [
+                'state' => 'later',
+                'until' => time() + self::REVIEW_PROMPT_SNOOZE_DAYS * DAY_IN_SECONDS,
+            ]);
+        } elseif (in_array($choice, ['review', 'never'], true)) {
+            update_user_meta($user_id, self::REVIEW_PROMPT_META_KEY, ['state' => 'done', 'choice' => $choice]);
+        }
+
+        // The review button submits into a new tab, which goes on to WordPress.org;
+        // the other two return to the page they were clicked on.
+        if ($choice === 'review') {
+            wp_safe_redirect(self::REVIEW_URL);
+            exit;
+        }
+        wp_safe_redirect(wp_get_referer() ?: add_query_arg(['page' => 'icap-seo'], admin_url('admin.php')));
+        exit;
     }
 
     /**
