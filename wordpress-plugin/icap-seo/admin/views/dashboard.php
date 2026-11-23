@@ -367,6 +367,31 @@ if (!function_exists('icap_seo_ai_actions_for_issues')) {
     }
 }
 
+if (!function_exists('icap_seo_render_just_changed_paragraphs')) {
+    // The before/after of paragraphs an AI action just published, highlighted.
+    function icap_seo_render_just_changed_paragraphs(?array $change, string $permalink, string $heading): void
+    {
+        $paragraphs = $change !== null && isset($change['paragraphs']) && is_array($change['paragraphs']) ? $change['paragraphs'] : [];
+        if (empty($paragraphs)) {
+            return;
+        }
+        ?>
+        <div class="icap-seo-just-changed">
+            <p><strong><?php echo esc_html($heading); ?></strong>
+            <?php if ($permalink !== '') : ?>
+                <a href="<?php echo esc_url($permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View the page', 'icap-seo'); ?></a>
+            <?php endif; ?></p>
+            <?php foreach ($paragraphs as $paragraph) : ?>
+                <div class="icap-seo-just-changed-pair">
+                    <p><strong><?php esc_html_e('Before:', 'icap-seo'); ?></strong> <del><?php echo esc_html((string) ($paragraph['before'] ?? '')); ?></del></p>
+                    <p><strong><?php esc_html_e('Now:', 'icap-seo'); ?></strong> <ins><?php echo esc_html((string) ($paragraph['after'] ?? '')); ?></ins></p>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php
+    }
+}
+
 if (!function_exists('icap_seo_indexing_guidance')) {
     // What a Google Search Console coverage state means for this page, and which of the
     // plugin's fixes help. Google sends the state as display text, so it's matched on
@@ -848,7 +873,7 @@ if ($notice_code === 'remediation_apply_noop') {
     </h1>
     <p><?php esc_html_e('SEO intelligence for WordPress sites by iCapSolutions.', 'icap-seo'); ?></p>
     <?php if ($notice_code !== '' && isset($notice_map[$notice_code])) : ?>
-        <div class="notice <?php echo esc_attr(['error' => 'notice-error', 'info' => 'notice-info'][$notice_map[$notice_code]['type']] ?? 'notice-success'); ?> is-dismissible">
+        <div class="notice icap-seo-action-notice <?php echo esc_attr(['error' => 'notice-error', 'info' => 'notice-info'][$notice_map[$notice_code]['type']] ?? 'notice-success'); ?> is-dismissible">
             <p><?php echo esc_html($notice_override_message !== '' ? $notice_override_message : $notice_map[$notice_code]['message']); ?></p>
         </div>
     <?php endif; ?>
@@ -2099,6 +2124,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                                                 <input type="hidden" name="action" value="icap_seo_apply_remediation">
                                                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                                                 <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($catalog_code); ?>">
+                                                                <input type="hidden" name="return_to" value="<?php echo esc_attr('icap-seo-applied-' . $catalog_code); ?>">
                                                                 <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
                                                                 <button type="submit" class="button button-secondary"><?php esc_html_e('Fix this', 'icap-seo'); ?></button>
                                                             </form>
@@ -2280,11 +2306,31 @@ if ($notice_code === 'remediation_apply_noop') {
                     // indexing panel's "Expand the content" step lands here even when the
                     // scan didn't flag content depth.
                     $content_depth_for_indexing = isset($detail_indexing) && in_array('content_depth', $detail_indexing['fixes'], true);
+                    // Shown once, on the page the admin lands on after publishing, so they
+                    // can see exactly what changed without opening the page.
+                    $detail_last_ai_change = $notice_code !== '' && substr($notice_code, -10) === '_published'
+                        ? $this->last_ai_change_for_post($this->extract_post_id_from_content_key($selected_content_key))
+                        : null;
+                    $detail_just_published = static function (string $generator) use ($detail_last_ai_change, $notice_code): ?array {
+                        return ($detail_last_ai_change !== null && $detail_last_ai_change['generator'] === $generator && $notice_code === $generator . '_published')
+                            ? $detail_last_ai_change
+                            : null;
+                    };
+                    $content_depth_just_published = $detail_just_published('content_depth');
                     ?>
-                    <?php if (!empty($content_depth_open_issue_codes) || $content_depth_draft_html !== '' || $content_depth_for_indexing) : ?>
+                    <?php if (!empty($content_depth_open_issue_codes) || $content_depth_draft_html !== '' || $content_depth_for_indexing || $content_depth_just_published !== null) : ?>
                         <div class="icap-seo-panel" id="icap-seo-ai-content_depth">
                         <h4><?php esc_html_e('Content depth expansion', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates draft paragraphs to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft.', 'icap-seo'); ?></p>
+                        <?php if ($content_depth_just_published !== null && !empty($content_depth_just_published['html'])) : ?>
+                            <div class="icap-seo-just-changed">
+                                <p><strong><?php esc_html_e('Added to the end of the page:', 'icap-seo'); ?></strong>
+                                <?php if ($detail_permalink !== '') : ?>
+                                    <a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View the page', 'icap-seo'); ?></a>
+                                <?php endif; ?></p>
+                                <div><?php echo wp_kses_post((string) $content_depth_just_published['html']); ?></div>
+                            </div>
+                        <?php endif; ?>
                         <?php if ($content_depth_draft_html !== '') : ?>
                             <div class="icap-seo-content-depth-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                                 <p class="description"><?php
@@ -2302,6 +2348,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Writing expanded content…', 'icap-seo'); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_content_depth">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_content_depth'); ?>
@@ -2312,6 +2359,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_publish_content_depth">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_publish_content_depth'); ?>
@@ -2319,6 +2367,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_discard_content_depth">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_discard_content_depth'); ?>
@@ -2326,6 +2375,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Writing expanded content…', 'icap-seo'); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_content_depth">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_content_depth'); ?>
@@ -2340,11 +2390,13 @@ if ($notice_code === 'remediation_apply_noop') {
                         $open_detail_issues
                     ), true);
                     $readability_draft_paragraphs = isset($readability_draft_paragraphs) && is_array($readability_draft_paragraphs) ? $readability_draft_paragraphs : [];
+                    $readability_just_published = $detail_just_published('readability_rewrite');
                     ?>
-                    <?php if ($readability_open || !empty($readability_draft_paragraphs)) : ?>
+                    <?php if ($readability_open || !empty($readability_draft_paragraphs) || $readability_just_published !== null) : ?>
                         <div class="icap-seo-panel" id="icap-seo-ai-readability_rewrite">
                         <h4><?php esc_html_e('Readability rewrite', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates simplified paragraph drafts to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft.', 'icap-seo'); ?></p>
+                        <?php icap_seo_render_just_changed_paragraphs($readability_just_published, $detail_permalink, __('Rewritten on the page:', 'icap-seo')); ?>
                         <?php if (!empty($readability_draft_paragraphs)) : ?>
                             <div class="icap-seo-readability-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                                 <p class="description">
@@ -2378,6 +2430,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Simplifying paragraphs…', 'icap-seo'); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_readability_rewrite">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_readability_rewrite'); ?>
@@ -2388,6 +2441,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_publish_readability_rewrite">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_publish_readability_rewrite'); ?>
@@ -2395,6 +2449,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_discard_readability_rewrite">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_discard_readability_rewrite'); ?>
@@ -2402,6 +2457,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Simplifying paragraphs…', 'icap-seo'); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_readability_rewrite">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_readability_rewrite'); ?>
@@ -2415,6 +2471,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     ?>
                     <div class="icap-seo-panel" id="icap-seo-ai-spelling_grammar">
                     <h4><?php esc_html_e('Spelling & grammar', 'icap-seo'); ?></h4>
+                    <?php icap_seo_render_just_changed_paragraphs($detail_just_published('spelling_grammar'), $detail_permalink, __('Corrected on the page:', 'icap-seo')); ?>
                     <p class="description"><?php esc_html_e('Not tied to a scan finding - run this any time to check this page\'s prose for spelling and grammar mistakes.', 'icap-seo'); ?> <?php echo esc_html(icap_seo_ai_credit_cost_text($ai_credit_pricing, 'spelling_grammar', 3)); ?> <?php esc_html_e('Generates a draft to review before anything is saved.', 'icap-seo'); ?></p>
                     <?php if (!empty($spelling_grammar_draft_paragraphs)) : ?>
                         <div class="icap-seo-spelling-grammar-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
@@ -2449,6 +2506,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <div class="icap-seo-actions">
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Checking spelling and grammar…', 'icap-seo'); ?>">
                                 <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
+                                <input type="hidden" name="return_to" value="icap-seo-ai-spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                 <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
@@ -2459,6 +2517,7 @@ if ($notice_code === 'remediation_apply_noop') {
                         <div class="icap-seo-actions">
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_publish_spelling_grammar">
+                                <input type="hidden" name="return_to" value="icap-seo-ai-spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                 <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_publish_spelling_grammar'); ?>
@@ -2466,6 +2525,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             </form>
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_discard_spelling_grammar">
+                                <input type="hidden" name="return_to" value="icap-seo-ai-spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                 <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_discard_spelling_grammar'); ?>
@@ -2473,6 +2533,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             </form>
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Checking spelling and grammar…', 'icap-seo'); ?>">
                                 <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
+                                <input type="hidden" name="return_to" value="icap-seo-ai-spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                 <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
@@ -2484,7 +2545,7 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; // content_detail_tab === 'ai-drafts' ?>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
                     <?php if (!empty($applied_detail_issues)) : ?>
-                        <div class="icap-seo-panel">
+                        <div class="icap-seo-panel" id="icap-seo-applied">
                         <h4><?php esc_html_e('Applied recommendations (local)', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('These were applied in WordPress already. Use regenerate if you want a new AI draft.', 'icap-seo'); ?></p>
                         <ol>
@@ -2496,7 +2557,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 $issue_recommended_fix = isset($issue['recommended_fix']) ? sanitize_text_field((string) $issue['recommended_fix']) : '';
                                 $can_regenerate = in_array($issue_code, ['missing_meta_description', 'meta_description_length_out_of_range', 'title_length_out_of_range', 'missing_title_tag', 'missing_h1', 'images_missing_alt', 'images_missing_dimensions', 'images_not_lazy_loaded', 'missing_canonical', 'missing_jsonld_schema', 'limited_heading_structure', 'low_internal_linking', 'no_links_detected', 'limited_paragraph_structure'], true);
                                 ?>
-                                <li>
+                                <li id="<?php echo esc_attr('icap-seo-applied-' . $issue_code); ?>">
                                     <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
                                     <span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>
                                     <em><?php esc_html_e('Applied locally', 'icap-seo'); ?></em>
@@ -2511,6 +2572,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                                 <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
                                                 <input type="hidden" name="force_regenerate" value="1">
+                                                <input type="hidden" name="return_to" value="<?php echo esc_attr('icap-seo-applied-' . $issue_code); ?>">
                                                 <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
                                                 <button type="submit" class="button"><?php esc_html_e('Regenerate & re-apply', 'icap-seo'); ?></button>
                                             </form>
@@ -2627,6 +2689,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php foreach ($apply_all_issue_codes as $issue_code) : ?>
                                 <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
                             <?php endforeach; ?>
+                            <input type="hidden" name="return_to" value="icap-seo-applied">
                             <button type="submit" class="button button-primary" <?php disabled(empty($apply_all_issue_codes)); ?>><?php esc_html_e('Apply all open recommendations', 'icap-seo'); ?></button>
                         </form>
                     </div>

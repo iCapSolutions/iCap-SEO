@@ -47,6 +47,10 @@ class ICap_SEO_Admin
     // preview/publish/discard draft shape as readability rewrite above, reusing
     // 100% of that plumbing's pattern rather than inventing a second one.
     private const SPELLING_GRAMMAR_DRAFT_META_KEY = '_icap_seo_spelling_grammar_draft';
+    // What the current admin last published with an AI action, so the page they land
+    // back on can show the change. Per user, short-lived: it only has to survive the redirect.
+    private const LAST_AI_CHANGE_TRANSIENT_PREFIX = 'icap_seo_last_ai_change_';
+    private const LAST_AI_CHANGE_TTL = 15 * MINUTE_IN_SECONDS;
     private const SPELLING_GRAMMAR_MAX_PARAGRAPHS = 6;
     private const LOCAL_BUSINESS_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     private const LOCAL_BUSINESS_TYPES = [
@@ -2094,6 +2098,7 @@ class ICap_SEO_Admin
         }
 
         $words_added = $this->count_words_in_html($draft_html);
+        $this->remember_ai_change($post_id, 'content_depth', ['html' => $draft_html]);
         delete_post_meta($post_id, self::CONTENT_DEPTH_DRAFT_META_KEY);
         delete_post_meta($post_id, self::CONTENT_DEPTH_DRAFT_WORD_COUNT_META_KEY);
 
@@ -2209,6 +2214,7 @@ class ICap_SEO_Admin
 
         $blocks = $this->split_content_into_paragraph_blocks((string) $post->post_content);
         $paragraphs_updated = 0;
+        $changed_paragraphs = [];
         foreach ($draft_paragraphs as $entry) {
             if (!is_array($entry)) {
                 continue;
@@ -2238,6 +2244,7 @@ class ICap_SEO_Admin
             }
             $blocks[$block_index] = $updated_block;
             $paragraphs_updated++;
+            $changed_paragraphs[] = ['before' => $original_text, 'after' => $rewritten_text];
         }
 
         if ($paragraphs_updated === 0) {
@@ -2260,6 +2267,7 @@ class ICap_SEO_Admin
         }
 
         delete_post_meta($post_id, self::READABILITY_DRAFT_META_KEY);
+        $this->remember_ai_change($post_id, 'readability_rewrite', ['paragraphs' => $changed_paragraphs]);
 
         $this->mark_issue_codes_applied($post_id, self::READABILITY_ISSUE_CODES);
 
@@ -2371,6 +2379,7 @@ class ICap_SEO_Admin
 
         $blocks = $this->split_content_into_paragraph_blocks((string) $post->post_content);
         $paragraphs_updated = 0;
+        $changed_paragraphs = [];
         foreach ($draft_paragraphs as $entry) {
             if (!is_array($entry)) {
                 continue;
@@ -2400,6 +2409,7 @@ class ICap_SEO_Admin
             }
             $blocks[$block_index] = $updated_block;
             $paragraphs_updated++;
+            $changed_paragraphs[] = ['before' => $original_text, 'after' => $corrected_text];
         }
 
         if ($paragraphs_updated === 0) {
@@ -2422,6 +2432,7 @@ class ICap_SEO_Admin
         }
 
         delete_post_meta($post_id, self::SPELLING_GRAMMAR_DRAFT_META_KEY);
+        $this->remember_ai_change($post_id, 'spelling_grammar', ['paragraphs' => $changed_paragraphs]);
 
         $this->store_remediation_history_entry(
             $post_id,
@@ -5966,6 +5977,29 @@ class ICap_SEO_Admin
      * happened on. Handled centrally here (not per call site) so any future
      * content-detail form gets this for free just by including the hidden field.
      */
+    private function remember_ai_change(int $post_id, string $generator, array $change): void
+    {
+        set_transient(
+            self::LAST_AI_CHANGE_TRANSIENT_PREFIX . get_current_user_id(),
+            array_merge($change, ['post_id' => $post_id, 'generator' => $generator]),
+            self::LAST_AI_CHANGE_TTL
+        );
+    }
+
+    /**
+     * The change the current admin just published on this post, if any.
+     *
+     * @return array{generator: string, html?: string, paragraphs?: array}|null
+     */
+    public function last_ai_change_for_post(int $post_id): ?array
+    {
+        $change = get_transient(self::LAST_AI_CHANGE_TRANSIENT_PREFIX . get_current_user_id());
+        if (!is_array($change) || $post_id <= 0 || (int) ($change['post_id'] ?? 0) !== $post_id) {
+            return null;
+        }
+        return $change;
+    }
+
     private function redirect_with_notice(string $notice_code, string $tab, array $extra_query_args = []): void
     {
         // A suspended site gets account_suspended from nearly every service route.
@@ -5991,6 +6025,12 @@ class ICap_SEO_Admin
             ),
             admin_url('admin.php')
         );
+        // Lands back on the panel the form was in, not the top of the page.
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- same nonce-protected forms as detail_tab above.
+        $return_to = isset($_POST['return_to']) ? sanitize_key((string) wp_unslash($_POST['return_to'])) : '';
+        if (strpos($return_to, 'icap-seo-') === 0) {
+            $url .= '#' . $return_to;
+        }
 
         wp_safe_redirect($url);
         exit;

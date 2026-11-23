@@ -1110,3 +1110,54 @@ a.icap-seo-ai-card-state {
 .icap-seo-indexing-steps .description {
     display: block;
 }
+
+.icap-seo-landed {
+    scroll-margin-top: 48px;
+    animation: icap-seo-landed-glow 2.4s ease-out;
+}
+
+@keyframes icap-seo-landed-glow {
+    0%, 40% {
+        box-shadow: 0 0 0 3px #b9a6f5;
+    }
+    100% {
+        box-shadow: 0 0 0 3px transparent;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .icap-seo-landed {
+        animation: none;
+        box-shadow: 0 0 0 3px #b9a6f5;
+    }
+}
+
+.icap-seo-just-changed {
+    margin: 8px 0;
+    padding: 12px;
+    border: 1px solid #b9a6f5;
+    border-left-width: 4px;
+    border-radius: 4px;
+    background: #f7f3ff;
+}
+
+.icap-seo-just-changed-pair {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e6defb;
+}
+
+.icap-seo-just-changed-pair:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.icap-seo-just-changed del {
+    color: #8a2424;
+}
+
+.icap-seo-just-changed ins {
+    text-decoration: none;
+    background: #e3f6ea;
+}
