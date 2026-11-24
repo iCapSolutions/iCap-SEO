@@ -1660,9 +1660,37 @@ if ($notice_code === 'remediation_apply_noop') {
                         $detail_gsc_inspect_url = ($detail_gsc_property !== '' && $detail_permalink !== '')
                             ? add_query_arg(['resource_id' => rawurlencode($detail_gsc_property), 'id' => rawurlencode($detail_permalink)], 'https://search.google.com/search-console/inspect')
                             : 'https://search.google.com/search-console';
+                        // Content expanded since Google last crawled the page has done its job;
+                        // what's left is asking Google to look again, so don't suggest it twice.
+                        $detail_indexing_crawled_ts = !empty($detail_google_verification['last_crawl_time']) ? strtotime((string) $detail_google_verification['last_crawl_time']) : 0;
+                        $detail_content_expanded = null;
+                        foreach ((isset($remediation_audit_entries) && is_array($remediation_audit_entries) ? $remediation_audit_entries : []) as $audit_entry) {
+                            if (empty($audit_entry['content_depth_changed']) || empty($audit_entry['timestamp'])) {
+                                continue;
+                            }
+                            $expanded_ts = strtotime(get_gmt_from_date((string) $audit_entry['timestamp']) . ' UTC');
+                            if ($expanded_ts && $expanded_ts > $detail_indexing_crawled_ts && ($detail_content_expanded === null || $expanded_ts > $detail_content_expanded['ts'])) {
+                                $detail_content_expanded = ['ts' => $expanded_ts, 'words' => (int) ($audit_entry['content_depth_words_added'] ?? 0)];
+                            }
+                        }
+                        if ($detail_content_expanded !== null) {
+                            $detail_indexing['fixes'] = array_values(array_diff($detail_indexing['fixes'], ['content_depth']));
+                        }
                         // Each step links to the plugin tool that does it; steps whose finding
                         // isn't open on this page are left out rather than shown as no-ops.
                         $detail_indexing_steps = [];
+                        if ($detail_content_expanded !== null) {
+                            $detail_indexing_steps[] = [
+                                'label' => sprintf(
+                                    /* translators: 1: number of words, 2: date */
+                                    __('Done: %1$d words added with AI on %2$s, after Google\'s last visit', 'icap-seo'),
+                                    $detail_content_expanded['words'],
+                                    date_i18n(get_option('date_format'), $detail_content_expanded['ts'])
+                                ),
+                                'href' => '',
+                                'note' => '',
+                            ];
+                        }
                         foreach ($detail_indexing['fixes'] as $indexing_fix) {
                             if ($indexing_fix === 'content_depth') {
                                 $detail_indexing_steps[] = [
@@ -1710,7 +1738,11 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <ol class="icap-seo-indexing-steps">
                                     <?php foreach ($detail_indexing_steps as $indexing_step) : ?>
                                         <li>
+                                            <?php if ($indexing_step['href'] === '') : ?>
+                                                <span class="dashicons dashicons-yes-alt" aria-hidden="true"></span> <?php echo esc_html($indexing_step['label']); ?>
+                                            <?php else : ?>
                                             <a href="<?php echo esc_url($indexing_step['href']); ?>"><?php echo esc_html($indexing_step['label']); ?></a>
+                                            <?php endif; ?>
                                             <?php if ($indexing_step['note'] !== '') : ?>
                                                 <span class="icap-seo-ai-badge"><?php echo esc_html($indexing_step['note']); ?></span>
                                             <?php endif; ?>
