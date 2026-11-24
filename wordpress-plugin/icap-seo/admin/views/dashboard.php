@@ -1683,7 +1683,11 @@ if ($notice_code === 'remediation_apply_noop') {
                             </div>
                             <div class="icap-seo-card-text">
                                 <h3><?php esc_html_e('Status', 'icap-seo'); ?></h3>
-                                <p class="icap-seo-card-value"><?php echo esc_html($detail_status !== '' ? $detail_status : 'n/a'); ?></p>
+                                <?php $detail_status_object = $detail_status !== '' ? get_post_status_object($detail_status) : null; ?>
+                                <p class="icap-seo-card-value"><?php echo esc_html($detail_status_object !== null ? $detail_status_object->label : ($detail_status !== '' ? $detail_status : 'n/a')); ?></p>
+                                <?php if (!empty($content_detail_is_local)) : ?>
+                                    <p class="icap-seo-card-subtext"><?php esc_html_e('Checked on this site', 'icap-seo'); ?></p>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="icap-seo-card icap-seo-card--icon">

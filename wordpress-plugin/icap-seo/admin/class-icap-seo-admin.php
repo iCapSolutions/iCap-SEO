@@ -899,7 +899,7 @@ class ICap_SEO_Admin
 
         return [
             'title' => (string) $local_detail['title'],
-            'status' => __('Checked on this site', 'icap-seo'),
+            'status' => (string) get_post_status($post_id),
             'post_type' => (string) get_post_type($post_id),
             'permalink' => (string) $local_detail['permalink'],
             'overall_score' => ICap_SEO_Local_Checks::score_for_detail($local_detail),
