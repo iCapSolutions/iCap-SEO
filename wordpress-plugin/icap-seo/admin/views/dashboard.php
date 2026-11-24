@@ -1640,7 +1640,8 @@ if ($notice_code === 'remediation_apply_noop') {
                     // the same layout; when there's no data they say why instead of vanishing.
                     $detail_google_connected = ($google_connection_status['status'] ?? '') === 'connected';
                     $detail_gsc_property = (string) ($google_connection_status['search_console_property_url'] ?? '');
-                    $detail_is_private = in_array($detail_status, ['private', 'draft', 'pending', 'future'], true);
+                    // From WordPress itself: on-site detail shows a label in the Status card, not the post status.
+                    $detail_is_private = in_array((string) get_post_status($this->extract_post_id_from_content_key($selected_content_key)), ['private', 'draft', 'pending', 'future'], true);
                     $detail_google_empty_reason = static function (bool $source_connected, string $no_data) use ($service_is_registered, $detail_is_private, $detail_google_connected): string {
                         if (!$service_is_registered) {
                             return __('Register this site to see Google data here', 'icap-seo');
