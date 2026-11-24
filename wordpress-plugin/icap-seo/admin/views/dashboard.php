@@ -1636,6 +1636,23 @@ if ($notice_code === 'remediation_apply_noop') {
                     $detail_google_analytics = isset($content_score_detail['google_analytics']) && is_array($content_score_detail['google_analytics'])
                         ? $content_score_detail['google_analytics']
                         : null;
+                    // The Google cards and the indexing panel always show, so every page has
+                    // the same layout; when there's no data they say why instead of vanishing.
+                    $detail_google_connected = ($google_connection_status['status'] ?? '') === 'connected';
+                    $detail_gsc_property = (string) ($google_connection_status['search_console_property_url'] ?? '');
+                    $detail_is_private = in_array($detail_status, ['private', 'draft', 'pending', 'future'], true);
+                    $detail_google_empty_reason = static function (bool $source_connected, string $no_data) use ($service_is_registered, $detail_is_private, $detail_google_connected): string {
+                        if (!$service_is_registered) {
+                            return __('Register this site to see Google data here', 'icap-seo');
+                        }
+                        if ($detail_is_private) {
+                            return __('Google doesn\'t see pages that aren\'t public', 'icap-seo');
+                        }
+                        if (!$detail_google_connected || !$source_connected) {
+                            return __('Connect Google on the Account tab', 'icap-seo');
+                        }
+                        return $no_data;
+                    };
                     ?>
                     <div class="icap-seo-cards">
                         <div class="icap-seo-card icap-seo-card--icon icap-seo-card--page">
@@ -1707,6 +1724,17 @@ if ($notice_code === 'remediation_apply_noop') {
                                     </p>
                                 </div>
                             </div>
+                        <?php else : ?>
+                            <div class="icap-seo-card icap-seo-card--icon is-empty">
+                                <div class="icap-seo-card-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                                </div>
+                                <div class="icap-seo-card-text">
+                                    <h3><?php esc_html_e('Search Console (28d)', 'icap-seo'); ?></h3>
+                                    <p class="icap-seo-card-value icap-seo-card-value--muted"><?php esc_html_e('No data', 'icap-seo'); ?></p>
+                                    <p class="icap-seo-card-subtext"><?php echo esc_html($detail_google_empty_reason($detail_gsc_property !== '', __('This page hasn\'t appeared in Google searches in the last 28 days', 'icap-seo'))); ?></p>
+                                </div>
+                            </div>
                         <?php endif; ?>
                         <?php if ($detail_google_analytics !== null) : ?>
                             <div class="icap-seo-card icap-seo-card--icon">
@@ -1736,6 +1764,17 @@ if ($notice_code === 'remediation_apply_noop') {
                                         ));
                                         ?>
                                     </p>
+                                </div>
+                            </div>
+                        <?php else : ?>
+                            <div class="icap-seo-card icap-seo-card--icon is-empty">
+                                <div class="icap-seo-card-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+                                </div>
+                                <div class="icap-seo-card-text">
+                                    <h3><?php esc_html_e('Google Analytics (28d)', 'icap-seo'); ?></h3>
+                                    <p class="icap-seo-card-value icap-seo-card-value--muted"><?php esc_html_e('No data', 'icap-seo'); ?></p>
+                                    <p class="icap-seo-card-subtext"><?php echo esc_html($detail_google_empty_reason(!empty($google_connection_status['analytics_property_id']), __('No visits to this page in the last 28 days', 'icap-seo'))); ?></p>
                                 </div>
                             </div>
                         <?php endif; ?>
@@ -1777,8 +1816,28 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; ?>
                     <?php
                     $detail_coverage_state = $detail_google_verification !== null ? (string) ($detail_google_verification['coverage_state'] ?? '') : '';
+                    $detail_gsc_inspect_url = ($detail_gsc_property !== '' && $detail_permalink !== '')
+                        ? add_query_arg(['resource_id' => rawurlencode($detail_gsc_property), 'id' => rawurlencode($detail_permalink)], 'https://search.google.com/search-console/inspect')
+                        : 'https://search.google.com/search-console';
                     ?>
-                    <?php if ($detail_coverage_state !== '') : ?>
+                    <?php if ($detail_coverage_state === '') : ?>
+                        <div class="icap-seo-panel icap-seo-indexing is-unknown" id="icap-seo-indexing">
+                            <h3><?php esc_html_e('Google indexing', 'icap-seo'); ?></h3>
+                            <p class="icap-seo-indexing-state"><?php esc_html_e('No report from Google yet', 'icap-seo'); ?></p>
+                            <p>
+                                <?php
+                                $detail_indexing_unknown_reason = $detail_google_empty_reason(
+                                    $detail_gsc_property !== '',
+                                    __('Google hasn\'t reported on this page yet. iCap SEO asks Google about each page during scans; new or rarely visited pages can take a while to show up.', 'icap-seo')
+                                );
+                                echo esc_html($detail_indexing_unknown_reason);
+                                ?>
+                            </p>
+                            <?php if ($service_is_registered && !$detail_is_private && $detail_google_connected && $detail_gsc_property !== '') : ?>
+                                <p><a href="<?php echo esc_url($detail_gsc_inspect_url); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Check this page in Search Console', 'icap-seo'); ?></a></p>
+                            <?php endif; ?>
+                        </div>
+                    <?php else : ?>
                         <?php
                         $detail_indexing = icap_seo_indexing_guidance($detail_coverage_state);
                         $detail_indexing_checked = (string) ($detail_google_verification['checked_at'] ?? '');
@@ -1791,10 +1850,6 @@ if ($notice_code === 'remediation_apply_noop') {
                             ['page' => 'icap-seo', 'tab' => 'content-scores', 'content_key' => $selected_content_key],
                             admin_url('admin.php')
                         );
-                        $detail_gsc_property = (string) ($google_connection_status['search_console_property_url'] ?? '');
-                        $detail_gsc_inspect_url = ($detail_gsc_property !== '' && $detail_permalink !== '')
-                            ? add_query_arg(['resource_id' => rawurlencode($detail_gsc_property), 'id' => rawurlencode($detail_permalink)], 'https://search.google.com/search-console/inspect')
-                            : 'https://search.google.com/search-console';
                         // Content expanded since Google last crawled the page has done its job;
                         // what's left is asking Google to look again, so don't suggest it twice.
                         $detail_indexing_crawled_ts = !empty($detail_google_verification['last_crawl_time']) ? strtotime((string) $detail_google_verification['last_crawl_time']) : 0;

@@ -145,6 +145,7 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 * Content depth expansion now reads the whole page before writing, so it adds new material instead of repeating what's further down the page.
 * Once content has been expanded since Google's last visit, the indexing panel marks that step done instead of suggesting it again.
 * A page's details screen now starts with one row of cards: the page (with a link to view it), its type, status and overall score.
+* Every page's details screen now has the same layout: the Search Console and Google Analytics cards and the Google indexing panel always show, and say why when there's no data yet.
 * When a page's sentences already pass but its reading-ease score is still low, the Readability rewrite explains that word choice is what's left.
 * Fixed: a Readability rewrite, Spelling & grammar or image alt text draft could put an AI answer on the wrong paragraph or image when the AI left blank lines in its reply. Drafts are now only built when every answer lines up with its paragraph or image, and each rewrite is checked against its original.
 

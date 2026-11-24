@@ -1165,3 +1165,11 @@ a.icap-seo-ai-card-state {
 .icap-seo-card--page .icap-seo-card-value {
     overflow-wrap: anywhere;
 }
+
+.icap-seo-indexing.is-unknown {
+    border-left-color: #c3c4c7;
+}
+
+.icap-seo-card.is-empty .icap-seo-card-icon {
+    opacity: 0.6;
+}
