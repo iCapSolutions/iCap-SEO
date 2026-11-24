@@ -3219,22 +3219,9 @@ class ICap_SEO_Admin
             return [];
         }
 
-        // Deliberately not trim()-ing the raw response before splitting: a leading
-        // blank line here is a real (if malformed) empty slot for image 1, and
-        // trimming it away would silently shift every later alt text onto the
-        // wrong image. Only the individual lines get trimmed below.
-        $lines = preg_split('/\r\n|\r|\n/', (string) $result['data']['draft_text']);
-        if (!is_array($lines)) {
-            return [];
-        }
-
         $alt_texts = [];
-        foreach ($lines as $line) {
-            $line = trim((string) $line);
-            // Strip numbering/bullet/quote artifacts the model might still include
-            // despite the "no numbering" instruction (e.g. "1. ", "- ", "\"").
-            $line = preg_replace('/^[\s\-\*\d\.\)]+/', '', $line);
-            $line = trim(wp_strip_all_tags((string) $line), " \t\n\r\0\x0B\"'");
+        foreach ($this->ai_lines_for_items((string) $result['data']['draft_text'], count($image_urls)) as $line) {
+            $line = trim(wp_strip_all_tags($line));
             $alt_texts[] = $line === '' ? '' : $this->trim_title_to_max_length($line, 125);
         }
 
@@ -4100,6 +4087,57 @@ class ICap_SEO_Admin
         return preg_match('/<[a-z][^>]*>/i', $html) !== 1;
     }
 
+    /**
+     * The AI's one-line-per-item answer, matched to the items it was sent.
+     *
+     * Models often put a blank line between items despite being told not to.
+     * Treating those as empty slots shifted every later answer onto the wrong
+     * item (a paragraph replaced by the rewrite of another), so blank lines are
+     * dropped and the answer is only used when it has exactly one line per item.
+     * Anything else returns [] rather than guess which line belongs where.
+     *
+     * @return string[]
+     */
+    private function ai_lines_for_items(string $draft_text, int $expected_count): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/', $draft_text);
+        if (!is_array($lines) || $expected_count <= 0) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($lines as $line) {
+            // List markers the model may add despite "no numbering": "1. ", "2) ", "- ", "* ".
+            // The trailing space is required, so text that starts with a number stays whole.
+            $line = preg_replace('/^\s*(?:\d+[.)]|[-*\x{2022}])\s+/u', '', trim((string) $line));
+            $line = trim((string) $line, " \t\n\r\0\x0B\"'");
+            if ($line !== '') {
+                $items[] = $line;
+            }
+        }
+
+        return count($items) === $expected_count ? $items : [];
+    }
+
+    /**
+     * Whether a rewrite is recognisably the same paragraph: the share of the
+     * original's words (4+ letters) it still uses. A last check against a rewrite
+     * landing on the wrong paragraph, since the length check can't see that.
+     */
+    private function rewrite_matches_original(string $original, string $rewrite, float $min_shared): bool
+    {
+        $words = static function (string $text): array {
+            preg_match_all('/[a-z]{4,}/', strtolower($text), $matches);
+            return array_unique($matches[0]);
+        };
+        $original_words = $words($original);
+        if (count($original_words) < 4) {
+            return true;
+        }
+        $shared = count(array_intersect($original_words, $words($rewrite)));
+        return $shared / count($original_words) >= $min_shared;
+    }
+
     private function build_readability_paragraphs_via_ai(string $content_key, array $paragraph_texts): array
     {
         if ($content_key === '' || empty($paragraph_texts)) {
@@ -4118,22 +4156,7 @@ class ICap_SEO_Admin
             return [];
         }
 
-        // Not trim()-ing the raw response before splitting, same reasoning as
-        // image_alt_text: a leading blank line is a real empty slot, not noise to
-        // discard, and trimming it away would shift every later rewrite by one.
-        $lines = preg_split('/\r\n|\r|\n/', (string) $result['data']['draft_text']);
-        if (!is_array($lines)) {
-            return [];
-        }
-
-        $rewrites = [];
-        foreach ($lines as $line) {
-            $line = trim((string) $line);
-            $line = preg_replace('/^[\s\-\*\d\.\)]+/', '', $line);
-            $rewrites[] = trim((string) $line, " \t\n\r\0\x0B\"'");
-        }
-
-        return $rewrites;
+        return $this->ai_lines_for_items((string) $result['data']['draft_text'], count($paragraph_texts));
     }
 
     /**
@@ -4200,7 +4223,7 @@ class ICap_SEO_Admin
                     continue;
                 }
             }
-            if (strcasecmp($original_text, $rewritten_text) === 0) {
+            if (strcasecmp($original_text, $rewritten_text) === 0 || !$this->rewrite_matches_original($original_text, $rewritten_text, 0.3)) {
                 continue;
             }
 
@@ -4243,21 +4266,7 @@ class ICap_SEO_Admin
             return [];
         }
 
-        // Same "don't trim first" reasoning as the readability/image-alt drafts -
-        // a leading blank line is a real empty slot, not noise.
-        $lines = preg_split('/\r\n|\r|\n/', (string) $result['data']['draft_text']);
-        if (!is_array($lines)) {
-            return [];
-        }
-
-        $corrections = [];
-        foreach ($lines as $line) {
-            $line = trim((string) $line);
-            $line = preg_replace('/^[\s\-\*\d\.\)]+/', '', $line);
-            $corrections[] = trim((string) $line, " \t\n\r\0\x0B\"'");
-        }
-
-        return $corrections;
+        return $this->ai_lines_for_items((string) $result['data']['draft_text'], count($paragraph_texts));
     }
 
     /**
@@ -4326,7 +4335,7 @@ class ICap_SEO_Admin
             // Case-SENSITIVE identity check, unlike readability's case-insensitive
             // one - a capitalization fix is a real grammar correction here, not a
             // no-op to discard.
-            if ($original_text === $corrected_text) {
+            if ($original_text === $corrected_text || !$this->rewrite_matches_original($original_text, $corrected_text, 0.7)) {
                 continue;
             }
 

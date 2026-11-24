@@ -143,6 +143,7 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 * The buttons for each AI improvement, and for fixing everything at once, now sit inside their own box.
 * Content depth expansion now reads the whole page before writing, so it adds new material instead of repeating what's further down the page.
 * Once content has been expanded since Google's last visit, the indexing panel marks that step done instead of suggesting it again.
+* Fixed: a Readability rewrite, Spelling & grammar or image alt text draft could put an AI answer on the wrong paragraph or image when the AI left blank lines in its reply. Drafts are now only built when every answer lines up with its paragraph or image, and each rewrite is checked against its original.
 
 = 0.1.159 =
 * The iCap SEO panel on the edit screen now shows the page's Content Scores score, with a Check now button to re-check the page.
