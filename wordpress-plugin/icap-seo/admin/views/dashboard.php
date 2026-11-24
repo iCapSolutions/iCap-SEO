@@ -2343,7 +2343,6 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <div><?php echo wp_kses_post($content_depth_draft_html); ?></div>
                             </div>
                         <?php endif; ?>
-                        </div>
                         <?php if ($content_depth_draft_html === '') : ?>
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Writing expanded content…', 'icap-seo'); ?>">
@@ -2383,6 +2382,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </form>
                             </div>
                         <?php endif; ?>
+                        </div>
                     <?php endif; ?>
                     <?php
                     $readability_open = in_array('readability_score_low', array_map(
@@ -2425,7 +2425,6 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                        </div>
                         <?php if (empty($readability_draft_paragraphs)) : ?>
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Simplifying paragraphs…', 'icap-seo'); ?>">
@@ -2465,6 +2464,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </form>
                             </div>
                         <?php endif; ?>
+                        </div>
                     <?php endif; ?>
                     <?php
                     $spelling_grammar_draft_paragraphs = isset($spelling_grammar_draft_paragraphs) && is_array($spelling_grammar_draft_paragraphs) ? $spelling_grammar_draft_paragraphs : [];
@@ -2501,7 +2501,6 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
-                    </div>
                     <?php if (empty($spelling_grammar_draft_paragraphs)) : ?>
                         <div class="icap-seo-actions">
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Checking spelling and grammar…', 'icap-seo'); ?>">
@@ -2541,6 +2540,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             </form>
                         </div>
                     <?php endif; ?>
+                    </div>
                     <?php endif; // service_is_premium ?>
                     <?php endif; // content_detail_tab === 'ai-drafts' ?>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
@@ -2586,7 +2586,6 @@ if ($notice_code === 'remediation_apply_noop') {
                     <div class="icap-seo-panel">
                     <h4><?php esc_html_e('Fix everything at once', 'icap-seo'); ?></h4>
                     <p class="description"><?php esc_html_e('Applies every fix on this page that doesn\'t need your review.', 'icap-seo'); ?></p>
-                    </div>
                     <?php if (!empty($content_detail_is_local)) : ?>
                         <?php // The proposed-changes preview comes from the iCap SEO service; on-site detail applies fixes directly. ?>
                     <?php elseif ($remediation_preview_error !== '') : ?>
@@ -2692,6 +2691,7 @@ if ($notice_code === 'remediation_apply_noop') {
                             <input type="hidden" name="return_to" value="icap-seo-applied">
                             <button type="submit" class="button button-primary" <?php disabled(empty($apply_all_issue_codes)); ?>><?php esc_html_e('Apply all open recommendations', 'icap-seo'); ?></button>
                         </form>
+                    </div>
                     </div>
                     <?php endif; // content_detail_tab === 'recommendations' ?>
                     <?php if ($content_detail_tab === 'history') : ?>
