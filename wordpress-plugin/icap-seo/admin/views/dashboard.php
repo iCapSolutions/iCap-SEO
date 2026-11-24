@@ -1870,6 +1870,16 @@ if ($notice_code === 'remediation_apply_noop') {
                     $detail_ai_actions = empty($content_detail_is_posts_page)
                         ? icap_seo_ai_actions_for_issues($open_detail_issue_codes)
                         : array_values(array_intersect(icap_seo_ai_actions_for_issues($open_detail_issue_codes), ['page_title', 'meta_description']));
+                    // Google not indexing the page for thin content counts as a suggestion too,
+                    // so the card, the tab count and the indexing panel agree.
+                    if (
+                        empty($content_detail_is_posts_page)
+                        && isset($detail_indexing)
+                        && in_array('content_depth', $detail_indexing['fixes'], true)
+                        && !in_array('content_depth', $detail_ai_actions, true)
+                    ) {
+                        $detail_ai_actions = array_values(array_intersect(array_keys(icap_seo_ai_action_catalog()), array_merge($detail_ai_actions, ['content_depth'])));
+                    }
                     $ai_action_catalog = icap_seo_ai_action_catalog();
                     $ai_drafts_tab_url = add_query_arg(
                         [
