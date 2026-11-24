@@ -1625,23 +1625,132 @@ if ($notice_code === 'remediation_apply_noop') {
                         }
                     }
                     ?>
-                    <div class="icap-seo-panel">
-                    <p class="icap-seo-card-value"><?php echo esc_html($detail_title); ?></p>
                     <?php
-                    $detail_google_verification = isset($content_score_detail['google_verification']) && is_array($content_score_detail['google_verification'])
-                        ? $content_score_detail['google_verification']
+                    // Page/Type/Status/Overall score plus per-page Search Console/Analytics
+                    // stats as icon cards, matching the Overview tab's .icap-seo-cards
+                    // grid pattern rather than the plain meta-line text used elsewhere -
+                    // these are scannable at-a-glance stats, not a single label:value line.
+                    $detail_google_performance = isset($content_score_detail['google_performance']) && is_array($content_score_detail['google_performance'])
+                        ? $content_score_detail['google_performance']
+                        : null;
+                    $detail_google_analytics = isset($content_score_detail['google_analytics']) && is_array($content_score_detail['google_analytics'])
+                        ? $content_score_detail['google_analytics']
                         : null;
                     ?>
-                    <?php if ($detail_permalink !== '') : ?>
-                        <p><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View published URL', 'icap-seo'); ?></a></p>
-                    <?php endif; ?>
+                    <div class="icap-seo-cards">
+                        <div class="icap-seo-card icap-seo-card--icon icap-seo-card--page">
+                            <div class="icap-seo-card-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h10"/><path d="M4 18h7"/></svg>
+                            </div>
+                            <div class="icap-seo-card-text">
+                                <h3><?php esc_html_e('Page', 'icap-seo'); ?></h3>
+                                <p class="icap-seo-card-value"><?php echo esc_html($detail_title); ?></p>
+                                <?php if ($detail_permalink !== '') : ?>
+                                    <p class="icap-seo-card-subtext"><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View published page', 'icap-seo'); ?></a></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="icap-seo-card icap-seo-card--icon">
+                            <div class="icap-seo-card-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>
+                            </div>
+                            <div class="icap-seo-card-text">
+                                <h3><?php esc_html_e('Type', 'icap-seo'); ?></h3>
+                                <p class="icap-seo-card-value"><?php echo esc_html($detail_type !== '' ? $detail_type : 'n/a'); ?></p>
+                            </div>
+                        </div>
+                        <div class="icap-seo-card icap-seo-card--icon">
+                            <div class="icap-seo-card-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 6-6"/></svg>
+                            </div>
+                            <div class="icap-seo-card-text">
+                                <h3><?php esc_html_e('Status', 'icap-seo'); ?></h3>
+                                <p class="icap-seo-card-value"><?php echo esc_html($detail_status !== '' ? $detail_status : 'n/a'); ?></p>
+                            </div>
+                        </div>
+                        <div class="icap-seo-card icap-seo-card--icon">
+                            <div class="icap-seo-card-icon" aria-hidden="true" style="background: <?php echo esc_attr(ICap_SEO_Admin::score_color($detail_score)); ?>;">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>
+                            </div>
+                            <div class="icap-seo-card-text">
+                                <h3><?php esc_html_e('Overall score', 'icap-seo'); ?></h3>
+                                <p class="icap-seo-card-value" style="color: <?php echo esc_attr(ICap_SEO_Admin::score_text_color($detail_score)); ?>;"><?php echo esc_html(sprintf('%d/100', $detail_score)); ?></p>
+                            </div>
+                        </div>
+                        <?php if ($detail_google_performance !== null) : ?>
+                            <div class="icap-seo-card icap-seo-card--icon">
+                                <div class="icap-seo-card-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                                </div>
+                                <div class="icap-seo-card-text">
+                                    <h3><?php esc_html_e('Search Console (28d)', 'icap-seo'); ?></h3>
+                                    <p class="icap-seo-card-value">
+                                        <?php
+                                        $detail_gsc_clicks = (int) $detail_google_performance['clicks'];
+                                        echo esc_html(sprintf(
+                                            /* translators: %d: clicks in the last 28 days */
+                                            _n('%d click', '%d clicks', $detail_gsc_clicks, 'icap-seo'),
+                                            $detail_gsc_clicks
+                                        ));
+                                        ?>
+                                    </p>
+                                    <p class="icap-seo-card-subtext">
+                                        <?php
+                                        echo esc_html(sprintf(
+                                            /* translators: 1: impressions, 2: CTR percentage, 3: average position, all from Google Search Console, last 28 days */
+                                            __('%1$d impressions · %2$s CTR · avg position %3$s', 'icap-seo'),
+                                            (int) $detail_google_performance['impressions'],
+                                            number_format((float) $detail_google_performance['ctr'] * 100, 1) . '%',
+                                            number_format((float) $detail_google_performance['position'], 1)
+                                        ));
+                                        ?>
+                                    </p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($detail_google_analytics !== null) : ?>
+                            <div class="icap-seo-card icap-seo-card--icon">
+                                <div class="icap-seo-card-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+                                </div>
+                                <div class="icap-seo-card-text">
+                                    <h3><?php esc_html_e('Google Analytics (28d)', 'icap-seo'); ?></h3>
+                                    <p class="icap-seo-card-value">
+                                        <?php
+                                        $detail_ga_sessions = (int) $detail_google_analytics['sessions'];
+                                        echo esc_html(sprintf(
+                                            /* translators: %d: sessions in the last 28 days */
+                                            _n('%d session', '%d sessions', $detail_ga_sessions, 'icap-seo'),
+                                            $detail_ga_sessions
+                                        ));
+                                        ?>
+                                    </p>
+                                    <p class="icap-seo-card-subtext">
+                                        <?php
+                                        echo esc_html(sprintf(
+                                            /* translators: 1: page views, 2: engagement rate percentage, 3: average session duration in seconds, all from Google Analytics, last 28 days */
+                                            __('%1$d page views · %2$s engagement · %3$ss avg duration', 'icap-seo'),
+                                            (int) $detail_google_analytics['page_views'],
+                                            number_format((float) $detail_google_analytics['engagement_rate'] * 100, 1) . '%',
+                                            number_format((float) $detail_google_analytics['avg_session_duration'], 0)
+                                        ));
+                                        ?>
+                                    </p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                     <?php if ($current_meta_description_value !== '') : ?>
                         <p class="description">
                             <strong><?php esc_html_e('Current meta description:', 'icap-seo'); ?></strong>
                             <?php echo esc_html($current_meta_description_value); ?>
                         </p>
                     <?php endif; ?>
-                    </div>
+                    <?php
+                    $detail_google_verification = isset($content_score_detail['google_verification']) && is_array($content_score_detail['google_verification'])
+                        ? $content_score_detail['google_verification']
+                        : null;
+                    ?>
                     <?php
                     // After an AI change is published the admin lands at the top of this
                     // page; show what changed here, once, with a link to see it live.
@@ -1782,109 +1891,6 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
-                    <?php
-                    // Type/Status/Overall score plus per-page Search Console/Analytics
-                    // stats as icon cards, matching the Overview tab's .icap-seo-cards
-                    // grid pattern rather than the plain meta-line text used elsewhere -
-                    // these are scannable at-a-glance stats, not a single label:value line.
-                    $detail_google_performance = isset($content_score_detail['google_performance']) && is_array($content_score_detail['google_performance'])
-                        ? $content_score_detail['google_performance']
-                        : null;
-                    $detail_google_analytics = isset($content_score_detail['google_analytics']) && is_array($content_score_detail['google_analytics'])
-                        ? $content_score_detail['google_analytics']
-                        : null;
-                    ?>
-                    <div class="icap-seo-cards">
-                        <div class="icap-seo-card icap-seo-card--icon">
-                            <div class="icap-seo-card-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>
-                            </div>
-                            <div class="icap-seo-card-text">
-                                <h3><?php esc_html_e('Type', 'icap-seo'); ?></h3>
-                                <p class="icap-seo-card-value"><?php echo esc_html($detail_type !== '' ? $detail_type : 'n/a'); ?></p>
-                            </div>
-                        </div>
-                        <div class="icap-seo-card icap-seo-card--icon">
-                            <div class="icap-seo-card-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 6-6"/></svg>
-                            </div>
-                            <div class="icap-seo-card-text">
-                                <h3><?php esc_html_e('Status', 'icap-seo'); ?></h3>
-                                <p class="icap-seo-card-value"><?php echo esc_html($detail_status !== '' ? $detail_status : 'n/a'); ?></p>
-                            </div>
-                        </div>
-                        <div class="icap-seo-card icap-seo-card--icon">
-                            <div class="icap-seo-card-icon" aria-hidden="true" style="background: <?php echo esc_attr(ICap_SEO_Admin::score_color($detail_score)); ?>;">
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>
-                            </div>
-                            <div class="icap-seo-card-text">
-                                <h3><?php esc_html_e('Overall score', 'icap-seo'); ?></h3>
-                                <p class="icap-seo-card-value" style="color: <?php echo esc_attr(ICap_SEO_Admin::score_text_color($detail_score)); ?>;"><?php echo esc_html(sprintf('%d/100', $detail_score)); ?></p>
-                            </div>
-                        </div>
-                        <?php if ($detail_google_performance !== null) : ?>
-                            <div class="icap-seo-card icap-seo-card--icon">
-                                <div class="icap-seo-card-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-                                </div>
-                                <div class="icap-seo-card-text">
-                                    <h3><?php esc_html_e('Search Console (28d)', 'icap-seo'); ?></h3>
-                                    <p class="icap-seo-card-value">
-                                        <?php
-                                        $detail_gsc_clicks = (int) $detail_google_performance['clicks'];
-                                        echo esc_html(sprintf(
-                                            /* translators: %d: clicks in the last 28 days */
-                                            _n('%d click', '%d clicks', $detail_gsc_clicks, 'icap-seo'),
-                                            $detail_gsc_clicks
-                                        ));
-                                        ?>
-                                    </p>
-                                    <p class="icap-seo-card-subtext">
-                                        <?php
-                                        echo esc_html(sprintf(
-                                            /* translators: 1: impressions, 2: CTR percentage, 3: average position, all from Google Search Console, last 28 days */
-                                            __('%1$d impressions · %2$s CTR · avg position %3$s', 'icap-seo'),
-                                            (int) $detail_google_performance['impressions'],
-                                            number_format((float) $detail_google_performance['ctr'] * 100, 1) . '%',
-                                            number_format((float) $detail_google_performance['position'], 1)
-                                        ));
-                                        ?>
-                                    </p>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                        <?php if ($detail_google_analytics !== null) : ?>
-                            <div class="icap-seo-card icap-seo-card--icon">
-                                <div class="icap-seo-card-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
-                                </div>
-                                <div class="icap-seo-card-text">
-                                    <h3><?php esc_html_e('Google Analytics (28d)', 'icap-seo'); ?></h3>
-                                    <p class="icap-seo-card-value">
-                                        <?php
-                                        $detail_ga_sessions = (int) $detail_google_analytics['sessions'];
-                                        echo esc_html(sprintf(
-                                            /* translators: %d: sessions in the last 28 days */
-                                            _n('%d session', '%d sessions', $detail_ga_sessions, 'icap-seo'),
-                                            $detail_ga_sessions
-                                        ));
-                                        ?>
-                                    </p>
-                                    <p class="icap-seo-card-subtext">
-                                        <?php
-                                        echo esc_html(sprintf(
-                                            /* translators: 1: page views, 2: engagement rate percentage, 3: average session duration in seconds, all from Google Analytics, last 28 days */
-                                            __('%1$d page views · %2$s engagement · %3$ss avg duration', 'icap-seo'),
-                                            (int) $detail_google_analytics['page_views'],
-                                            number_format((float) $detail_google_analytics['engagement_rate'] * 100, 1) . '%',
-                                            number_format((float) $detail_google_analytics['avg_session_duration'], 0)
-                                        ));
-                                        ?>
-                                    </p>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
                     <?php if (!empty($content_detail_is_local)) : ?>
                     <div class="notice notice-info inline" style="margin:12px 0;">
                         <p><?php esc_html_e('These free checks ran on this site, and their fixes apply here without any connection. Registering adds free Google Search Console and Google Analytics reports. Premium adds AI Improvements, plus scans, reachability, and broken-link checks from outside your site.', 'icap-seo'); ?></p>
@@ -2439,6 +2445,41 @@ if ($notice_code === 'remediation_apply_noop') {
                         <div class="icap-seo-panel" id="icap-seo-ai-readability_rewrite">
                         <h4><?php esc_html_e('Readability rewrite', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates simplified paragraph drafts to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft.', 'icap-seo'); ?></p>
+                        <?php
+                        // A page can pass the sentence checks and still score low on reading
+                        // ease, which also weighs word length. Say so, so a repeat rewrite
+                        // isn't a mystery, and note that names can't be shortened.
+                        $readability_open_codes = array_map(
+                            static fn($issue_row): string => is_array($issue_row) && isset($issue_row['issue_code']) ? sanitize_key((string) $issue_row['issue_code']) : '',
+                            $open_detail_issues
+                        );
+                        $readability_rewrite_count = 0;
+                        foreach ((isset($remediation_audit_entries) && is_array($remediation_audit_entries) ? $remediation_audit_entries : []) as $audit_entry) {
+                            if (in_array('readability_score_low', (array) ($audit_entry['issue_codes'] ?? []), true)) {
+                                $readability_rewrite_count++;
+                            }
+                        }
+                        $readability_only_word_choice = $readability_open
+                            && !array_intersect(['readability_long_sentences_high', 'readability_low_transition_word_usage', 'readability_passive_voice_high'], $readability_open_codes);
+                        ?>
+                        <?php if ($readability_only_word_choice && $readability_rewrite_count > 0) : ?>
+                            <div class="notice notice-info inline">
+                                <p>
+                                    <?php
+                                    echo esc_html(sprintf(
+                                        /* translators: %d: number of times this page has been rewritten for readability */
+                                        _n(
+                                            'This page has been rewritten for readability %d time, and its sentences now pass. What\'s left is word choice: long words such as "infrastructure" or "portfolio" lower the reading-ease score. Another rewrite swaps in plainer words. Names of people, products and companies stay as they are, so a page that mentions them often may not reach the target, and that\'s fine.',
+                                            'This page has been rewritten for readability %d times, and its sentences now pass. What\'s left is word choice: long words such as "infrastructure" or "portfolio" lower the reading-ease score. Another rewrite swaps in plainer words. Names of people, products and companies stay as they are, so a page that mentions them often may not reach the target, and that\'s fine.',
+                                            $readability_rewrite_count,
+                                            'icap-seo'
+                                        ),
+                                        $readability_rewrite_count
+                                    ));
+                                    ?>
+                                </p>
+                            </div>
+                        <?php endif; ?>
                         <?php if (!empty($readability_draft_paragraphs)) : ?>
                             <div class="icap-seo-readability-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                                 <p class="description">

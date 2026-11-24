@@ -1161,3 +1161,7 @@ a.icap-seo-ai-card-state {
     text-decoration: none;
     background: #e3f6ea;
 }
+
+.icap-seo-card--page .icap-seo-card-value {
+    overflow-wrap: anywhere;
+}
