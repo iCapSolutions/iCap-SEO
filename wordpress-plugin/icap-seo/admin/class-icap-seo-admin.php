@@ -4691,8 +4691,9 @@ class ICap_SEO_Admin
             $content_key,
             'content_depth',
             [
+                // The whole page, so the new paragraphs don't repeat what's further down.
                 'title' => (string) $post->post_title,
-                'existing_content_text' => mb_substr(wp_strip_all_tags((string) $post->post_content), 0, 4000),
+                'existing_content_text' => mb_substr(wp_strip_all_tags((string) $post->post_content), 0, 12000),
                 'site_name' => $site_name,
                 'post_type' => (string) $post->post_type,
                 'target_word_count' => $target_word_count,

@@ -141,6 +141,8 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 * The Google status on the Content Scores list now opens that panel.
 * After you preview, publish or discard an AI improvement, or apply a fix, the page now returns to that section instead of the top, with the result message there. Published AI changes are shown highlighted, so you can see exactly what changed on the page.
 * The buttons for each AI improvement, and for fixing everything at once, now sit inside their own box.
+* Content depth expansion now reads the whole page before writing, so it adds new material instead of repeating what's further down the page.
+* Once content has been expanded since Google's last visit, the indexing panel marks that step done instead of suggesting it again.
 
 = 0.1.159 =
 * The iCap SEO panel on the edit screen now shows the page's Content Scores score, with a Check now button to re-check the page.
