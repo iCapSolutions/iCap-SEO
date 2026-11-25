@@ -15,10 +15,12 @@ class ICap_SEO_Plugin
     private ICap_SEO_Admin $admin;
     private ICap_SEO_Output $output;
     private ICap_SEO_Editor_Panel $editor_panel;
+    private ICap_SEO_Service_Client $service_client;
 
     public function __construct()
     {
         $service_client = new ICap_SEO_Service_Client();
+        $this->service_client = $service_client;
         $this->admin = new ICap_SEO_Admin($service_client);
         $this->output = new ICap_SEO_Output();
         $this->editor_panel = new ICap_SEO_Editor_Panel($this->output, $service_client);
@@ -39,6 +41,7 @@ class ICap_SEO_Plugin
         add_action('save_post', ['ICap_SEO_Local_Checks', 'clear_cache_for_post']);
         add_action('before_delete_post', [$this, 'ping_indexnow_on_delete']);
         add_action('wp_trash_post', [$this, 'ping_indexnow_on_delete']);
+        add_action(ICap_SEO_Service_Client::SCAN_CONTINUATION_HOOK, [$this->service_client, 'continue_scan']);
         $this->admin->register_admin_actions();
         $this->admin->register_list_table_columns();
     }
