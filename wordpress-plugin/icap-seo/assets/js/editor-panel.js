@@ -1,16 +1,12 @@
 /**
- * Live in-editor panel. Phase 1 shipped a static SERP preview, social card
- * preview, and read-only "quick check" score computed once from the post's
- * last-saved content (data comes entirely from icapSeoEditorPanel, localized
- * by ICap_SEO_Editor_Panel::enqueue_assets()). Phase 2 adds live-typing: a
- * debounced subscription to the block editor's own data store re-runs the
- * exact same scoring rules (via a local REST call to
- * ICap_SEO_Editor_Panel::handle_quick_check_request(), not a second JS
- * implementation of the rules) against the CURRENT draft - title/content/
- * excerpt the user hasn't saved yet. The image/URL/site-name parts of the
- * SERP and social previews stay as the last-saved snapshot: neither changes
- * from typing, and refreshing them live would mean also live-tracking
- * featured-image changes, which is out of Phase 2's scope.
+ * iCap SEO sidebar in the block editor. Data comes from icapSeoEditorPanel,
+ * localized by ICap_SEO_Editor_Panel::enqueue_assets().
+ *
+ * - The score is the page's Content Scores number. Check now runs the on-site
+ *   checks for this page (saved version) through a local REST route.
+ * - Live checks and the previews re-run on the unsaved draft as the user types
+ *   (debounced), through ICap_SEO_Editor_Panel::handle_quick_check_request(), so
+ *   the rules live only in PHP.
  *
  * No build step / JSX, same convention as assets/js/admin.js - written against
  * the wp.* globals WordPress core already registers for the block editor.
@@ -31,6 +27,7 @@
 	var PluginSidebarMoreMenuItem = wp.editPost.PluginSidebarMoreMenuItem;
 	var Panel = wp.components.Panel;
 	var PanelBody = wp.components.PanelBody;
+	var Button = wp.components.Button;
 	var __ = wp.i18n.__;
 
 	var initialData = window.icapSeoEditorPanel || {};
@@ -68,6 +65,9 @@
 		if ( status === 'warn' ) {
 			return '#9a6700';
 		}
+		if ( status === 'tip' ) {
+			return '#2271b1';
+		}
 		return '#cf222e';
 	}
 
@@ -78,40 +78,61 @@
 		if ( status === 'warn' ) {
 			return '!';
 		}
+		if ( status === 'tip' ) {
+			return 'i';
+		}
 		return '✕';
 	}
 
-	function ScoreBadge( props ) {
-		var score = props.score;
-		if ( score === null ) {
-			return null;
+	function savedScoreHint( saved ) {
+		if ( saved.source === 'scan' ) {
+			return __( 'From the last full scan.', 'icap-seo' );
 		}
+		if ( saved.source === 'local' ) {
+			/* translators: %s: date and time the page was last checked */
+			return saved.checkedAt ? wp.i18n.sprintf( __( 'Checked %s.', 'icap-seo' ), saved.checkedAt ) : __( 'From the on-site checks.', 'icap-seo' );
+		}
+		return __( 'Not checked since this page last changed.', 'icap-seo' );
+	}
+
+	function ScoreBadge( props ) {
+		var saved = props.saved || {};
+		var score = parseScore( saved.score );
 		// Keep in sync with ICap_SEO_Admin::score_band_colors()/score_band_text_colors()
 		// (PHP) - this runs client-side in the block editor, so the palette
 		// can't be shared directly and is duplicated here. borderColor uses the
 		// light fill variant; color uses the darker, readable-on-white variant
 		// (a light yellow in particular is illegible as text).
-		var label = score >= 80 ? __( 'Good', 'icap-seo' ) : score >= 50 ? __( 'Needs work', 'icap-seo' ) : __( 'Poor', 'icap-seo' );
-		var borderColor = score >= 80 ? '#7bc47f' : score >= 50 ? '#f5c518' : '#f28b82';
-		var textColor = score >= 80 ? '#2e8f52' : score >= 50 ? '#b7950b' : '#d1443b';
+		var circle = score === null
+			? el( 'div', { className: 'icap-seo-quick-score__circle icap-seo-quick-score__circle--empty' }, '–' )
+			: el(
+					'div',
+					{
+						className: 'icap-seo-quick-score__circle',
+						style: {
+							borderColor: score >= 80 ? '#7bc47f' : score >= 50 ? '#f5c518' : '#f28b82',
+							color: score >= 80 ? '#2e8f52' : score >= 50 ? '#b7950b' : '#d1443b',
+						},
+					},
+					String( score )
+			  );
 
 		return el(
 			'div',
 			{ className: 'icap-seo-quick-score' },
-			el( 'div', { className: 'icap-seo-quick-score__circle', style: { borderColor: borderColor, color: textColor } }, String( score ) ),
+			circle,
 			el(
 				'div',
 				{ className: 'icap-seo-quick-score__label' },
-				el( 'strong', null, label ),
+				el( 'strong', null, __( 'Content Scores', 'icap-seo' ) ),
+				el( 'div', { className: 'icap-seo-quick-score__hint' }, props.message || savedScoreHint( saved ) ),
 				el(
 					'div',
-					{ className: 'icap-seo-quick-score__hint' },
-					props.isLive
-						? __( 'Quick check, updated as you type. Run a full scan in iCap SEO for the authoritative score.', 'icap-seo' )
-						: __(
-								'Quick check based on this page’s saved content only. Run a full scan in iCap SEO for the authoritative score.',
-								'icap-seo'
-						  )
+					{ className: 'icap-seo-quick-score__actions' },
+					saved.source !== 'scan'
+						? el( Button, { variant: 'secondary', isSmall: true, isBusy: props.checking, disabled: props.checking, onClick: props.onCheck }, props.checking ? __( 'Checking…', 'icap-seo' ) : __( 'Check now', 'icap-seo' ) )
+						: null,
+					saved.detailUrl ? el( 'a', { className: 'icap-seo-quick-score__link', href: saved.detailUrl }, __( 'Open in Content Scores', 'icap-seo' ) ) : null
 				)
 			)
 		);
@@ -159,20 +180,44 @@
 		);
 	}
 
+	// Kept in sync with ICap_SEO_Editor_Panel::social_image_note() (PHP).
+	function socialImageNote( source ) {
+		if ( source === 'featured' ) {
+			return '';
+		}
+		if ( source === 'content' ) {
+			return __( 'No featured image, so shares use the first image in this page.', 'icap-seo' );
+		}
+		if ( source === 'logo' ) {
+			return __( 'No featured image or page image, so shares use the site logo.', 'icap-seo' );
+		}
+		if ( source === 'site_icon' ) {
+			return __( 'No featured image or page image, so shares use the site icon.', 'icap-seo' );
+		}
+		return __( 'Shares of this page show no picture. Set a featured image, or add an image to the page.', 'icap-seo' );
+	}
+
 	function SocialPreview( props ) {
+		var image = props.image || {};
+		var note = socialImageNote( image.source || '' );
 		return el(
-			'div',
-			{ className: 'icap-seo-social-preview' },
-			initialData.imageUrl
-				? el( 'img', { className: 'icap-seo-social-preview__image', src: initialData.imageUrl, alt: '' } )
-				: el( 'div', { className: 'icap-seo-social-preview__image icap-seo-social-preview__image--empty' } ),
+			Fragment,
+			null,
 			el(
 				'div',
-				{ className: 'icap-seo-social-preview__body' },
-				el( 'div', { className: 'icap-seo-social-preview__site' }, ( initialData.siteName || '' ).toUpperCase() ),
-				el( 'div', { className: 'icap-seo-social-preview__title' }, props.title || __( '(no title)', 'icap-seo' ) ),
-				props.description ? el( 'div', { className: 'icap-seo-social-preview__description' }, props.description ) : null
-			)
+				{ className: 'icap-seo-social-preview' },
+				image.url
+					? el( 'img', { className: 'icap-seo-social-preview__image', src: image.url, alt: '' } )
+					: el( 'div', { className: 'icap-seo-social-preview__image icap-seo-social-preview__image--empty' }, __( 'No picture', 'icap-seo' ) ),
+				el(
+					'div',
+					{ className: 'icap-seo-social-preview__body' },
+					el( 'div', { className: 'icap-seo-social-preview__site' }, ( initialData.siteName || '' ).toUpperCase() ),
+					el( 'div', { className: 'icap-seo-social-preview__title' }, props.title || __( '(no title)', 'icap-seo' ) ),
+					props.description ? el( 'div', { className: 'icap-seo-social-preview__description' }, props.description ) : null
+				)
+			),
+			note ? el( 'p', { className: 'icap-seo-social-preview__note' }, note ) : null
 		);
 	}
 
@@ -191,26 +236,33 @@
 			title: editor.getEditedPostAttribute( 'title' ) || '',
 			content: editor.getEditedPostAttribute( 'content' ) || '',
 			excerpt: editor.getEditedPostAttribute( 'excerpt' ) || '',
+			featuredMedia: editor.getEditedPostAttribute( 'featured_media' ) || 0,
 		};
 	}
 
 	function fieldsChanged( a, b ) {
-		return ! a || ! b || a.title !== b.title || a.content !== b.content || a.excerpt !== b.excerpt;
+		return ! a || ! b || a.title !== b.title || a.content !== b.content || a.excerpt !== b.excerpt || a.featuredMedia !== b.featuredMedia;
 	}
 
 	function PanelContent() {
-		var initialScore = parseScore( initialData.score );
-		var initialState = {
-			score: initialScore,
+		var stateHook = useState( {
 			checks: initialData.checks || [],
+			tip: initialData.tip || null,
 			title: initialData.title || '',
+			searchTitle: initialData.searchTitle || '',
 			description: initialData.description || '',
-			isLive: false,
-		};
-
-		var stateHook = useState( initialState );
+			image: initialData.image || { url: '', source: '' },
+		} );
 		var state = stateHook[ 0 ];
 		var setState = stateHook[ 1 ];
+
+		var savedHook = useState( initialData.saved || {} );
+		var saved = savedHook[ 0 ];
+		var setSaved = savedHook[ 1 ];
+
+		var checkHook = useState( { checking: false, message: '' } );
+		var checkState = checkHook[ 0 ];
+		var setCheckState = checkHook[ 1 ];
 
 		useEffect( function () {
 			if ( ! postId ) {
@@ -232,6 +284,7 @@
 						title: fields.title,
 						content: fields.content,
 						excerpt: fields.excerpt,
+						featured_media: fields.featuredMedia,
 					},
 				} )
 					.then( function ( response ) {
@@ -240,19 +293,18 @@
 						if ( fields !== lastRequested ) {
 							return;
 						}
-						setState( function ( prev ) {
-							return Object.assign( {}, prev, {
-								score: parseScore( response.score ),
-								checks: response.checks || [],
-								title: response.title || '',
-								description: response.description || '',
-								isLive: true,
-							} );
+						setState( {
+							checks: response.checks || [],
+							tip: response.tip || null,
+							title: response.title || '',
+							searchTitle: response.searchTitle || '',
+							description: response.description || '',
+							image: response.image || { url: '', source: '' },
 						} );
 					} )
 					.catch( function () {
 						// Live refresh is a nice-to-have; keep showing the last
-						// good state (or the Phase 1 static snapshot) on error.
+						// good state on error.
 					} );
 			}
 
@@ -282,25 +334,51 @@
 			};
 		}, [] );
 
-		var allChecks = state.checks;
+		function checkNow() {
+			var editor = wp.data.select( 'core/editor' );
+			if ( editor && editor.isEditedPostDirty() ) {
+				setCheckState( { checking: false, message: __( 'Save your changes first. The check reads the saved page.', 'icap-seo' ) } );
+				return;
+			}
+			setCheckState( { checking: true, message: '' } );
+			wp.apiFetch( { path: '/icap-seo/v1/editor-panel/recheck', method: 'POST', data: { post_id: postId } } )
+				.then( function ( response ) {
+					if ( response.saved ) {
+						setSaved( response.saved );
+					}
+					setCheckState( { checking: false, message: response.error || '' } );
+				} )
+				.catch( function () {
+					setCheckState( { checking: false, message: __( 'This page couldn’t be checked right now. Try again, or use Check all pages in Content Scores.', 'icap-seo' ) } );
+				} );
+		}
+
+		var items = state.tip ? state.checks.concat( [ state.tip ] ) : state.checks;
 
 		return el(
 			'div',
 			{ className: 'icap-seo-editor-panel' },
-			el( ScoreBadge, { score: state.score, isLive: state.isLive } ),
+			el( ScoreBadge, { saved: saved, checking: checkState.checking, message: checkState.message, onCheck: checkNow } ),
 			el(
 				Panel,
 				null,
-				el( PanelBody, { title: __( 'Quick checks', 'icap-seo' ), initialOpen: true }, allChecks.map( ChecklistItem ) ),
+				el(
+					PanelBody,
+					{ title: __( 'Live checks', 'icap-seo' ), initialOpen: true },
+					el( 'p', { className: 'icap-seo-quick-check__intro' }, __( 'The basics from Content Scores, updated as you type. Content Scores runs every check on the published page.', 'icap-seo' ) ),
+					items.map( ChecklistItem )
+				),
 				el(
 					PanelBody,
 					{ title: __( 'Search preview', 'icap-seo' ), initialOpen: true },
-					el( SerpPreview, { title: state.title, description: state.description } )
+					el( 'p', { className: 'icap-seo-quick-check__intro' }, __( 'How this page can look as a Google result.', 'icap-seo' ) ),
+					el( SerpPreview, { title: state.searchTitle, description: state.description } )
 				),
 				el(
 					PanelBody,
 					{ title: __( 'Social preview', 'icap-seo' ), initialOpen: false },
-					el( SocialPreview, { title: state.title, description: state.description } )
+					el( 'p', { className: 'icap-seo-quick-check__intro' }, __( 'How this page looks when its link is shared on Facebook, LinkedIn or X.', 'icap-seo' ) ),
+					el( SocialPreview, { title: state.title, description: state.description, image: state.image } )
 				)
 			)
 		);

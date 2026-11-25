@@ -4,7 +4,7 @@ Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.158
+Stable tag: 0.1.159
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,7 +20,7 @@ iCap SEO checks your pages for common SEO problems, explains what it finds in pl
 * **Check all pages**: run those checks across your published pages at once and see a site-wide score, with results and fixes for each page.
 * **Link check**: find broken links on any page when you click Check links.
 * **One-click fixes** for those checks: titles, meta descriptions, H1, alt text, image dimensions, lazy loading, canonical URL, JSON-LD structured data, headings, paragraphs, and internal links. Checks that need a judgment call, such as readability or robots rules, explain what to change. They are applied directly on your site. With AI Improvements, some of these fixes use AI-drafted text instead of the built-in templates.
-* **Editor panel**: a quick-check score, search result preview, and social preview in the block editor (updated as you type) and in a classic editor meta box.
+* **Editor panel**: the page's Content Scores score with a Check now button, live checks as you type, a search result preview, and a social preview in the block editor, plus a classic editor meta box.
 * **Social sharing tags, a redirect manager with a 404 log, an llms.txt file, Local SEO, and optional IndexNow pings**: Open Graph and X Card tags, old-URL-to-new-URL redirects, a log of pages visitors hit that don't exist, a generated `/llms.txt`, LocalBusiness structured data (address, phone, hours), and IndexNow notifications on publish, update, or delete (off by default).
 
 **Free with registration**
@@ -135,6 +135,13 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.159 =
+* The iCap SEO panel on the edit screen now shows the page's Content Scores score, with a Check now button to re-check the page.
+* The panel's live checks use the same rules and limits as Content Scores, including the site name in the title length, so the two no longer disagree. Headline suggestions are shown as tips and aren't scored.
+* When a page has no featured image, social sites are now offered the first image in the page, then the site logo, then the site icon, skipping images smaller than 200 × 200 pixels, which Facebook ignores. The social preview shows that picture and says where it came from.
+* On a page's AI Improvements tab, only the improvements the scan suggested are highlighted, so the highlighted cards match the count on the tab. Spelling & grammar stays available on every page.
+* The Overview tab shows the Overall SEO Score out of 100, like the rest of the plugin, instead of as a percentage.
 
 = 0.1.158 =
 * The page link check now lists links it couldn't check separately from broken ones, with the reason (for example, the other site refused an automated check or your server couldn't verify its security certificate), so a connection problem doesn't look like a broken link.

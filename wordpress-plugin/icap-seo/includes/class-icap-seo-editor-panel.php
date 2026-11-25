@@ -5,18 +5,18 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Phase 1 of the live in-editor panel (competitor-audit gap: a real-time score
- * badge + SERP/social preview in the block editor, which every major competitor
- * ships and iCap SEO didn't have at all). Deliberately "static": everything here
- * is computed once, server-side, from the post's last-saved content when the
- * editor screen loads - no live-as-you-type updates and no new cloud API calls.
- * Live-typing (debounced re-computation) and cloud-backed checks are later phases,
- * not this one.
+ * The iCap SEO panel on the post edit screen (block editor sidebar, or a meta
+ * box in the classic editor).
  *
- * The quick-check codes here intentionally reuse this plugin's existing issue_code
- * naming (missing_title_tag, missing_meta_description, limited_heading_structure,
- * images_missing_alt) so a later phase that wires these into the real remediation-
- * apply flow doesn't have to invent a second taxonomy.
+ * - Score: the same number Content Scores shows for this page (the last full
+ *   scan's score, else the saved on-site check score), with a Check now button
+ *   that re-runs the on-site checks for this one page.
+ * - Live checks: a few of the on-site checks, re-run against the unsaved draft
+ *   as the user types. They use ICap_SEO_Local_Checks' own functions and limits,
+ *   so they can't disagree with Content Scores. They aren't scored.
+ * - Headline tips: writing suggestions only, not an SEO check, not scored.
+ * - Search and social previews: how the page looks as a Google result and when
+ *   its link is shared, using the same title and picture the page's head prints.
  *
  * Every check in the panel runs on this site; nothing is sent to an external service.
  */
@@ -35,10 +35,12 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
         ];
 
         private ICap_SEO_Output $output;
+        private ICap_SEO_Service_Client $service_client;
 
-        public function __construct(ICap_SEO_Output $output)
+        public function __construct(ICap_SEO_Output $output, ICap_SEO_Service_Client $service_client)
         {
             $this->output = $output;
+            $this->service_client = $service_client;
         }
 
         public function register(): void
@@ -49,29 +51,35 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
         }
 
         /**
-         * Phase 2 (live-typing): a local REST route the block editor sidebar
-         * calls (debounced, not per-keystroke) to recompute the quick checks
-         * against the CURRENT in-editor draft - title/content/excerpt the user
-         * hasn't saved yet - rather than only the last-saved post row. Runs the
-         * exact same compute_quick_checks()/score_checks() logic Phase 1 already
-         * uses for the last-saved version, so the two phases can never drift
-         * into two different sets of scoring rules. Purely local WP computation,
-         * no cloud API call - this is not the authoritative scan.
+         * Two local routes for the block editor sidebar: quick-check re-runs the
+         * live checks on the unsaved draft (debounced as the user types), and
+         * recheck runs the full on-site checks on the saved page and stores the
+         * result, the same as Check all pages does for every page.
          */
         public function register_rest_route(): void
         {
+            $can_edit = static function (WP_REST_Request $request): bool {
+                $post_id = (int) $request->get_param('post_id');
+                return $post_id > 0 && current_user_can('edit_post', $post_id);
+            };
             register_rest_route('icap-seo/v1', '/editor-panel/quick-check', [
                 'methods' => WP_REST_Server::CREATABLE,
                 'callback' => [$this, 'handle_quick_check_request'],
-                'permission_callback' => function (WP_REST_Request $request) {
-                    $post_id = (int) $request->get_param('post_id');
-                    return $post_id > 0 && current_user_can('edit_post', $post_id);
-                },
+                'permission_callback' => $can_edit,
                 'args' => [
                     'post_id' => ['required' => true, 'type' => 'integer'],
                     'title' => ['required' => false, 'type' => 'string', 'default' => ''],
                     'content' => ['required' => false, 'type' => 'string', 'default' => ''],
                     'excerpt' => ['required' => false, 'type' => 'string', 'default' => ''],
+                    'featured_media' => ['required' => false, 'type' => 'integer', 'default' => 0],
+                ],
+            ]);
+            register_rest_route('icap-seo/v1', '/editor-panel/recheck', [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [$this, 'handle_recheck_request'],
+                'permission_callback' => $can_edit,
+                'args' => [
+                    'post_id' => ['required' => true, 'type' => 'integer'],
                 ],
             ]);
         }
@@ -84,38 +92,94 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
             $excerpt = trim((string) $request->get_param('excerpt'));
 
             $description = $this->resolve_draft_description($post_id, $excerpt, $content);
-            $checks = $this->compute_quick_checks($title, $description, $content);
-            $score = $this->score_checks($checks);
+            $search_title = ICap_SEO_Local_Checks::document_title($title);
 
             return new WP_REST_Response([
                 'title' => $title !== '' ? $title : get_bloginfo('name'),
+                'searchTitle' => $search_title,
                 'description' => $description,
-                'checks' => $checks,
-                'score' => $score,
+                'checks' => $this->compute_quick_checks($search_title, $description, $content),
+                'tip' => $this->compute_headline_quality_check($title),
+                'image' => $this->draft_social_image($post_id, $content, (int) $request->get_param('featured_media')),
             ]);
         }
 
+        public function handle_recheck_request(WP_REST_Request $request): WP_REST_Response
+        {
+            $post_id = (int) $request->get_param('post_id');
+            $detail = ICap_SEO_Local_Checks::detail_for_post($post_id);
+            if ($detail === null || !ICap_SEO_Local_Checks::store_result($post_id, $detail)) {
+                return new WP_REST_Response([
+                    'saved' => $this->saved_score_data($post_id),
+                    'error' => __('This page couldn\'t be checked right now. Try again, or use Check all pages in Content Scores.', 'icap-seo'),
+                ]);
+            }
+
+            return new WP_REST_Response(['saved' => $this->saved_score_data($post_id)]);
+        }
+
         /**
-         * Mirrors ICap_SEO_Output::get_effective_meta_description()'s fallback
-         * order but against the live draft: an in-progress excerpt field wins
-         * (the user is actively editing it), then the previously-saved
-         * `_icap_seo_meta_description` postmeta (unrelated to this draft
-         * session, but still the best available signal), then the draft
-         * content itself stripped to plain text.
+         * The social picture for the draft: the featured image picked in the
+         * editor, else the first image in the draft content, else the site logo or icon.
+         */
+        private function draft_social_image(int $post_id, string $content, int $featured_id): array
+        {
+            $post = get_post($post_id);
+            if (!$post instanceof WP_Post) {
+                return ['url' => '', 'source' => ''];
+            }
+            $draft = clone $post;
+            $draft->post_content = $content;
+            // Only an image the user may see is used for the preview.
+            if ($featured_id > 0 && (get_post_type($featured_id) !== 'attachment' || !current_user_can('read_post', $featured_id))) {
+                $featured_id = 0;
+            }
+
+            return $this->output->get_effective_social_image($draft, max(0, $featured_id));
+        }
+
+        private function saved_score_data(int $post_id): array
+        {
+            $saved = $this->service_client->get_saved_content_score($post_id);
+            $checked_at = $saved['source'] === 'local' ? ICap_SEO_Local_Checks::stored_checked_at($post_id) : '';
+            $timestamp = $checked_at !== '' ? strtotime($checked_at) : false;
+
+            return [
+                'score' => $saved['score'],
+                'source' => $saved['source'],
+                'partial' => $saved['partial'],
+                'checkedAt' => $timestamp ? wp_date(get_option('date_format') . ' ' . get_option('time_format'), $timestamp) : '',
+                'detailUrl' => add_query_arg(
+                    ['page' => 'icap-seo', 'tab' => 'content-scores', 'content_key' => $saved['content_key']],
+                    admin_url('admin.php')
+                ),
+            ];
+        }
+
+        /**
+         * Same order as ICap_SEO_Output::get_effective_meta_description(), against
+         * the live draft: a meta description set on purpose, then the excerpt, then
+         * the content as plain text.
          */
         private function resolve_draft_description(int $post_id, string $excerpt, string $content): string
         {
-            if ($excerpt !== '') {
-                return $this->truncate($excerpt, 200);
-            }
-
+            $post = get_post($post_id);
+            $is_protected = $post instanceof WP_Post && $post->post_password !== '';
+            // 160 characters, the length the page's meta description tag prints.
             $stored = get_post_meta($post_id, '_icap_seo_meta_description', true);
             if (is_string($stored) && trim($stored) !== '') {
-                return $this->truncate(trim($stored), 200);
+                return $this->truncate(trim($stored), 160);
             }
 
-            $stripped = trim(wp_strip_all_tags($content, true));
-            return $this->truncate($stripped, 200);
+            if ($is_protected) {
+                return '';
+            }
+            if ($excerpt !== '') {
+                return $this->truncate($excerpt, 160);
+            }
+
+            $stripped = trim((string) preg_replace('/\s+/', ' ', wp_strip_all_tags($content, true)));
+            return $this->truncate($stripped, 160);
         }
 
         private function truncate(string $value, int $max_length): string
@@ -124,7 +188,7 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
                 return $value;
             }
             $truncated = function_exists('mb_substr') ? mb_substr($value, 0, $max_length) : substr($value, 0, $max_length);
-            return trim($truncated) . '…';
+            return trim($truncated);
         }
 
         /**
@@ -177,57 +241,44 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
             );
 
             $data = $this->build_panel_data($post);
-            $score = (int) $data['score'];
-            $score_border_color = ICap_SEO_Admin::score_color($score);
-            $score_text_color = ICap_SEO_Admin::score_text_color($score);
-            if ($score >= 80) {
-                $score_label = __('Good', 'icap-seo');
-            } elseif ($score >= 50) {
-                $score_label = __('Needs work', 'icap-seo');
-            } else {
-                $score_label = __('Poor', 'icap-seo');
-            }
+            $saved = $data['saved'];
 
             echo '<div class="icap-seo-editor-panel icap-seo-editor-panel--metabox">';
 
             echo '<div class="icap-seo-quick-score">';
-            echo '<div class="icap-seo-quick-score__circle" style="border-color:' . esc_attr($score_border_color) . ';color:' . esc_attr($score_text_color) . ';">' . esc_html((string) $score) . '</div>';
-            echo '<div class="icap-seo-quick-score__label"><strong>' . esc_html($score_label) . '</strong>';
-            echo '<div class="icap-seo-quick-score__hint">' . esc_html__('Quick check based on this page\'s saved content only. Run a full scan in iCap SEO for the authoritative score.', 'icap-seo') . '</div>';
+            if ($saved['score'] !== null) {
+                $score = (int) $saved['score'];
+                echo '<div class="icap-seo-quick-score__circle" style="border-color:' . esc_attr(ICap_SEO_Admin::score_color($score)) . ';color:' . esc_attr(ICap_SEO_Admin::score_text_color($score)) . ';">' . esc_html((string) $score) . '</div>';
+            } else {
+                echo '<div class="icap-seo-quick-score__circle icap-seo-quick-score__circle--empty">&ndash;</div>';
+            }
+            echo '<div class="icap-seo-quick-score__label"><strong>' . esc_html__('Content Scores', 'icap-seo') . '</strong>';
+            echo '<div class="icap-seo-quick-score__hint">' . esc_html($this->saved_score_hint($saved)) . '</div>';
+            echo '<a class="icap-seo-quick-score__link" href="' . esc_url($saved['detailUrl']) . '">' . esc_html__('Open in Content Scores', 'icap-seo') . '</a>';
             echo '</div></div>';
 
-            echo '<p class="icap-seo-metabox-heading"><strong>' . esc_html__('Quick checks', 'icap-seo') . '</strong></p>';
-            foreach ($data['checks'] as $check) {
-                if ($check['status'] === 'pass') {
-                    $color = '#1a7f37';
-                    $symbol = '✓';
-                } elseif ($check['status'] === 'warn') {
-                    $color = '#9a6700';
-                    $symbol = '!';
-                } else {
-                    $color = '#cf222e';
-                    $symbol = '✕';
-                }
-                echo '<div class="icap-seo-quick-check icap-seo-quick-check--' . esc_attr($check['status']) . '">';
-                echo '<span class="icap-seo-quick-check__icon" style="color:' . esc_attr($color) . ';">' . esc_html($symbol) . '</span>';
-                echo '<span class="icap-seo-quick-check__body"><strong>' . esc_html($check['label']) . '</strong><div class="icap-seo-quick-check__detail">' . esc_html($check['detail']) . '</div></span>';
-                echo '</div>';
+            echo '<p class="icap-seo-metabox-heading"><strong>' . esc_html__('Live checks', 'icap-seo') . '</strong></p>';
+            echo '<p class="icap-seo-quick-check__intro">' . esc_html__('The basics from Content Scores, for the last saved version. Content Scores runs every check on the published page.', 'icap-seo') . '</p>';
+            foreach (array_merge($data['checks'], [$data['tip']]) as $check) {
+                $this->render_check_item($check);
             }
 
             echo '<p class="icap-seo-metabox-heading"><strong>' . esc_html__('Search preview', 'icap-seo') . '</strong></p>';
+            echo '<p class="icap-seo-quick-check__intro">' . esc_html__('How this page can look as a Google result.', 'icap-seo') . '</p>';
             echo '<div class="icap-seo-serp-preview">';
             echo '<div class="icap-seo-serp-preview__url">' . esc_html($data['url']) . '</div>';
-            echo '<div class="icap-seo-serp-preview__title" id="icap-seo-metabox-serp-title">' . esc_html($data['title']) . '</div>';
+            echo '<div class="icap-seo-serp-preview__title" id="icap-seo-metabox-serp-title">' . esc_html($data['searchTitle']) . '</div>';
             echo '<div class="icap-seo-serp-preview__description">' . esc_html($data['description']) . '</div>';
             echo '<p class="icap-seo-serp-preview__note" id="icap-seo-metabox-serp-note" hidden>' . esc_html__('Title may be truncated in search results at this pixel width.', 'icap-seo') . '</p>';
             echo '</div>';
 
             echo '<p class="icap-seo-metabox-heading"><strong>' . esc_html__('Social preview', 'icap-seo') . '</strong></p>';
+            echo '<p class="icap-seo-quick-check__intro">' . esc_html__('How this page looks when its link is shared on Facebook, LinkedIn or X.', 'icap-seo') . '</p>';
             echo '<div class="icap-seo-social-preview">';
-            if ($data['imageUrl'] !== '') {
-                echo '<img class="icap-seo-social-preview__image" src="' . esc_url($data['imageUrl']) . '" alt="" />';
+            if ($data['image']['url'] !== '') {
+                echo '<img class="icap-seo-social-preview__image" src="' . esc_url($data['image']['url']) . '" alt="" />';
             } else {
-                echo '<div class="icap-seo-social-preview__image icap-seo-social-preview__image--empty"></div>';
+                echo '<div class="icap-seo-social-preview__image icap-seo-social-preview__image--empty">' . esc_html__('No picture', 'icap-seo') . '</div>';
             }
             echo '<div class="icap-seo-social-preview__body">';
             echo '<div class="icap-seo-social-preview__site">' . esc_html(strtoupper((string) $data['siteName'])) . '</div>';
@@ -236,6 +287,10 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
                 echo '<div class="icap-seo-social-preview__description">' . esc_html($data['description']) . '</div>';
             }
             echo '</div></div>';
+            $image_note = self::social_image_note($data['image']['source']);
+            if ($image_note !== '') {
+                echo '<p class="icap-seo-social-preview__note">' . esc_html($image_note) . '</p>';
+            }
 
             echo '</div>';
 
@@ -250,6 +305,51 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
                 ICAP_SEO_VERSION,
                 true
             );
+        }
+
+        private function render_check_item(array $check): void
+        {
+            $symbols = ['pass' => ['#1a7f37', '✓'], 'warn' => ['#9a6700', '!'], 'fail' => ['#cf222e', '✕'], 'tip' => ['#2271b1', 'i']];
+            [$color, $symbol] = $symbols[$check['status']] ?? $symbols['fail'];
+            echo '<div class="icap-seo-quick-check icap-seo-quick-check--' . esc_attr($check['status']) . '">';
+            echo '<span class="icap-seo-quick-check__icon" style="color:' . esc_attr($color) . ';">' . esc_html($symbol) . '</span>';
+            echo '<span class="icap-seo-quick-check__body"><strong>' . esc_html($check['label']) . '</strong><div class="icap-seo-quick-check__detail">' . esc_html($check['detail']) . '</div></span>';
+            echo '</div>';
+        }
+
+        private function saved_score_hint(array $saved): string
+        {
+            if ($saved['source'] === 'scan') {
+                return __('From the last full scan.', 'icap-seo');
+            }
+            if ($saved['source'] === 'local') {
+                return $saved['checkedAt'] !== ''
+                    /* translators: %s: date and time the page was last checked */
+                    ? sprintf(__('Checked %s.', 'icap-seo'), $saved['checkedAt'])
+                    : __('From the on-site checks.', 'icap-seo');
+            }
+
+            return __('Not checked since this page last changed.', 'icap-seo');
+        }
+
+        /**
+         * Says where the shared picture comes from when it isn't the featured
+         * image. Kept in sync with socialImageNote() in assets/js/editor-panel.js.
+         */
+        public static function social_image_note(string $source): string
+        {
+            switch ($source) {
+                case 'featured':
+                    return '';
+                case 'content':
+                    return __('No featured image, so shares use the first image in this page.', 'icap-seo');
+                case 'logo':
+                    return __('No featured image or page image, so shares use the site logo.', 'icap-seo');
+                case 'site_icon':
+                    return __('No featured image or page image, so shares use the site icon.', 'icap-seo');
+                default:
+                    return __('Shares of this page show no picture. Set a featured image, or add an image to the page.', 'icap-seo');
+            }
         }
 
         public function enqueue_assets(): void
@@ -287,143 +387,133 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
         {
             $title = trim((string) $post->post_title);
             $site_name = get_bloginfo('name');
-            $description = $this->output->get_effective_meta_description($post, 200);
+            $description = $this->output->get_effective_meta_description($post, 160);
             $url = $this->output->get_effective_canonical_url($post);
             if ($url === '') {
                 $permalink = get_permalink($post);
                 $url = is_string($permalink) ? $permalink : '';
             }
-            $image_url = get_the_post_thumbnail_url($post, 'large');
-
-            $checks = $this->compute_quick_checks($title, $description, (string) $post->post_content);
-            $score = $this->score_checks($checks);
+            $search_title = ICap_SEO_Local_Checks::document_title($title);
 
             return [
                 'postId' => $post->ID,
                 'title' => $title !== '' ? $title : $site_name,
+                'searchTitle' => $search_title,
                 'description' => $description,
                 'url' => $url,
                 'siteName' => $site_name,
-                'imageUrl' => is_string($image_url) ? $image_url : '',
-                'checks' => $checks,
-                'score' => $score,
+                'image' => $this->output->get_effective_social_image($post),
+                'checks' => $this->compute_quick_checks($search_title, $description, (string) $post->post_content),
+                'tip' => $this->compute_headline_quality_check($title),
+                'saved' => $this->saved_score_data((int) $post->ID),
             ];
         }
 
         /**
-         * Only checks computable from the post's own already-saved fields, with
-         * no network call - the explicit Phase 1 scope boundary. Thresholds are
-         * deliberately simple/conservative; this is a lightweight preview, not a
-         * restatement of the authoritative cloud scan's own scoring logic.
+         * The basics from the on-site checks, run on a draft: title, meta
+         * description, content length, subheadings and images. Uses
+         * ICap_SEO_Local_Checks' own functions on a page built the way its
+         * WordPress-data fallback builds one, so a result here matches the
+         * result Content Scores gets for the same text. Low-severity issues show
+         * as warnings, the rest as failures.
          */
-        private function compute_quick_checks(string $title, string $description, string $content): array
+        private function compute_quick_checks(string $search_title, string $description, string $content): array
         {
+            // Core hook: render the body the way a visitor gets it, as the on-site checks do.
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- the_content is a WordPress core hook, not a plugin hook.
+            $body = (string) apply_filters('the_content', $content);
+            $head = '<title>' . esc_html($search_title) . '</title>';
+            if ($description !== '') {
+                $head .= '<meta name="description" content="' . esc_attr($description) . '">';
+            }
+            $html = '<html><head>' . $head . '</head><body>' . $body . '</body></html>';
+
+            $failed = [];
+            foreach (array_merge(
+                ICap_SEO_Local_Checks::page_basics_issues($html),
+                ICap_SEO_Local_Checks::heading_issues($body),
+                ICap_SEO_Local_Checks::image_issues($body)
+            ) as $issue) {
+                $failed[$issue['issue_code']] = $issue['severity'] === 'low' ? 'warn' : 'fail';
+            }
+
             $checks = [];
 
-            $title_len = $this->strlen($title);
-            if ($title === '') {
-                $checks[] = $this->check('missing_title_tag', __('Title', 'icap-seo'), 'fail', __('No title set yet.', 'icap-seo'));
-            } elseif ($title_len < 15 || $title_len > 60) {
+            $title_length = $this->strlen($search_title);
+            if (isset($failed['missing_title_tag'])) {
+                $checks[] = $this->check('title', __('Title', 'icap-seo'), 'fail', __('No title yet.', 'icap-seo'));
+            } else {
                 $checks[] = $this->check(
-                    'missing_title_tag',
+                    'title',
                     __('Title', 'icap-seo'),
-                    'warn',
+                    $failed['title_length_out_of_range'] ?? 'pass',
                     sprintf(
-                        /* translators: %d: character count of the post title */
-                        __('%d characters - aim for 15-60 so it isn\'t truncated in search results.', 'icap-seo'),
-                        $title_len
-                    )
-                );
-            } else {
-                $checks[] = $this->check(
-                    'missing_title_tag',
-                    __('Title', 'icap-seo'),
-                    'pass',
-                    sprintf(
-                        /* translators: %d: character count of the post title */
-                        __('%d characters.', 'icap-seo'),
-                        $title_len
+                        /* translators: 1: title length, 2: minimum length, 3: maximum length */
+                        __('%1$d characters, with the site name. Aim for %2$d–%3$d.', 'icap-seo'),
+                        $title_length,
+                        ICap_SEO_Local_Checks::TITLE_MIN_LENGTH,
+                        ICap_SEO_Local_Checks::TITLE_MAX_LENGTH
                     )
                 );
             }
 
-            $description_len = $this->strlen($description);
-            if ($description === '') {
-                $checks[] = $this->check('missing_meta_description', __('Meta description', 'icap-seo'), 'fail', __('No description found - add an excerpt or let iCap SEO generate one.', 'icap-seo'));
-            } elseif ($description_len < 50 || $description_len > 160) {
+            if (isset($failed['missing_meta_description'])) {
+                $checks[] = $this->check('meta_description', __('Meta description', 'icap-seo'), $failed['missing_meta_description'], __('No description yet. Add an excerpt, or let iCap SEO write one.', 'icap-seo'));
+            } else {
                 $checks[] = $this->check(
-                    'missing_meta_description',
+                    'meta_description',
                     __('Meta description', 'icap-seo'),
-                    'warn',
+                    $failed['meta_description_length_out_of_range'] ?? 'pass',
                     sprintf(
-                        /* translators: %d: character count of the meta description */
-                        __('%d characters - aim for 50-160.', 'icap-seo'),
-                        $description_len
-                    )
-                );
-            } else {
-                $checks[] = $this->check(
-                    'missing_meta_description',
-                    __('Meta description', 'icap-seo'),
-                    'pass',
-                    sprintf(
-                        /* translators: %d: character count of the meta description */
-                        __('%d characters.', 'icap-seo'),
-                        $description_len
+                        /* translators: 1: description length, 2: minimum length, 3: maximum length */
+                        __('%1$d characters. Aim for %2$d–%3$d.', 'icap-seo'),
+                        $this->strlen($description),
+                        ICap_SEO_Local_Checks::DESCRIPTION_MIN_LENGTH,
+                        ICap_SEO_Local_Checks::DESCRIPTION_MAX_LENGTH
                     )
                 );
             }
 
-            $has_heading = (bool) preg_match('/<h[1-6][\s>]/i', $content) || (bool) preg_match('/wp:heading/i', $content);
-            $word_count = str_word_count(wp_strip_all_tags($content));
-            if ($word_count >= 300 && !$has_heading) {
-                $checks[] = $this->check('limited_heading_structure', __('Headings', 'icap-seo'), 'warn', __('No subheadings found in a longer page - consider breaking it up with H2/H3s.', 'icap-seo'));
-            } else {
-                $checks[] = $this->check(
-                    'limited_heading_structure',
-                    __('Headings', 'icap-seo'),
-                    'pass',
-                    $has_heading ? __('Subheadings present.', 'icap-seo') : __('Short content - no subheadings needed yet.', 'icap-seo')
-                );
-            }
+            $checks[] = $this->check(
+                'content_length',
+                __('Content length', 'icap-seo'),
+                $failed['thin_content'] ?? 'pass',
+                sprintf(
+                    /* translators: 1: word count, 2: minimum word count */
+                    __('%1$d words. Aim for at least %2$d.', 'icap-seo'),
+                    ICap_SEO_Local_Checks::visible_word_count($body),
+                    ICap_SEO_Local_Checks::THIN_CONTENT_WORDS
+                )
+            );
 
-            preg_match_all('/<img\b[^>]*>/i', $content, $image_matches);
-            $images = $image_matches[0];
-            $total_images = count($images);
-            $missing_alt = 0;
-            foreach ($images as $image_tag) {
-                if (!preg_match('/\balt\s*=\s*"[^"]+"/i', $image_tag)) {
-                    $missing_alt++;
-                }
-            }
-            if ($total_images === 0) {
-                $checks[] = $this->check('images_missing_alt', __('Image alt text', 'icap-seo'), 'pass', __('No images in this content yet.', 'icap-seo'));
-            } elseif ($missing_alt > 0) {
-                $checks[] = $this->check(
-                    'images_missing_alt',
-                    __('Image alt text', 'icap-seo'),
-                    'warn',
-                    sprintf(
-                        /* translators: 1: images missing alt text, 2: total images in the content */
-                        __('%1$d of %2$d images missing alt text.', 'icap-seo'),
-                        $missing_alt,
-                        $total_images
-                    )
-                );
-            } else {
-                $checks[] = $this->check(
-                    'images_missing_alt',
-                    __('Image alt text', 'icap-seo'),
-                    'pass',
-                    sprintf(
-                        /* translators: %d: total images, all of which have alt text */
-                        __('All %d images have alt text.', 'icap-seo'),
-                        $total_images
-                    )
-                );
-            }
+            $checks[] = $this->check(
+                'subheadings',
+                __('Subheadings', 'icap-seo'),
+                $failed['limited_heading_structure'] ?? 'pass',
+                sprintf(
+                    /* translators: 1: number of H2/H3 headings, 2: minimum number */
+                    __('%1$d H2 or H3 headings. Aim for at least %2$d.', 'icap-seo'),
+                    (int) preg_match_all('/<h[23][\s>]/i', $body),
+                    ICap_SEO_Local_Checks::MIN_SECONDARY_HEADINGS
+                )
+            );
 
-            $checks[] = $this->compute_headline_quality_check($title);
+            $image_count = (int) preg_match_all('/<img\b[^>]*>/i', $body);
+            if (isset($failed['no_images_detected'])) {
+                $checks[] = $this->check('images', __('Images', 'icap-seo'), $failed['no_images_detected'], __('No images yet.', 'icap-seo'));
+            } elseif (isset($failed['images_missing_alt'])) {
+                $checks[] = $this->check('images', __('Images', 'icap-seo'), $failed['images_missing_alt'], sprintf(
+                    /* translators: %d: number of images */
+                    _n('%d image; some are missing alt text.', '%d images; some are missing alt text.', $image_count, 'icap-seo'),
+                    $image_count
+                ));
+            } else {
+                $checks[] = $this->check('images', __('Images', 'icap-seo'), 'pass', sprintf(
+                    /* translators: %d: number of images */
+                    _n('%d image, with alt text.', 'All %d images have alt text.', $image_count, 'icap-seo'),
+                    $image_count
+                ));
+            }
 
             return $checks;
         }
@@ -434,12 +524,12 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
          * is present (numbered-list headlines are a well-known engagement
          * pattern). Deliberately NOT sentiment analysis - that needs an LLM or
          * a sentiment library, out of scope for a client-computable quick
-         * check. This is a heuristic nudge, not a scored ranking.
+         * check. A writing tip only: it isn't one of the SEO checks and isn't scored.
          */
         private function compute_headline_quality_check(string $title): array
         {
             if ($title === '') {
-                return $this->check('headline_quality', __('Headline quality', 'icap-seo'), 'pass', __('No title set yet.', 'icap-seo'));
+                return $this->check('headline_quality', __('Headline tip', 'icap-seo'), 'tip', __('No title set yet.', 'icap-seo'));
             }
 
             $word_count = str_word_count($title);
@@ -462,8 +552,8 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
             if (empty($notes)) {
                 return $this->check(
                     'headline_quality',
-                    __('Headline quality', 'icap-seo'),
-                    'pass',
+                    __('Headline tip', 'icap-seo'),
+                    'tip',
                     sprintf(
                         /* translators: %d: word count of the post title */
                         __('%d words, includes a power word and a number.', 'icap-seo'),
@@ -474,8 +564,8 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
 
             return $this->check(
                 'headline_quality',
-                __('Headline quality', 'icap-seo'),
-                'warn',
+                __('Headline tip', 'icap-seo'),
+                'tip',
                 sprintf(
                     /* translators: %d: word count, %s: comma-separated suggestions */
                     __('%1$d words - %2$s.', 'icap-seo'),
@@ -493,24 +583,6 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
                 'status' => $status,
                 'detail' => $detail,
             ];
-        }
-
-        private function score_checks(array $checks): int
-        {
-            if (empty($checks)) {
-                return 0;
-            }
-
-            $points = 0.0;
-            foreach ($checks as $check) {
-                if ($check['status'] === 'pass') {
-                    $points += 1.0;
-                } elseif ($check['status'] === 'warn') {
-                    $points += 0.5;
-                }
-            }
-
-            return (int) round(($points / count($checks)) * 100);
         }
 
         private function strlen(string $value): int

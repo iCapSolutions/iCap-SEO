@@ -16,6 +16,9 @@ if (!defined('ABSPATH')) {
 if (!class_exists('ICap_SEO_Output')) {
     class ICap_SEO_Output
     {
+        // Facebook ignores share images smaller than this on either side.
+        private const SOCIAL_IMAGE_MIN_SIZE = 200;
+
         public function register(): void
         {
             add_action('wp_head', [$this, 'output_meta_description_fallback'], 20);
@@ -75,6 +78,86 @@ if (!class_exists('ICap_SEO_Output')) {
             }
 
             echo '<meta name="description" content="' . esc_attr($description) . "\" />\n";
+        }
+
+        /**
+         * The picture social sites show when this page is shared: the featured
+         * image, else the first image in the page's content, else the site logo,
+         * else the site icon. A content image or logo from the media library
+         * smaller than SOCIAL_IMAGE_MIN_SIZE on either side is skipped, since
+         * Facebook ignores those. Shared with the editor panel's social preview so
+         * it shows the same picture.
+         *
+         * $featured_id overrides the saved featured image (0 = none), for a draft
+         * in the editor.
+         *
+         * @return array{url: string, source: string} source is featured, content, logo, site_icon or ''.
+         */
+        public function get_effective_social_image(WP_Post $post, ?int $featured_id = null): array
+        {
+            $featured = $featured_id === null
+                ? get_the_post_thumbnail_url($post, 'large')
+                : ($featured_id > 0 ? wp_get_attachment_image_url($featured_id, 'large') : false);
+            if (is_string($featured) && $featured !== '') {
+                return ['url' => $featured, 'source' => 'featured'];
+            }
+
+            if ($post->post_password === '') {
+                $content_image = $this->first_content_image_url((string) $post->post_content);
+                if ($content_image !== '') {
+                    return ['url' => $content_image, 'source' => 'content'];
+                }
+            }
+
+            $logo_id = (int) get_theme_mod('custom_logo');
+            $logo = $logo_id > 0 ? $this->large_enough_attachment_url($logo_id, 'full') : '';
+            if ($logo !== '') {
+                return ['url' => $logo, 'source' => 'logo'];
+            }
+
+            $icon = get_site_icon_url(512);
+            if ($icon !== '') {
+                return ['url' => $icon, 'source' => 'site_icon'];
+            }
+
+            return ['url' => '', 'source' => ''];
+        }
+
+        /**
+         * First image in post content: a media library image at its large size,
+         * if it's big enough to share, or any other image with a full http(s) address.
+         */
+        public function first_content_image_url(string $content): string
+        {
+            if (preg_match('/<img\b[^>]*>/i', $content, $match) !== 1) {
+                return '';
+            }
+            if (preg_match('/\bwp-image-(\d+)\b/', $match[0], $id_match) === 1) {
+                // A media library image too small to share isn't used; nor is its tag's src below.
+                return $this->large_enough_attachment_url((int) $id_match[1], 'large');
+            }
+            if (preg_match('/\bsrc\s*=\s*["\'](https?:\/\/[^"\']+)["\']/i', $match[0], $src_match) === 1) {
+                return esc_url_raw(html_entity_decode($src_match[1], ENT_QUOTES));
+            }
+
+            return '';
+        }
+
+        /**
+         * A media library image's URL at $size, or '' when it's missing or
+         * smaller than SOCIAL_IMAGE_MIN_SIZE on either side.
+         */
+        private function large_enough_attachment_url(int $attachment_id, string $size): string
+        {
+            $image = wp_get_attachment_image_src($attachment_id, $size);
+            if (!is_array($image) || empty($image[0])) {
+                return '';
+            }
+            if ((int) $image[1] < self::SOCIAL_IMAGE_MIN_SIZE || (int) $image[2] < self::SOCIAL_IMAGE_MIN_SIZE) {
+                return '';
+            }
+
+            return (string) $image[0];
         }
 
         /**
@@ -249,7 +332,8 @@ if (!class_exists('ICap_SEO_Output')) {
             $url = $this->get_effective_canonical_url($post);
             $site_name = get_bloginfo('name');
             $type = $post->post_type === 'post' ? 'article' : 'website';
-            $image_url = get_the_post_thumbnail_url($post, 'large');
+            $image = $this->get_effective_social_image($post);
+            $image_url = $image['url'];
 
             echo '<meta property="og:type" content="' . esc_attr($type) . "\" />\n";
             echo '<meta property="og:title" content="' . esc_attr($title) . "\" />\n";
@@ -266,7 +350,9 @@ if (!class_exists('ICap_SEO_Output')) {
                 echo '<meta property="og:image" content="' . esc_url($image_url) . "\" />\n";
             }
 
-            echo '<meta name="twitter:card" content="' . esc_attr($image_url ? 'summary_large_image' : 'summary') . "\" />\n";
+            // A logo or site icon is a small square, so it gets the small card.
+            $large_card = in_array($image['source'], ['featured', 'content'], true);
+            echo '<meta name="twitter:card" content="' . esc_attr($large_card ? 'summary_large_image' : 'summary') . "\" />\n";
             echo '<meta name="twitter:title" content="' . esc_attr($title) . "\" />\n";
             if ($description !== '') {
                 echo '<meta name="twitter:description" content="' . esc_attr($description) . "\" />\n";
