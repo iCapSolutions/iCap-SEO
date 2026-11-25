@@ -367,6 +367,117 @@ if (!function_exists('icap_seo_ai_actions_for_issues')) {
     }
 }
 
+if (!function_exists('icap_seo_render_just_changed_paragraphs')) {
+    // The before/after of paragraphs an AI action just published, highlighted.
+    function icap_seo_render_just_changed_paragraphs(?array $change, string $permalink, string $heading): void
+    {
+        $paragraphs = $change !== null && isset($change['paragraphs']) && is_array($change['paragraphs']) ? $change['paragraphs'] : [];
+        if (empty($paragraphs)) {
+            return;
+        }
+        ?>
+        <div>
+            <?php if ($heading !== '' || $permalink !== '') : ?>
+                <p><strong><?php echo esc_html($heading); ?></strong>
+                <?php if ($permalink !== '') : ?>
+                    <a href="<?php echo esc_url($permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View the page', 'icap-seo'); ?></a>
+                <?php endif; ?></p>
+            <?php endif; ?>
+            <?php foreach ($paragraphs as $paragraph) : ?>
+                <div class="icap-seo-just-changed-pair">
+                    <p><strong><?php esc_html_e('Before:', 'icap-seo'); ?></strong> <del><?php echo esc_html((string) ($paragraph['before'] ?? '')); ?></del></p>
+                    <p><strong><?php esc_html_e('Now:', 'icap-seo'); ?></strong> <ins><?php echo esc_html((string) ($paragraph['after'] ?? '')); ?></ins></p>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php
+    }
+}
+
+if (!function_exists('icap_seo_sitemap_findings')) {
+    // Compares the sitemaps Search Console has on file with this site's own sitemap.
+    // Returns ['site_sitemap' => url|'', 'submitted' => bool, 'problems' => [message, ...]],
+    // or null when Google's list isn't known.
+    function icap_seo_sitemap_findings($gsc_sitemaps): ?array
+    {
+        if (!is_array($gsc_sitemaps)) {
+            return null;
+        }
+        $site_sitemap = function_exists('get_sitemap_url') ? (string) get_sitemap_url('index') : '';
+        $normalize = static fn(string $url): string => strtolower(untrailingslashit(preg_replace('#^https?://#i', '', $url)));
+        $site_key = $site_sitemap !== '' ? $normalize($site_sitemap) : '';
+        $submitted = false;
+        $problems = [];
+        foreach ($gsc_sitemaps as $entry) {
+            $path = (string) ($entry['path'] ?? '');
+            $is_site_sitemap = $site_key !== '' && $normalize($path) === $site_key;
+            $submitted = $submitted || $is_site_sitemap;
+            if ((int) ($entry['errors'] ?? 0) > 0) {
+                $problems[] = $is_site_sitemap || $site_key === ''
+                    ? sprintf(
+                        /* translators: 1: sitemap URL, 2: number of errors */
+                        _n('Google reports %2$d error reading %1$s. Open it in Search Console to see what Google couldn\'t read.', 'Google reports %2$d errors reading %1$s. Open it in Search Console to see what Google couldn\'t read.', (int) $entry['errors'], 'icap-seo'),
+                        $path,
+                        (int) $entry['errors']
+                    )
+                    : sprintf(
+                        /* translators: 1: old sitemap URL, 2: this site's sitemap URL */
+                        __('Google can\'t read %1$s, an old sitemap this site no longer has. Remove it in Search Console; your sitemap is %2$s.', 'icap-seo'),
+                        $path,
+                        $site_sitemap
+                    );
+            }
+        }
+        if ($site_sitemap !== '' && !$submitted) {
+            $problems[] = sprintf(
+                /* translators: %s: this site's sitemap URL */
+                __('Your sitemap, %s, isn\'t submitted to Google. Submit it in Search Console so Google finds every page.', 'icap-seo'),
+                $site_sitemap
+            );
+        }
+        return ['site_sitemap' => $site_sitemap, 'submitted' => $submitted, 'problems' => $problems];
+    }
+}
+
+if (!function_exists('icap_seo_indexing_guidance')) {
+    // What a Google Search Console coverage state means for this page, and which of the
+    // plugin's fixes help. Google sends the state as display text, so it's matched on
+    // phrases. 'fixes' keys: content_depth, internal_links, title_meta, redirect.
+    // 'indexed' => true means there's nothing to fix.
+    function icap_seo_indexing_guidance(string $coverage_state): array
+    {
+        $state = strtolower($coverage_state);
+        $rules = [
+            ['crawled - currently not indexed', false, ['content_depth', 'internal_links', 'title_meta'], __('Google read this page but decided not to add it to search results, usually because it looks thin or too similar to other pages. Make the page more useful, then ask Google to index it again.', 'icap-seo')],
+            ['discovered - currently not indexed', false, ['internal_links', 'content_depth'], __('Google knows this page exists but hasn\'t read it yet. Links from your other pages and stronger content help Google decide it\'s worth reading.', 'icap-seo')],
+            ['soft 404', false, ['content_depth', 'redirect'], __('The page loads, but Google thinks it looks empty or like an error page. Add real content, or redirect it if the page is gone.', 'icap-seo')],
+            ['not found', false, ['redirect'], __('Google got a "not found" (404) error for this address. If the page moved, redirect the old address to its new one.', 'icap-seo')],
+            ['indexed, though blocked by robots.txt', false, [], __('The page is in search results, but robots.txt stops Google from reading it, so its listing may show no description. Remove the robots.txt rule that blocks it.', 'icap-seo')],
+            ['page indexed without content', false, [], __('The page is in search results, but Google couldn\'t read its content. Check the page doesn\'t rely on content that only loads in the browser.', 'icap-seo')],
+            ['noindex', false, [], __('The page tells search engines not to index it. If that isn\'t intended, check Settings > Reading ("Discourage search engines") and any other SEO plugin\'s settings for this page.', 'icap-seo')],
+            ['robots.txt', false, [], __('Your robots.txt file stops Google from reading this page. Remove the rule that blocks it if the page should be in search.', 'icap-seo')],
+            ['page with redirect', false, [], __('This address redirects to another page, so Google indexes the destination instead. That\'s expected. Make sure your links point at the destination.', 'icap-seo')],
+            ['redirect error', false, [], __('Google couldn\'t follow this page\'s redirect: it loops, is too long, or points at a bad address. Check the redirect on the Redirects tab or your server.', 'icap-seo')],
+            ['alternate page with proper canonical', true, [], __('This page points Google at another version as the main one, and Google agreed. Nothing to fix.', 'icap-seo')],
+            ['duplicate without user-selected canonical', false, [], __('Google sees this page as a copy of another and picked a different one to show. Make this page clearly different, or point it at the main version.', 'icap-seo')],
+            ['google chose different canonical', false, [], __('This page names itself as the main version, but Google picked another page instead. Make the content more distinct, or point this page at the one Google chose.', 'icap-seo')],
+            ['server error', false, [], __('Your server returned an error when Google tried to read this page. Check with your host if it keeps happening.', 'icap-seo')],
+            ['unauthorized', false, [], __('The page asks for a login, so Google can\'t read it. Make it public if it should be in search.', 'icap-seo')],
+            ['forbidden', false, [], __('Your server refused Google access to this page (403). A security plugin or firewall may be blocking Google.', 'icap-seo')],
+            ['4xx', false, [], __('Your server returned an error when Google tried to read this page. Check the page loads for logged-out visitors.', 'icap-seo')],
+            ['removal tool', false, [], __('This page was hidden with Search Console\'s Removals tool. Cancel the request in Search Console if it should come back.', 'icap-seo')],
+            ['unknown to google', false, [], __('Google hasn\'t found this page yet. Link to it from your other pages, then ask Google to index it.', 'icap-seo')],
+            ['indexed', true, [], __('This page is in Google\'s search results.', 'icap-seo')],
+        ];
+        foreach ($rules as [$phrase, $indexed, $fixes, $meaning]) {
+            if (strpos($state, $phrase) !== false) {
+                return ['indexed' => $indexed, 'fixes' => $fixes, 'meaning' => $meaning];
+            }
+        }
+        return ['indexed' => false, 'fixes' => [], 'meaning' => __('Open the page in Search Console for details on this status.', 'icap-seo')];
+    }
+}
+
 if (!function_exists('icap_seo_ai_icon')) {
     // Line icons for the AI actions, drawn in the same 24px style as the tab icons.
     function icap_seo_ai_icon(string $name, int $size = 20): string
@@ -809,7 +920,7 @@ if ($notice_code === 'remediation_apply_noop') {
     </h1>
     <p><?php esc_html_e('SEO intelligence for WordPress sites by iCapSolutions.', 'icap-seo'); ?></p>
     <?php if ($notice_code !== '' && isset($notice_map[$notice_code])) : ?>
-        <div class="notice <?php echo esc_attr(['error' => 'notice-error', 'info' => 'notice-info'][$notice_map[$notice_code]['type']] ?? 'notice-success'); ?> is-dismissible">
+        <div class="notice icap-seo-action-notice <?php echo esc_attr(['error' => 'notice-error', 'info' => 'notice-info'][$notice_map[$notice_code]['type']] ?? 'notice-success'); ?> is-dismissible">
             <p><?php echo esc_html($notice_override_message !== '' ? $notice_override_message : $notice_map[$notice_code]['message']); ?></p>
         </div>
     <?php endif; ?>
@@ -1371,9 +1482,16 @@ if ($notice_code === 'remediation_apply_noop') {
                                             $row_google_label = $row_google_coverage_state;
                                         }
                                         ?>
-                                        <span style="display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; background:<?php echo esc_attr($row_google_bg); ?>; color:<?php echo esc_attr($row_google_fg); ?>;">
+                                        <?php $row_google_style = 'display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; text-decoration:none; background:' . $row_google_bg . '; color:' . $row_google_fg . ';'; ?>
+                                        <?php if ($row_google_coverage_state !== '' && $row_content_key !== '') : ?>
+                                            <a href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'content-scores', 'content_key' => $row_content_key], admin_url('admin.php')) . '#icap-seo-indexing'); ?>" style="<?php echo esc_attr($row_google_style); ?>">
+                                                <?php echo esc_html($row_google_label); ?>
+                                            </a>
+                                        <?php else : ?>
+                                        <span style="<?php echo esc_attr($row_google_style); ?>">
                                             <?php echo esc_html($row_google_label); ?>
                                         </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php if ($row_content_key !== '') : ?>
@@ -1552,40 +1670,8 @@ if ($notice_code === 'remediation_apply_noop') {
                         }
                     }
                     ?>
-                    <div class="icap-seo-panel">
-                    <p class="icap-seo-card-value"><?php echo esc_html($detail_title); ?></p>
                     <?php
-                    $detail_google_verification = isset($content_score_detail['google_verification']) && is_array($content_score_detail['google_verification'])
-                        ? $content_score_detail['google_verification']
-                        : null;
-                    ?>
-                    <?php if ($detail_google_verification !== null && ($detail_google_verification['coverage_state'] ?? '') !== '') : ?>
-                        <p class="description">
-                            <?php
-                            echo esc_html(
-                                sprintf(
-                                    /* translators: 1: Google Search Console coverage state, 2: verdict, 3: when it was checked */
-                                    __('Google Search Console says: %1$s (verdict: %2$s, checked %3$s)', 'icap-seo'),
-                                    $detail_google_verification['coverage_state'],
-                                    $detail_google_verification['verdict'] !== '' ? $detail_google_verification['verdict'] : 'n/a',
-                                    $detail_google_verification['checked_at'] !== '' ? $detail_google_verification['checked_at'] : 'n/a'
-                                )
-                            );
-                            ?>
-                        </p>
-                    <?php endif; ?>
-                    <?php if ($detail_permalink !== '') : ?>
-                        <p><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View published URL', 'icap-seo'); ?></a></p>
-                    <?php endif; ?>
-                    <?php if ($current_meta_description_value !== '') : ?>
-                        <p class="description">
-                            <strong><?php esc_html_e('Current meta description:', 'icap-seo'); ?></strong>
-                            <?php echo esc_html($current_meta_description_value); ?>
-                        </p>
-                    <?php endif; ?>
-                    </div>
-                    <?php
-                    // Type/Status/Overall score plus per-page Search Console/Analytics
+                    // Page/Type/Status/Overall score plus per-page Search Console/Analytics
                     // stats as icon cards, matching the Overview tab's .icap-seo-cards
                     // grid pattern rather than the plain meta-line text used elsewhere -
                     // these are scannable at-a-glance stats, not a single label:value line.
@@ -1595,8 +1681,38 @@ if ($notice_code === 'remediation_apply_noop') {
                     $detail_google_analytics = isset($content_score_detail['google_analytics']) && is_array($content_score_detail['google_analytics'])
                         ? $content_score_detail['google_analytics']
                         : null;
+                    // The Google cards and the indexing panel always show, so every page has
+                    // the same layout; when there's no data they say why instead of vanishing.
+                    $detail_google_connected = ($google_connection_status['status'] ?? '') === 'connected';
+                    $detail_gsc_property = (string) ($google_connection_status['search_console_property_url'] ?? '');
+                    // From WordPress itself: on-site detail shows a label in the Status card, not the post status.
+                    $detail_is_private = in_array((string) get_post_status($this->extract_post_id_from_content_key($selected_content_key)), ['private', 'draft', 'pending', 'future'], true);
+                    $detail_google_empty_reason = static function (bool $source_connected, string $no_data) use ($service_is_registered, $detail_is_private, $detail_google_connected): string {
+                        if (!$service_is_registered) {
+                            return __('Register this site to see Google data here', 'icap-seo');
+                        }
+                        if ($detail_is_private) {
+                            return __('Google doesn\'t see pages that aren\'t public', 'icap-seo');
+                        }
+                        if (!$detail_google_connected || !$source_connected) {
+                            return __('Connect Google on the Account tab', 'icap-seo');
+                        }
+                        return $no_data;
+                    };
                     ?>
                     <div class="icap-seo-cards">
+                        <div class="icap-seo-card icap-seo-card--icon icap-seo-card--page">
+                            <div class="icap-seo-card-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h10"/><path d="M4 18h7"/></svg>
+                            </div>
+                            <div class="icap-seo-card-text">
+                                <h3><?php esc_html_e('Page', 'icap-seo'); ?></h3>
+                                <p class="icap-seo-card-value"><?php echo esc_html($detail_title); ?></p>
+                                <?php if ($detail_permalink !== '') : ?>
+                                    <p class="icap-seo-card-subtext"><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View published page', 'icap-seo'); ?></a></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                         <div class="icap-seo-card icap-seo-card--icon">
                             <div class="icap-seo-card-icon" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>
@@ -1612,7 +1728,11 @@ if ($notice_code === 'remediation_apply_noop') {
                             </div>
                             <div class="icap-seo-card-text">
                                 <h3><?php esc_html_e('Status', 'icap-seo'); ?></h3>
-                                <p class="icap-seo-card-value"><?php echo esc_html($detail_status !== '' ? $detail_status : 'n/a'); ?></p>
+                                <?php $detail_status_object = $detail_status !== '' ? get_post_status_object($detail_status) : null; ?>
+                                <p class="icap-seo-card-value"><?php echo esc_html($detail_status_object !== null ? $detail_status_object->label : ($detail_status !== '' ? $detail_status : 'n/a')); ?></p>
+                                <?php if (!empty($content_detail_is_local)) : ?>
+                                    <p class="icap-seo-card-subtext"><?php esc_html_e('Checked on this site', 'icap-seo'); ?></p>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="icap-seo-card icap-seo-card--icon">
@@ -1654,6 +1774,17 @@ if ($notice_code === 'remediation_apply_noop') {
                                     </p>
                                 </div>
                             </div>
+                        <?php else : ?>
+                            <div class="icap-seo-card icap-seo-card--icon is-empty">
+                                <div class="icap-seo-card-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                                </div>
+                                <div class="icap-seo-card-text">
+                                    <h3><?php esc_html_e('Search Console (28d)', 'icap-seo'); ?></h3>
+                                    <p class="icap-seo-card-value icap-seo-card-value--muted"><?php esc_html_e('No data', 'icap-seo'); ?></p>
+                                    <p class="icap-seo-card-subtext"><?php echo esc_html($detail_google_empty_reason($detail_gsc_property !== '', __('This page hasn\'t appeared in Google searches in the last 28 days', 'icap-seo'))); ?></p>
+                                </div>
+                            </div>
                         <?php endif; ?>
                         <?php if ($detail_google_analytics !== null) : ?>
                             <div class="icap-seo-card icap-seo-card--icon">
@@ -1685,8 +1816,206 @@ if ($notice_code === 'remediation_apply_noop') {
                                     </p>
                                 </div>
                             </div>
+                        <?php else : ?>
+                            <div class="icap-seo-card icap-seo-card--icon is-empty">
+                                <div class="icap-seo-card-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+                                </div>
+                                <div class="icap-seo-card-text">
+                                    <h3><?php esc_html_e('Google Analytics (28d)', 'icap-seo'); ?></h3>
+                                    <p class="icap-seo-card-value icap-seo-card-value--muted"><?php esc_html_e('No data', 'icap-seo'); ?></p>
+                                    <p class="icap-seo-card-subtext"><?php echo esc_html($detail_google_empty_reason(!empty($google_connection_status['analytics_property_id']), __('No visits to this page in the last 28 days', 'icap-seo'))); ?></p>
+                                </div>
+                            </div>
                         <?php endif; ?>
                     </div>
+                    <?php if ($current_meta_description_value !== '') : ?>
+                        <p class="description">
+                            <strong><?php esc_html_e('Current meta description:', 'icap-seo'); ?></strong>
+                            <?php echo esc_html($current_meta_description_value); ?>
+                        </p>
+                    <?php endif; ?>
+                    <?php
+                    $detail_google_verification = isset($content_score_detail['google_verification']) && is_array($content_score_detail['google_verification'])
+                        ? $content_score_detail['google_verification']
+                        : null;
+                    ?>
+                    <?php
+                    // After an AI change is published the admin lands at the top of this
+                    // page; show what changed here, once, with a link to see it live.
+                    $detail_last_ai_change = $notice_code !== '' && substr($notice_code, -10) === '_published'
+                        ? $this->last_ai_change_for_post($this->extract_post_id_from_content_key($selected_content_key))
+                        : null;
+                    if ($detail_last_ai_change !== null && $notice_code !== $detail_last_ai_change['generator'] . '_published') {
+                        $detail_last_ai_change = null;
+                    }
+                    ?>
+                    <?php if ($detail_last_ai_change !== null) : ?>
+                        <div class="icap-seo-panel icap-seo-just-changed">
+                            <h3><?php esc_html_e('What changed on the page', 'icap-seo'); ?></h3>
+                            <?php if ($detail_permalink !== '') : ?>
+                                <p><a href="<?php echo esc_url($detail_permalink); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('View the published page', 'icap-seo'); ?></a></p>
+                            <?php endif; ?>
+                            <?php if (!empty($detail_last_ai_change['html'])) : ?>
+                                <p><strong><?php esc_html_e('Added to the end of the page:', 'icap-seo'); ?></strong></p>
+                                <div><?php echo wp_kses_post((string) $detail_last_ai_change['html']); ?></div>
+                            <?php else : ?>
+                                <?php icap_seo_render_just_changed_paragraphs($detail_last_ai_change, '', ''); ?>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php
+                    $detail_coverage_state = $detail_google_verification !== null ? (string) ($detail_google_verification['coverage_state'] ?? '') : '';
+                    // Search Console's inspect page only opens with the page id Google hands
+                    // out during a scan. Until a scan brings that link, open the property's
+                    // Pages report, where the page can be pasted into the inspect box.
+                    $detail_gsc_inspection_link = $detail_google_verification !== null ? (string) ($detail_google_verification['inspection_link'] ?? '') : '';
+                    $detail_gsc_inspect_url = $detail_gsc_inspection_link !== ''
+                        ? $detail_gsc_inspection_link
+                        : ($detail_gsc_property !== ''
+                            ? add_query_arg('resource_id', rawurlencode($detail_gsc_property), 'https://search.google.com/search-console/index')
+                            : 'https://search.google.com/search-console');
+                    ?>
+                    <?php if ($detail_coverage_state === '') : ?>
+                        <div class="icap-seo-panel icap-seo-indexing is-unknown" id="icap-seo-indexing">
+                            <h3><?php esc_html_e('Google indexing', 'icap-seo'); ?></h3>
+                            <p class="icap-seo-indexing-state"><?php esc_html_e('No report from Google yet', 'icap-seo'); ?></p>
+                            <p>
+                                <?php
+                                $detail_indexing_unknown_reason = $detail_google_empty_reason(
+                                    $detail_gsc_property !== '',
+                                    __('Google hasn\'t reported on this page yet. iCap SEO asks Google about each page during scans; new or rarely visited pages can take a while to show up.', 'icap-seo')
+                                );
+                                echo esc_html($detail_indexing_unknown_reason);
+                                ?>
+                            </p>
+                            <?php if ($service_is_registered && !$detail_is_private && $detail_google_connected && $detail_gsc_property !== '') : ?>
+                                <p><a href="<?php echo esc_url($detail_gsc_inspect_url); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Check this page in Search Console', 'icap-seo'); ?></a></p>
+                            <?php endif; ?>
+                        </div>
+                    <?php else : ?>
+                        <?php
+                        $detail_indexing = icap_seo_indexing_guidance($detail_coverage_state);
+                        $detail_indexing_checked = (string) ($detail_google_verification['checked_at'] ?? '');
+                        $detail_indexing_checked_ts = $detail_indexing_checked !== '' ? strtotime($detail_indexing_checked) : false;
+                        $detail_indexing_codes = array_map(
+                            static fn($issue_row): string => is_array($issue_row) && isset($issue_row['issue_code']) ? sanitize_key((string) $issue_row['issue_code']) : '',
+                            $open_detail_issues
+                        );
+                        $detail_indexing_base_url = add_query_arg(
+                            ['page' => 'icap-seo', 'tab' => 'content-scores', 'content_key' => $selected_content_key],
+                            admin_url('admin.php')
+                        );
+                        // Content expanded since Google last crawled the page has done its job;
+                        // what's left is asking Google to look again, so don't suggest it twice.
+                        $detail_indexing_crawled_ts = !empty($detail_google_verification['last_crawl_time']) ? strtotime((string) $detail_google_verification['last_crawl_time']) : 0;
+                        $detail_content_expanded = null;
+                        foreach ((isset($remediation_audit_entries) && is_array($remediation_audit_entries) ? $remediation_audit_entries : []) as $audit_entry) {
+                            if (empty($audit_entry['content_depth_changed']) || empty($audit_entry['timestamp'])) {
+                                continue;
+                            }
+                            $expanded_ts = strtotime(get_gmt_from_date((string) $audit_entry['timestamp']) . ' UTC');
+                            if ($expanded_ts && $expanded_ts > $detail_indexing_crawled_ts && ($detail_content_expanded === null || $expanded_ts > $detail_content_expanded['ts'])) {
+                                $detail_content_expanded = ['ts' => $expanded_ts, 'words' => (int) ($audit_entry['content_depth_words_added'] ?? 0)];
+                            }
+                        }
+                        if ($detail_content_expanded !== null) {
+                            $detail_indexing['fixes'] = array_values(array_diff($detail_indexing['fixes'], ['content_depth']));
+                        }
+                        // Each step links to the plugin tool that does it; steps whose finding
+                        // isn't open on this page are left out rather than shown as no-ops.
+                        $detail_indexing_steps = [];
+                        if ($detail_content_expanded !== null) {
+                            $detail_indexing_steps[] = [
+                                'label' => sprintf(
+                                    /* translators: 1: number of words, 2: date */
+                                    __('Done: %1$d words added with AI on %2$s, after Google\'s last visit', 'icap-seo'),
+                                    $detail_content_expanded['words'],
+                                    date_i18n(get_option('date_format'), $detail_content_expanded['ts'])
+                                ),
+                                'href' => '',
+                                'note' => '',
+                            ];
+                        }
+                        // Google finds pages through the sitemap, so a missing or broken one
+                        // comes first. Read from the cached Search Console report only.
+                        $detail_sitemap_findings = icap_seo_sitemap_findings($detail_seo_performance['gsc']['sitemaps'] ?? null);
+                        if ($detail_sitemap_findings !== null && !empty($detail_sitemap_findings['problems'])) {
+                            $detail_indexing_steps[] = [
+                                'label' => $detail_sitemap_findings['submitted']
+                                    ? __('Fix your sitemap in Search Console', 'icap-seo')
+                                    : __('Submit your sitemap to Google', 'icap-seo'),
+                                'href' => add_query_arg(['page' => 'icap-seo', 'tab' => 'seo-performance'], admin_url('admin.php')) . '#icap-seo-sitemaps',
+                                'note' => '',
+                            ];
+                        }
+                        foreach ($detail_indexing['fixes'] as $indexing_fix) {
+                            if ($indexing_fix === 'content_depth') {
+                                $detail_indexing_steps[] = [
+                                    'label' => __('Expand the page\'s content with AI', 'icap-seo'),
+                                    'href' => add_query_arg('detail_tab', 'ai-drafts', $detail_indexing_base_url) . '#icap-seo-ai-content_depth',
+                                    'note' => $service_is_premium ? '' : __('Premium', 'icap-seo'),
+                                ];
+                            } elseif ($indexing_fix === 'internal_links' && array_intersect(['low_internal_linking', 'no_links_detected'], $detail_indexing_codes)) {
+                                $detail_indexing_steps[] = [
+                                    'label' => __('Add internal links to this page\'s content', 'icap-seo'),
+                                    'href' => add_query_arg('detail_tab', 'recommendations', $detail_indexing_base_url),
+                                    'note' => '',
+                                ];
+                            } elseif ($indexing_fix === 'title_meta' && array_intersect(['title_length_out_of_range', 'missing_title_tag', 'missing_meta_description', 'meta_description_length_out_of_range'], $detail_indexing_codes)) {
+                                $detail_indexing_steps[] = [
+                                    'label' => __('Fix the title and meta description', 'icap-seo'),
+                                    'href' => add_query_arg('detail_tab', 'recommendations', $detail_indexing_base_url),
+                                    'note' => '',
+                                ];
+                            } elseif ($indexing_fix === 'redirect' && $detail_permalink !== '') {
+                                $detail_indexing_path = (string) wp_parse_url($detail_permalink, PHP_URL_PATH);
+                                $detail_indexing_steps[] = [
+                                    'label' => __('Redirect this address to another page', 'icap-seo'),
+                                    'href' => add_query_arg(['page' => 'icap-seo', 'tab' => 'redirects', 'prefill_source' => $detail_indexing_path !== '' ? $detail_indexing_path : '/'], admin_url('admin.php')),
+                                    'note' => '',
+                                ];
+                            }
+                        }
+                        ?>
+                        <div class="icap-seo-panel icap-seo-indexing<?php echo $detail_indexing['indexed'] ? ' is-indexed' : ''; ?>" id="icap-seo-indexing">
+                            <h3><?php esc_html_e('Google indexing', 'icap-seo'); ?></h3>
+                            <p>
+                                <span class="icap-seo-indexing-state"><?php echo esc_html($detail_coverage_state); ?></span>
+                                <?php if ($detail_indexing_checked_ts) : ?>
+                                    <span class="description">
+                                        <?php
+                                        /* translators: %s: date Google Search Console was last checked */
+                                        echo esc_html(sprintf(__('Checked %s', 'icap-seo'), date_i18n(get_option('date_format'), $detail_indexing_checked_ts)));
+                                        ?>
+                                    </span>
+                                <?php endif; ?>
+                            </p>
+                            <p><?php echo esc_html($detail_indexing['meaning']); ?></p>
+                            <?php if (!$detail_indexing['indexed']) : ?>
+                                <ol class="icap-seo-indexing-steps">
+                                    <?php foreach ($detail_indexing_steps as $indexing_step) : ?>
+                                        <li>
+                                            <?php if ($indexing_step['href'] === '') : ?>
+                                                <span class="dashicons dashicons-yes-alt" aria-hidden="true"></span> <?php echo esc_html($indexing_step['label']); ?>
+                                            <?php else : ?>
+                                            <a href="<?php echo esc_url($indexing_step['href']); ?>"><?php echo esc_html($indexing_step['label']); ?></a>
+                                            <?php endif; ?>
+                                            <?php if ($indexing_step['note'] !== '') : ?>
+                                                <span class="icap-seo-ai-badge"><?php echo esc_html($indexing_step['note']); ?></span>
+                                            <?php endif; ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                    <li>
+                                        <a href="<?php echo esc_url($detail_gsc_inspect_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html(empty($detail_indexing_steps) ? __('Open this page in Search Console', 'icap-seo') : __('Then ask Google to index it again in Search Console', 'icap-seo')); ?></a>
+                                        <span class="description"><?php echo esc_html($detail_gsc_inspection_link !== ''
+                                            ? __('Click "Request indexing" there. Google only allows this from Search Console.', 'icap-seo')
+                                            : __('Paste this page\'s address into the search box at the top, then click "Request indexing". Google only allows this from Search Console.', 'icap-seo')); ?></span>
+                                    </li>
+                                </ol>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                     <?php if (!empty($content_detail_is_local)) : ?>
                     <div class="notice notice-info inline" style="margin:12px 0;">
                         <p><?php esc_html_e('These free checks ran on this site, and their fixes apply here without any connection. Registering adds free Google Search Console and Google Analytics reports. Premium adds AI Improvements, plus scans, reachability, and broken-link checks from outside your site.', 'icap-seo'); ?></p>
@@ -1730,6 +2059,31 @@ if ($notice_code === 'remediation_apply_noop') {
                     $detail_ai_actions = empty($content_detail_is_posts_page)
                         ? icap_seo_ai_actions_for_issues($open_detail_issue_codes)
                         : array_values(array_intersect(icap_seo_ai_actions_for_issues($open_detail_issue_codes), ['page_title', 'meta_description']));
+                    // Google not indexing the page for thin content counts as a suggestion too,
+                    // so the card, the tab count and the indexing panel agree.
+                    if (
+                        empty($content_detail_is_posts_page)
+                        && isset($detail_indexing)
+                        && in_array('content_depth', $detail_indexing['fixes'], true)
+                        && !in_array('content_depth', $detail_ai_actions, true)
+                    ) {
+                        $detail_ai_actions = array_values(array_intersect(array_keys(icap_seo_ai_action_catalog()), array_merge($detail_ai_actions, ['content_depth'])));
+                    }
+                    // Once a page has been rewritten and its sentence checks pass, only the
+                    // reading-ease score is left, and that comes down to long words and names.
+                    // Another rewrite rarely moves it, so stop suggesting one.
+                    $readability_rewrite_count = 0;
+                    foreach ((isset($remediation_audit_entries) && is_array($remediation_audit_entries) ? $remediation_audit_entries : []) as $audit_entry) {
+                        if (in_array('readability_score_low', (array) ($audit_entry['issue_codes'] ?? []), true)) {
+                            $readability_rewrite_count++;
+                        }
+                    }
+                    $readability_only_word_choice = in_array('readability_score_low', $open_detail_issue_codes, true)
+                        && !array_intersect(['readability_long_sentences_high', 'readability_low_transition_word_usage', 'readability_passive_voice_high'], $open_detail_issue_codes);
+                    $readability_ai_done = $readability_only_word_choice && $readability_rewrite_count > 0;
+                    if ($readability_ai_done) {
+                        $detail_ai_actions = array_values(array_diff($detail_ai_actions, ['readability_rewrite']));
+                    }
                     $ai_action_catalog = icap_seo_ai_action_catalog();
                     $ai_drafts_tab_url = add_query_arg(
                         [
@@ -1976,6 +2330,8 @@ if ($notice_code === 'remediation_apply_noop') {
                                                         <div style="margin-top:6px;"><em><?php esc_html_e('This page\'s content isn\'t displayed here (see the notice above) — applying this fix would have no visible effect.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($is_content_depth_code) : ?>
                                                         <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use Content depth expansion on the AI Improvements tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Add more useful content to this page in the editor. Premium\'s AI Improvements can draft it for you.', 'icap-seo'); ?></em></div>
+                                                    <?php elseif ($is_readability_code && $readability_ai_done) : ?>
+                                                        <div style="margin-top:6px;"><em><?php esc_html_e('Sentences already pass after the AI rewrite. What\'s left is long words and names, which can stay. Edit by hand if you want a higher score.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($is_readability_code) : ?>
                                                         <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use the Readability rewrite on the AI Improvements tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Edit this page using shorter sentences and simpler words. Premium\'s AI Improvements can rewrite it for you.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($catalog_apply_type === 'auto') : ?>
@@ -1984,6 +2340,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                                                 <input type="hidden" name="action" value="icap_seo_apply_remediation">
                                                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                                                 <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($catalog_code); ?>">
+                                                                <input type="hidden" name="return_to" value="<?php echo esc_attr('icap-seo-applied-' . $catalog_code); ?>">
                                                                 <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
                                                                 <button type="submit" class="button button-secondary"><?php esc_html_e('Fix this', 'icap-seo'); ?></button>
                                                             </form>
@@ -2103,6 +2460,9 @@ if ($notice_code === 'remediation_apply_noop') {
                             if (!$service_is_premium) {
                                 $ai_action_state = $ai_action_suggested ? __('Suggested for this page', 'icap-seo') : __('Premium', 'icap-seo');
                                 $ai_action_href = '';
+                            } elseif ($ai_generator === 'readability_rewrite' && $readability_ai_done) {
+                                $ai_action_state = __('Done, sentences pass', 'icap-seo');
+                                $ai_action_href = '#icap-seo-ai-readability_rewrite';
                             } elseif (!$ai_action_ready) {
                                 $ai_action_state = __('Nothing to fix on this page', 'icap-seo');
                                 $ai_action_href = '';
@@ -2160,7 +2520,13 @@ if ($notice_code === 'remediation_apply_noop') {
                     $content_depth_draft_html = isset($content_depth_draft['html']) && is_string($content_depth_draft['html']) ? $content_depth_draft['html'] : '';
                     $content_depth_draft_word_count = isset($content_depth_draft['word_count']) ? (int) $content_depth_draft['word_count'] : 0;
                     ?>
-                    <?php if (!empty($content_depth_open_issue_codes) || $content_depth_draft_html !== '') : ?>
+                    <?php
+                    // Google not indexing a page is usually about thin content, so the
+                    // indexing panel's "Expand the content" step lands here even when the
+                    // scan didn't flag content depth.
+                    $content_depth_for_indexing = isset($detail_indexing) && in_array('content_depth', $detail_indexing['fixes'], true);
+                    ?>
+                    <?php if (!empty($content_depth_open_issue_codes) || $content_depth_draft_html !== '' || $content_depth_for_indexing) : ?>
                         <div class="icap-seo-panel" id="icap-seo-ai-content_depth">
                         <h4><?php esc_html_e('Content depth expansion', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates draft paragraphs to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft.', 'icap-seo'); ?></p>
@@ -2176,11 +2542,11 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <div><?php echo wp_kses_post($content_depth_draft_html); ?></div>
                             </div>
                         <?php endif; ?>
-                        </div>
                         <?php if ($content_depth_draft_html === '') : ?>
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Writing expanded content…', 'icap-seo'); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_content_depth">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_content_depth'); ?>
@@ -2192,19 +2558,18 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_publish_content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_publish_content_depth'); ?>
                                     <button type="submit" class="button button-primary"><?php esc_html_e('Accept & publish', 'icap-seo'); ?></button>
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_discard_content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_discard_content_depth'); ?>
                                     <button type="submit" class="button"><?php esc_html_e('Discard', 'icap-seo'); ?></button>
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Writing expanded content…', 'icap-seo'); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_content_depth">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-content_depth">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_content_depth'); ?>
@@ -2212,6 +2577,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </form>
                             </div>
                         <?php endif; ?>
+                        </div>
                     <?php endif; ?>
                     <?php
                     $readability_open = in_array('readability_score_low', array_map(
@@ -2224,6 +2590,29 @@ if ($notice_code === 'remediation_apply_noop') {
                         <div class="icap-seo-panel" id="icap-seo-ai-readability_rewrite">
                         <h4><?php esc_html_e('Readability rewrite', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('Generates simplified paragraph drafts to review before anything is saved. Nothing publishes to this page until you explicitly accept the draft.', 'icap-seo'); ?></p>
+                        <?php
+                        // A page can pass the sentence checks and still score low on reading
+                        // ease, which also weighs word length. Say so, so a repeat rewrite
+                        // isn't a mystery, and note that names can't be shortened.
+                        ?>
+                        <?php if ($readability_ai_done) : ?>
+                            <div class="notice notice-info inline">
+                                <p>
+                                    <?php
+                                    echo esc_html(sprintf(
+                                        /* translators: %d: number of times this page has been rewritten for readability */
+                                        _n(
+                                            'Done: this page has been rewritten for readability %d time, and its sentences now pass. The reading-ease score that\'s left comes from long words and names (such as product and company names), which a rewrite keeps as written, so it isn\'t suggested again. You can still try another rewrite, or leave it.',
+                                            'Done: this page has been rewritten for readability %d times, and its sentences now pass. The reading-ease score that\'s left comes from long words and names (such as product and company names), which a rewrite keeps as written, so it isn\'t suggested again. You can still try another rewrite, or leave it.',
+                                            $readability_rewrite_count,
+                                            'icap-seo'
+                                        ),
+                                        $readability_rewrite_count
+                                    ));
+                                    ?>
+                                </p>
+                            </div>
+                        <?php endif; ?>
                         <?php if (!empty($readability_draft_paragraphs)) : ?>
                             <div class="icap-seo-readability-draft" style="border:1px solid #ccd0d4; padding:12px; margin:8px 0; background:#fff;">
                                 <p class="description">
@@ -2252,15 +2641,19 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                        </div>
                         <?php if (empty($readability_draft_paragraphs)) : ?>
                             <div class="icap-seo-actions">
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Simplifying paragraphs…', 'icap-seo'); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_readability_rewrite">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_readability_rewrite'); ?>
-                                    <button type="submit" class="button button-primary"><?php esc_html_e('Preview simplified paragraphs', 'icap-seo'); ?></button>
+                                    <?php if ($readability_ai_done) : ?>
+                                        <button type="submit" class="button"><?php esc_html_e('Try another rewrite anyway', 'icap-seo'); ?></button>
+                                    <?php else : ?>
+                                        <button type="submit" class="button button-primary"><?php esc_html_e('Preview simplified paragraphs', 'icap-seo'); ?></button>
+                                    <?php endif; ?>
                                 </form>
                             </div>
                         <?php else : ?>
@@ -2268,19 +2661,18 @@ if ($notice_code === 'remediation_apply_noop') {
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_publish_readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_publish_readability_rewrite'); ?>
                                     <button type="submit" class="button button-primary"><?php esc_html_e('Accept & publish', 'icap-seo'); ?></button>
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                     <input type="hidden" name="action" value="icap_seo_discard_readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                                    <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_discard_readability_rewrite'); ?>
                                     <button type="submit" class="button"><?php esc_html_e('Discard', 'icap-seo'); ?></button>
                                 </form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Simplifying paragraphs…', 'icap-seo'); ?>">
                                     <input type="hidden" name="action" value="icap_seo_preview_readability_rewrite">
+                                    <input type="hidden" name="return_to" value="icap-seo-ai-readability_rewrite">
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_readability_rewrite'); ?>
@@ -2288,6 +2680,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 </form>
                             </div>
                         <?php endif; ?>
+                        </div>
                     <?php endif; ?>
                     <?php
                     $spelling_grammar_draft_paragraphs = isset($spelling_grammar_draft_paragraphs) && is_array($spelling_grammar_draft_paragraphs) ? $spelling_grammar_draft_paragraphs : [];
@@ -2323,11 +2716,11 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
-                    </div>
                     <?php if (empty($spelling_grammar_draft_paragraphs)) : ?>
                         <div class="icap-seo-actions">
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Checking spelling and grammar…', 'icap-seo'); ?>">
                                 <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
+                                <input type="hidden" name="return_to" value="icap-seo-ai-spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                 <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
@@ -2339,19 +2732,18 @@ if ($notice_code === 'remediation_apply_noop') {
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_publish_spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                                <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_publish_spelling_grammar'); ?>
                                 <button type="submit" class="button button-primary"><?php esc_html_e('Accept & publish', 'icap-seo'); ?></button>
                             </form>
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                                 <input type="hidden" name="action" value="icap_seo_discard_spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
-                                <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_discard_spelling_grammar'); ?>
                                 <button type="submit" class="button"><?php esc_html_e('Discard', 'icap-seo'); ?></button>
                             </form>
                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" data-progress-label="<?php esc_attr_e('Checking spelling and grammar…', 'icap-seo'); ?>">
                                 <input type="hidden" name="action" value="icap_seo_preview_spelling_grammar">
+                                <input type="hidden" name="return_to" value="icap-seo-ai-spelling_grammar">
                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                 <input type="hidden" name="detail_tab" value="ai-drafts">
                                 <?php wp_nonce_field('icap_seo_preview_spelling_grammar'); ?>
@@ -2359,11 +2751,12 @@ if ($notice_code === 'remediation_apply_noop') {
                             </form>
                         </div>
                     <?php endif; ?>
+                    </div>
                     <?php endif; // service_is_premium ?>
                     <?php endif; // content_detail_tab === 'ai-drafts' ?>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
                     <?php if (!empty($applied_detail_issues)) : ?>
-                        <div class="icap-seo-panel">
+                        <div class="icap-seo-panel" id="icap-seo-applied">
                         <h4><?php esc_html_e('Applied recommendations (local)', 'icap-seo'); ?></h4>
                         <p class="description"><?php esc_html_e('These were applied in WordPress already. Use regenerate if you want a new AI draft.', 'icap-seo'); ?></p>
                         <ol>
@@ -2375,7 +2768,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                 $issue_recommended_fix = isset($issue['recommended_fix']) ? sanitize_text_field((string) $issue['recommended_fix']) : '';
                                 $can_regenerate = in_array($issue_code, ['missing_meta_description', 'meta_description_length_out_of_range', 'title_length_out_of_range', 'missing_title_tag', 'missing_h1', 'images_missing_alt', 'images_missing_dimensions', 'images_not_lazy_loaded', 'missing_canonical', 'missing_jsonld_schema', 'limited_heading_structure', 'low_internal_linking', 'no_links_detected', 'limited_paragraph_structure'], true);
                                 ?>
-                                <li>
+                                <li id="<?php echo esc_attr('icap-seo-applied-' . $issue_code); ?>">
                                     <strong><?php echo esc_html(strtoupper($issue_severity)); ?></strong>
                                     <span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>
                                     <em><?php esc_html_e('Applied locally', 'icap-seo'); ?></em>
@@ -2390,6 +2783,7 @@ if ($notice_code === 'remediation_apply_noop') {
                                                 <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                                 <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
                                                 <input type="hidden" name="force_regenerate" value="1">
+                                                <input type="hidden" name="return_to" value="<?php echo esc_attr('icap-seo-applied-' . $issue_code); ?>">
                                                 <?php wp_nonce_field('icap_seo_apply_remediation'); ?>
                                                 <button type="submit" class="button"><?php esc_html_e('Regenerate & re-apply', 'icap-seo'); ?></button>
                                             </form>
@@ -2403,7 +2797,6 @@ if ($notice_code === 'remediation_apply_noop') {
                     <div class="icap-seo-panel">
                     <h4><?php esc_html_e('Fix everything at once', 'icap-seo'); ?></h4>
                     <p class="description"><?php esc_html_e('Applies every fix on this page that doesn\'t need your review.', 'icap-seo'); ?></p>
-                    </div>
                     <?php if (!empty($content_detail_is_local)) : ?>
                         <?php // The proposed-changes preview comes from the iCap SEO service; on-site detail applies fixes directly. ?>
                     <?php elseif ($remediation_preview_error !== '') : ?>
@@ -2506,8 +2899,10 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php foreach ($apply_all_issue_codes as $issue_code) : ?>
                                 <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($issue_code); ?>">
                             <?php endforeach; ?>
+                            <input type="hidden" name="return_to" value="icap-seo-applied">
                             <button type="submit" class="button button-primary" <?php disabled(empty($apply_all_issue_codes)); ?>><?php esc_html_e('Apply all open recommendations', 'icap-seo'); ?></button>
                         </form>
+                    </div>
                     </div>
                     <?php endif; // content_detail_tab === 'recommendations' ?>
                     <?php if ($content_detail_tab === 'history') : ?>
@@ -2777,6 +3172,68 @@ if ($notice_code === 'remediation_apply_noop') {
                         <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_gsc_totals['position'] ?? 0), 1)); ?></p>
                     </div>
                 </div>
+
+                <?php
+                $performance_sitemaps = $performance_gsc['sitemaps'] ?? null;
+                $performance_sitemap_findings = icap_seo_sitemap_findings($performance_sitemaps);
+                $performance_gsc_property = (string) ($google_connection_status['search_console_property_url'] ?? '');
+                $performance_sitemaps_report_url = $performance_gsc_property !== ''
+                    ? add_query_arg('resource_id', rawurlencode($performance_gsc_property), 'https://search.google.com/search-console/sitemaps')
+                    : 'https://search.google.com/search-console';
+                ?>
+                <?php if ($performance_sitemap_findings !== null) : ?>
+                    <div class="icap-seo-panel" id="icap-seo-sitemaps">
+                        <h3><?php esc_html_e('Sitemaps in Search Console', 'icap-seo'); ?></h3>
+                        <p class="description"><?php esc_html_e('A sitemap lists your pages so Google can find them. Google only reads the sitemaps submitted in Search Console.', 'icap-seo'); ?></p>
+                        <?php if (!empty($performance_sitemap_findings['problems'])) : ?>
+                            <div class="notice notice-warning inline">
+                                <?php foreach ($performance_sitemap_findings['problems'] as $sitemap_problem) : ?>
+                                    <p><?php echo esc_html($sitemap_problem); ?></p>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php elseif ($performance_sitemap_findings['submitted']) : ?>
+                            <p><span class="dashicons dashicons-yes-alt" aria-hidden="true"></span> <?php esc_html_e('Your sitemap is submitted and Google reads it without errors.', 'icap-seo'); ?></p>
+                        <?php endif; ?>
+                        <?php if (!empty($performance_sitemaps)) : ?>
+                            <table class="widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th><?php esc_html_e('Sitemap', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Last read by Google', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($performance_sitemaps as $sitemap_row) : ?>
+                                        <?php $sitemap_read_ts = $sitemap_row['last_downloaded'] !== '' ? strtotime($sitemap_row['last_downloaded']) : false; ?>
+                                        <tr>
+                                            <td><?php echo esc_html($sitemap_row['path']); ?></td>
+                                            <td><?php echo $sitemap_read_ts ? esc_html(date_i18n(get_option('date_format'), $sitemap_read_ts)) : esc_html__('Not yet', 'icap-seo'); ?></td>
+                                            <td>
+                                                <?php
+                                                if ($sitemap_row['errors'] > 0) {
+                                                    /* translators: %d: number of errors */
+                                                    echo esc_html(sprintf(_n('%d error', '%d errors', $sitemap_row['errors'], 'icap-seo'), $sitemap_row['errors']));
+                                                } elseif ($sitemap_row['is_pending']) {
+                                                    esc_html_e('Waiting for Google', 'icap-seo');
+                                                } elseif ($sitemap_row['warnings'] > 0) {
+                                                    /* translators: %d: number of warnings */
+                                                    echo esc_html(sprintf(_n('%d warning', '%d warnings', $sitemap_row['warnings'], 'icap-seo'), $sitemap_row['warnings']));
+                                                } else {
+                                                    esc_html_e('OK', 'icap-seo');
+                                                }
+                                                ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php elseif ($performance_sitemap_findings['site_sitemap'] === '') : ?>
+                            <p><?php esc_html_e('No sitemaps are submitted, and WordPress\'s built-in sitemap is turned off on this site.', 'icap-seo'); ?></p>
+                        <?php endif; ?>
+                        <p><a class="button" href="<?php echo esc_url($performance_sitemaps_report_url); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Open Sitemaps in Search Console', 'icap-seo'); ?></a></p>
+                    </div>
+                <?php endif; ?>
 
                 <?php if (count($performance_gsc_daily) > 1) :
                     // One combined chart, not four - but clicks/impressions/CTR/position don't

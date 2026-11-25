@@ -4,7 +4,7 @@ Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.159
+Stable tag: 0.1.160
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -135,6 +135,23 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.160 =
+* A page's Google indexing status now has its own panel on the page's Content Scores screen. It explains what Google's status means and links to the fixes that help, such as expanding the content with AI, adding internal links or adding a redirect, then to the page in Search Console so you can ask Google to index it again.
+* The Google status on the Content Scores list now opens that panel.
+* The "ask Google to index it" link now opens the page straight in Search Console's URL Inspection, using the link Google provides during scans. Before the next scan it opens the site's Pages report instead.
+* SEO Performance now has a "Sitemaps in Search Console" panel. It lists the sitemaps Google has on file with Google's own error counts, and says when your site's sitemap isn't submitted or Google can't read an old one. A page Google hasn't indexed gets a "Submit your sitemap to Google" step when that's the case.
+* Once a page has had a Readability rewrite and its sentences pass, the rewrite is no longer suggested again for the remaining reading-ease score, which comes from long words and names. You can still run another one.
+* After you preview an AI improvement or apply a fix, the page now returns to that section instead of the top, with the result message there.
+* After you accept and publish an AI improvement, or discard it, you're taken back to the top of the page's details, with a "What changed on the page" summary and a link to view the published page.
+* The buttons for each AI improvement, and for fixing everything at once, now sit inside their own box.
+* Content depth expansion now reads the whole page before writing, so it adds new material instead of repeating what's further down the page.
+* Once content has been expanded since Google's last visit, the indexing panel marks that step done instead of suggesting it again.
+* A page's details screen now starts with one row of cards: the page (with a link to view it), its type, status and overall score.
+* The Status card shows the page's WordPress status (Published, Private, Draft) on every page, with "Checked on this site" underneath when the on-site checks produced the score.
+* Every page's details screen now has the same layout: the Search Console and Google Analytics cards and the Google indexing panel always show, and say why when there's no data yet.
+* When a page's sentences already pass but its reading-ease score is still low, the Readability rewrite explains that word choice is what's left.
+* Fixed: a Readability rewrite, Spelling & grammar or image alt text draft could put an AI answer on the wrong paragraph or image when the AI left blank lines in its reply. Drafts are now only built when every answer lines up with its paragraph or image, and each rewrite is checked against its original.
 
 = 0.1.159 =
 * The iCap SEO panel on the edit screen now shows the page's Content Scores score, with a Check now button to re-check the page.

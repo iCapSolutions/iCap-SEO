@@ -47,6 +47,10 @@ class ICap_SEO_Admin
     // preview/publish/discard draft shape as readability rewrite above, reusing
     // 100% of that plumbing's pattern rather than inventing a second one.
     private const SPELLING_GRAMMAR_DRAFT_META_KEY = '_icap_seo_spelling_grammar_draft';
+    // What the current admin last published with an AI action, so the page they land
+    // back on can show the change. Per user, short-lived: it only has to survive the redirect.
+    private const LAST_AI_CHANGE_TRANSIENT_PREFIX = 'icap_seo_last_ai_change_';
+    private const LAST_AI_CHANGE_TTL = 15 * MINUTE_IN_SECONDS;
     private const SPELLING_GRAMMAR_MAX_PARAGRAPHS = 6;
     private const LOCAL_BUSINESS_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     private const LOCAL_BUSINESS_TYPES = [
@@ -485,6 +489,7 @@ class ICap_SEO_Admin
         $scan_status_data = [];
         $latest_content_scores_meta = [];
         $seo_performance = [];
+        $detail_seo_performance = [];
         $keywords_orderby = 'clicks';
         $keywords_order = 'desc';
         $seo_performance_pages_orderby = 'clicks';
@@ -665,6 +670,12 @@ class ICap_SEO_Admin
                         $detail_result = $this->service_client->get_content_score_detail($selected_content_key, $allow_live_fetch);
                         if (!empty($detail_result['success'])) {
                             $content_score_detail = isset($detail_result['data']) && is_array($detail_result['data']) ? $detail_result['data'] : [];
+                            // A page Google hasn't indexed gets a sitemap check in its indexing
+                            // panel, from the Search Console report (cached on both ends).
+                            $detail_coverage = (string) ($content_score_detail['google_verification']['coverage_state'] ?? '');
+                            if ($detail_coverage !== '' && stripos($detail_coverage, 'indexed') !== 0 && stripos($detail_coverage, 'submitted and indexed') !== 0) {
+                                $detail_seo_performance = $this->service_client->get_seo_performance($allow_live_fetch);
+                            }
                             $selected_post_id = $this->extract_post_id_from_content_key($selected_content_key);
                             if ($selected_post_id > 0) {
                                 $post_detail_state = $this->load_post_detail_state($selected_post_id);
@@ -895,7 +906,7 @@ class ICap_SEO_Admin
 
         return [
             'title' => (string) $local_detail['title'],
-            'status' => __('Checked on this site', 'icap-seo'),
+            'status' => (string) get_post_status($post_id),
             'post_type' => (string) get_post_type($post_id),
             'permalink' => (string) $local_detail['permalink'],
             'overall_score' => ICap_SEO_Local_Checks::score_for_detail($local_detail),
@@ -2094,6 +2105,7 @@ class ICap_SEO_Admin
         }
 
         $words_added = $this->count_words_in_html($draft_html);
+        $this->remember_ai_change($post_id, 'content_depth', ['html' => $draft_html]);
         delete_post_meta($post_id, self::CONTENT_DEPTH_DRAFT_META_KEY);
         delete_post_meta($post_id, self::CONTENT_DEPTH_DRAFT_WORD_COUNT_META_KEY);
 
@@ -2209,6 +2221,7 @@ class ICap_SEO_Admin
 
         $blocks = $this->split_content_into_paragraph_blocks((string) $post->post_content);
         $paragraphs_updated = 0;
+        $changed_paragraphs = [];
         foreach ($draft_paragraphs as $entry) {
             if (!is_array($entry)) {
                 continue;
@@ -2238,6 +2251,7 @@ class ICap_SEO_Admin
             }
             $blocks[$block_index] = $updated_block;
             $paragraphs_updated++;
+            $changed_paragraphs[] = ['before' => $original_text, 'after' => $rewritten_text];
         }
 
         if ($paragraphs_updated === 0) {
@@ -2260,6 +2274,7 @@ class ICap_SEO_Admin
         }
 
         delete_post_meta($post_id, self::READABILITY_DRAFT_META_KEY);
+        $this->remember_ai_change($post_id, 'readability_rewrite', ['paragraphs' => $changed_paragraphs]);
 
         $this->mark_issue_codes_applied($post_id, self::READABILITY_ISSUE_CODES);
 
@@ -2371,6 +2386,7 @@ class ICap_SEO_Admin
 
         $blocks = $this->split_content_into_paragraph_blocks((string) $post->post_content);
         $paragraphs_updated = 0;
+        $changed_paragraphs = [];
         foreach ($draft_paragraphs as $entry) {
             if (!is_array($entry)) {
                 continue;
@@ -2400,6 +2416,7 @@ class ICap_SEO_Admin
             }
             $blocks[$block_index] = $updated_block;
             $paragraphs_updated++;
+            $changed_paragraphs[] = ['before' => $original_text, 'after' => $corrected_text];
         }
 
         if ($paragraphs_updated === 0) {
@@ -2422,6 +2439,7 @@ class ICap_SEO_Admin
         }
 
         delete_post_meta($post_id, self::SPELLING_GRAMMAR_DRAFT_META_KEY);
+        $this->remember_ai_change($post_id, 'spelling_grammar', ['paragraphs' => $changed_paragraphs]);
 
         $this->store_remediation_history_entry(
             $post_id,
@@ -3208,22 +3226,9 @@ class ICap_SEO_Admin
             return [];
         }
 
-        // Deliberately not trim()-ing the raw response before splitting: a leading
-        // blank line here is a real (if malformed) empty slot for image 1, and
-        // trimming it away would silently shift every later alt text onto the
-        // wrong image. Only the individual lines get trimmed below.
-        $lines = preg_split('/\r\n|\r|\n/', (string) $result['data']['draft_text']);
-        if (!is_array($lines)) {
-            return [];
-        }
-
         $alt_texts = [];
-        foreach ($lines as $line) {
-            $line = trim((string) $line);
-            // Strip numbering/bullet/quote artifacts the model might still include
-            // despite the "no numbering" instruction (e.g. "1. ", "- ", "\"").
-            $line = preg_replace('/^[\s\-\*\d\.\)]+/', '', $line);
-            $line = trim(wp_strip_all_tags((string) $line), " \t\n\r\0\x0B\"'");
+        foreach ($this->ai_lines_for_items((string) $result['data']['draft_text'], count($image_urls)) as $line) {
+            $line = trim(wp_strip_all_tags($line));
             $alt_texts[] = $line === '' ? '' : $this->trim_title_to_max_length($line, 125);
         }
 
@@ -4089,6 +4094,57 @@ class ICap_SEO_Admin
         return preg_match('/<[a-z][^>]*>/i', $html) !== 1;
     }
 
+    /**
+     * The AI's one-line-per-item answer, matched to the items it was sent.
+     *
+     * Models often put a blank line between items despite being told not to.
+     * Treating those as empty slots shifted every later answer onto the wrong
+     * item (a paragraph replaced by the rewrite of another), so blank lines are
+     * dropped and the answer is only used when it has exactly one line per item.
+     * Anything else returns [] rather than guess which line belongs where.
+     *
+     * @return string[]
+     */
+    private function ai_lines_for_items(string $draft_text, int $expected_count): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/', $draft_text);
+        if (!is_array($lines) || $expected_count <= 0) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($lines as $line) {
+            // List markers the model may add despite "no numbering": "1. ", "2) ", "- ", "* ".
+            // The trailing space is required, so text that starts with a number stays whole.
+            $line = preg_replace('/^\s*(?:\d+[.)]|[-*\x{2022}])\s+/u', '', trim((string) $line));
+            $line = trim((string) $line, " \t\n\r\0\x0B\"'");
+            if ($line !== '') {
+                $items[] = $line;
+            }
+        }
+
+        return count($items) === $expected_count ? $items : [];
+    }
+
+    /**
+     * Whether a rewrite is recognisably the same paragraph: the share of the
+     * original's words (4+ letters) it still uses. A last check against a rewrite
+     * landing on the wrong paragraph, since the length check can't see that.
+     */
+    private function rewrite_matches_original(string $original, string $rewrite, float $min_shared): bool
+    {
+        $words = static function (string $text): array {
+            preg_match_all('/[a-z]{4,}/', strtolower($text), $matches);
+            return array_unique($matches[0]);
+        };
+        $original_words = $words($original);
+        if (count($original_words) < 4) {
+            return true;
+        }
+        $shared = count(array_intersect($original_words, $words($rewrite)));
+        return $shared / count($original_words) >= $min_shared;
+    }
+
     private function build_readability_paragraphs_via_ai(string $content_key, array $paragraph_texts): array
     {
         if ($content_key === '' || empty($paragraph_texts)) {
@@ -4107,22 +4163,7 @@ class ICap_SEO_Admin
             return [];
         }
 
-        // Not trim()-ing the raw response before splitting, same reasoning as
-        // image_alt_text: a leading blank line is a real empty slot, not noise to
-        // discard, and trimming it away would shift every later rewrite by one.
-        $lines = preg_split('/\r\n|\r|\n/', (string) $result['data']['draft_text']);
-        if (!is_array($lines)) {
-            return [];
-        }
-
-        $rewrites = [];
-        foreach ($lines as $line) {
-            $line = trim((string) $line);
-            $line = preg_replace('/^[\s\-\*\d\.\)]+/', '', $line);
-            $rewrites[] = trim((string) $line, " \t\n\r\0\x0B\"'");
-        }
-
-        return $rewrites;
+        return $this->ai_lines_for_items((string) $result['data']['draft_text'], count($paragraph_texts));
     }
 
     /**
@@ -4189,7 +4230,7 @@ class ICap_SEO_Admin
                     continue;
                 }
             }
-            if (strcasecmp($original_text, $rewritten_text) === 0) {
+            if (strcasecmp($original_text, $rewritten_text) === 0 || !$this->rewrite_matches_original($original_text, $rewritten_text, 0.3)) {
                 continue;
             }
 
@@ -4232,21 +4273,7 @@ class ICap_SEO_Admin
             return [];
         }
 
-        // Same "don't trim first" reasoning as the readability/image-alt drafts -
-        // a leading blank line is a real empty slot, not noise.
-        $lines = preg_split('/\r\n|\r|\n/', (string) $result['data']['draft_text']);
-        if (!is_array($lines)) {
-            return [];
-        }
-
-        $corrections = [];
-        foreach ($lines as $line) {
-            $line = trim((string) $line);
-            $line = preg_replace('/^[\s\-\*\d\.\)]+/', '', $line);
-            $corrections[] = trim((string) $line, " \t\n\r\0\x0B\"'");
-        }
-
-        return $corrections;
+        return $this->ai_lines_for_items((string) $result['data']['draft_text'], count($paragraph_texts));
     }
 
     /**
@@ -4315,7 +4342,7 @@ class ICap_SEO_Admin
             // Case-SENSITIVE identity check, unlike readability's case-insensitive
             // one - a capitalization fix is a real grammar correction here, not a
             // no-op to discard.
-            if ($original_text === $corrected_text) {
+            if ($original_text === $corrected_text || !$this->rewrite_matches_original($original_text, $corrected_text, 0.7)) {
                 continue;
             }
 
@@ -4680,8 +4707,9 @@ class ICap_SEO_Admin
             $content_key,
             'content_depth',
             [
+                // The whole page, so the new paragraphs don't repeat what's further down.
                 'title' => (string) $post->post_title,
-                'existing_content_text' => mb_substr(wp_strip_all_tags((string) $post->post_content), 0, 4000),
+                'existing_content_text' => mb_substr(wp_strip_all_tags((string) $post->post_content), 0, 12000),
                 'site_name' => $site_name,
                 'post_type' => (string) $post->post_type,
                 'target_word_count' => $target_word_count,
@@ -5966,6 +5994,29 @@ class ICap_SEO_Admin
      * happened on. Handled centrally here (not per call site) so any future
      * content-detail form gets this for free just by including the hidden field.
      */
+    private function remember_ai_change(int $post_id, string $generator, array $change): void
+    {
+        set_transient(
+            self::LAST_AI_CHANGE_TRANSIENT_PREFIX . get_current_user_id(),
+            array_merge($change, ['post_id' => $post_id, 'generator' => $generator]),
+            self::LAST_AI_CHANGE_TTL
+        );
+    }
+
+    /**
+     * The change the current admin just published on this post, if any.
+     *
+     * @return array{generator: string, html?: string, paragraphs?: array}|null
+     */
+    public function last_ai_change_for_post(int $post_id): ?array
+    {
+        $change = get_transient(self::LAST_AI_CHANGE_TRANSIENT_PREFIX . get_current_user_id());
+        if (!is_array($change) || $post_id <= 0 || (int) ($change['post_id'] ?? 0) !== $post_id) {
+            return null;
+        }
+        return $change;
+    }
+
     private function redirect_with_notice(string $notice_code, string $tab, array $extra_query_args = []): void
     {
         // A suspended site gets account_suspended from nearly every service route.
@@ -5991,6 +6042,12 @@ class ICap_SEO_Admin
             ),
             admin_url('admin.php')
         );
+        // Lands back on the panel the form was in, not the top of the page.
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- same nonce-protected forms as detail_tab above.
+        $return_to = isset($_POST['return_to']) ? sanitize_key((string) wp_unslash($_POST['return_to'])) : '';
+        if (strpos($return_to, 'icap-seo-') === 0) {
+            $url .= '#' . $return_to;
+        }
 
         wp_safe_redirect($url);
         exit;

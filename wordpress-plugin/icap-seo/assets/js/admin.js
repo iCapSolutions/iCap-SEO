@@ -16,6 +16,28 @@
         });
     });
 
+    // After an AI action or fix, the page reloads at the panel it came from
+    // (#icap-seo-...). Put the result message in that panel and highlight it,
+    // so it isn't left at the top of a long page. Runs on load, after
+    // WordPress has moved notices under the page heading.
+    window.addEventListener('load', function () {
+        var hash = window.location.hash;
+        if (!/^#icap-seo-[a-z0-9_-]+$/.test(hash)) {
+            return;
+        }
+        var target = document.getElementById(hash.slice(1));
+        if (!target) {
+            return;
+        }
+        var notice = document.querySelector('.icap-seo-action-notice');
+        if (notice) {
+            notice.classList.add('inline');
+            target.insertBefore(notice, target.firstChild);
+        }
+        target.classList.add('icap-seo-landed');
+        target.scrollIntoView({ block: 'start' });
+    });
+
     // Scan requests run synchronously on the backend and the page can't report
     // real progress percentage - this shows an indeterminate progress bar plus
     // an elapsed-seconds counter so it's clear a scan is running in the
