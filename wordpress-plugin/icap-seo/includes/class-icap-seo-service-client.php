@@ -18,6 +18,16 @@ class ICap_SEO_Service_Client
     // Billing states that include Premium: an active subscription, or one whose renewal payment
     // is still being retried.
     private const PREMIUM_BILLING_STATES = ['active', 'past_due'];
+    // Pages a full scan didn't reach in one request, scanned afterwards in the background.
+    public const SCAN_CONTINUATION_OPTION = 'icap_seo_scan_continuation';
+    public const SCAN_CONTINUATION_HOOK = 'icap_seo_continue_scan';
+    // Small enough that one batch finishes well inside the service's request time limit.
+    private const SCAN_CONTINUATION_BATCH_SIZE = 5;
+    // Each cron run stops starting new batches after this long, then schedules the next run.
+    private const SCAN_CONTINUATION_SECONDS_PER_RUN = 60;
+    // A full scan covers at most 100 pages, so 40 batches is plenty; stops a runaway loop.
+    private const SCAN_CONTINUATION_MAX_ROUNDS = 40;
+    private const SCAN_CONTINUATION_MAX_FAILURES = 3;
 
     private ?array $content_scores_index_cache = null;
     // Error code from the most recent service response, so the admin page can
@@ -1055,7 +1065,144 @@ class ICap_SEO_Service_Client
             $this->clear_content_scores_cache();
         }
 
+        if ($scan_mode === 'full_site' && $result['success']) {
+            $this->queue_scan_continuation(is_array($result['data'] ?? null) ? $result['data'] : []);
+        }
+
         return $result;
+    }
+
+    /**
+     * The service scans as many pages as fit in one request and returns the rest. Save
+     * those and scan them in the background, a few at a time, until none are left.
+     */
+    private function queue_scan_continuation(array $scan_data): void
+    {
+        $queue = [
+            'wp_post_ids' => $this->sanitize_post_id_list($scan_data['remaining_wp_post_ids'] ?? []),
+            'content_keys' => $this->sanitize_content_key_list($scan_data['remaining_content_keys'] ?? []),
+            'rounds' => 0,
+            'failures' => 0,
+        ];
+
+        if (empty($queue['wp_post_ids']) && empty($queue['content_keys'])) {
+            delete_option(self::SCAN_CONTINUATION_OPTION);
+            wp_clear_scheduled_hook(self::SCAN_CONTINUATION_HOOK);
+            return;
+        }
+
+        update_option(self::SCAN_CONTINUATION_OPTION, $queue, false);
+        if (!wp_next_scheduled(self::SCAN_CONTINUATION_HOOK)) {
+            wp_schedule_single_event(time(), self::SCAN_CONTINUATION_HOOK);
+        }
+    }
+
+    /**
+     * WP-Cron callback: scan the pages a full scan didn't reach, in small batches so each
+     * request finishes well inside the service's time limit.
+     */
+    public function continue_scan(): void
+    {
+        $queue = get_option(self::SCAN_CONTINUATION_OPTION, []);
+        if (!is_array($queue)) {
+            delete_option(self::SCAN_CONTINUATION_OPTION);
+            return;
+        }
+
+        $wp_post_ids = $this->sanitize_post_id_list($queue['wp_post_ids'] ?? []);
+        $content_keys = $this->sanitize_content_key_list($queue['content_keys'] ?? []);
+        $rounds = (int) ($queue['rounds'] ?? 0);
+        $failures = (int) ($queue['failures'] ?? 0);
+        $started = time();
+        $retry_later = false;
+
+        while ((!empty($wp_post_ids) || !empty($content_keys))
+            && $rounds < self::SCAN_CONTINUATION_MAX_ROUNDS
+            && time() - $started < self::SCAN_CONTINUATION_SECONDS_PER_RUN) {
+            $batch_ids = array_splice($wp_post_ids, 0, self::SCAN_CONTINUATION_BATCH_SIZE);
+            $batch_keys = array_splice($content_keys, 0, max(0, self::SCAN_CONTINUATION_BATCH_SIZE - count($batch_ids)));
+            $rounds++;
+
+            $result = $this->trigger_scan('content', [
+                'scan_mode' => 'content',
+                'wp_post_ids' => $batch_ids,
+                'content_keys' => $batch_keys,
+            ]);
+
+            if ($result['success']) {
+                $failures = 0;
+                $data = is_array($result['data'] ?? null) ? $result['data'] : [];
+                // Pages this batch didn't reach go back on the queue.
+                $wp_post_ids = array_values(array_unique(array_merge(
+                    $this->sanitize_post_id_list($data['remaining_wp_post_ids'] ?? []),
+                    $wp_post_ids
+                )));
+                $content_keys = array_values(array_unique(array_merge(
+                    $this->sanitize_content_key_list($data['remaining_content_keys'] ?? []),
+                    $content_keys
+                )));
+                continue;
+            }
+
+            $error_code = $this->extract_error_code($result);
+            $failures++;
+            if (in_array($error_code, ['premium_required', 'payment_required', 'subscription_required', 'account_suspended', 'invalid_token', 'site_not_configured'], true)
+                || $failures >= self::SCAN_CONTINUATION_MAX_FAILURES) {
+                // Retrying can't help; drop what's left. The next full scan starts over.
+                $wp_post_ids = [];
+                $content_keys = [];
+                break;
+            }
+            if ($error_code === 'content_not_found') {
+                // These pages are gone from the site; skip them.
+                continue;
+            }
+            $wp_post_ids = array_merge($batch_ids, $wp_post_ids);
+            $content_keys = array_merge($batch_keys, $content_keys);
+            $retry_later = true;
+            break;
+        }
+
+        if ($rounds >= self::SCAN_CONTINUATION_MAX_ROUNDS || (empty($wp_post_ids) && empty($content_keys))) {
+            delete_option(self::SCAN_CONTINUATION_OPTION);
+            return;
+        }
+
+        update_option(self::SCAN_CONTINUATION_OPTION, [
+            'wp_post_ids' => $wp_post_ids,
+            'content_keys' => $content_keys,
+            'rounds' => $rounds,
+            'failures' => $failures,
+        ], false);
+        if (!wp_next_scheduled(self::SCAN_CONTINUATION_HOOK)) {
+            wp_schedule_single_event(time() + ($retry_later ? MINUTE_IN_SECONDS : 0), self::SCAN_CONTINUATION_HOOK);
+        }
+    }
+
+    private function sanitize_post_id_list($ids): array
+    {
+        $clean = [];
+        foreach ((array) $ids as $id) {
+            $id = absint($id);
+            if ($id > 0) {
+                $clean[] = $id;
+            }
+        }
+
+        return array_values(array_unique($clean));
+    }
+
+    private function sanitize_content_key_list($keys): array
+    {
+        $clean = [];
+        foreach ((array) $keys as $key) {
+            $key = sanitize_text_field((string) $key);
+            if ($key !== '') {
+                $clean[] = $key;
+            }
+        }
+
+        return array_values(array_unique($clean));
     }
 
     public function clear_content_scores_cache(): void

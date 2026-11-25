@@ -43,5 +43,7 @@ delete_option('icap_seo_local_business');
 delete_option('icap_seo_dismissed_notifications');
 delete_option('icap_seo_local_last_check');
 delete_option('icap_seo_first_used');
+delete_option('icap_seo_scan_continuation');
+wp_clear_scheduled_hook('icap_seo_continue_scan');
 delete_metadata('user', 0, '_icap_seo_review_prompt', '', true);
 delete_post_meta_by_key('_icap_seo_local_score');

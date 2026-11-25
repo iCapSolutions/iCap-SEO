@@ -4265,6 +4265,28 @@ if ($notice_code === 'remediation_apply_noop') {
                             <?php esc_html_e('AI content generation is paused — this site is out of AI credits.', 'icap-seo'); ?>
                         </p>
                     <?php endif; ?>
+                    <?php
+                    $overview_scan_queue = get_option(ICap_SEO_Service_Client::SCAN_CONTINUATION_OPTION, []);
+                    $overview_scan_pages_left = is_array($overview_scan_queue)
+                        ? count((array) ($overview_scan_queue['wp_post_ids'] ?? [])) + count((array) ($overview_scan_queue['content_keys'] ?? []))
+                        : 0;
+                    ?>
+                    <?php if ($overview_scan_pages_left > 0) : ?>
+                        <p class="notice notice-info inline" style="padding:8px 12px;">
+                            <?php
+                            echo esc_html(sprintf(
+                                /* translators: %d: number of pages still to scan */
+                                _n(
+                                    'Full scan in progress: %d more page is being checked in the background. Its score appears when it finishes.',
+                                    'Full scan in progress: %d more pages are being checked in the background, a few at a time. Their scores appear as each batch finishes.',
+                                    $overview_scan_pages_left,
+                                    'icap-seo'
+                                ),
+                                $overview_scan_pages_left
+                            ));
+                            ?>
+                        </p>
+                    <?php endif; ?>
                     <div class="icap-seo-actions">
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form">
                             <input type="hidden" name="action" value="icap_seo_trigger_scan">
