@@ -368,7 +368,7 @@ if (!class_exists('ICap_SEO_Editor_Panel')) {
             wp_enqueue_script(
                 'icap-seo-editor-panel',
                 ICAP_SEO_PLUGIN_URL . 'assets/js/editor-panel.js',
-                ['wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-i18n', 'wp-data', 'wp-api-fetch'],
+                ['wp-plugins', 'wp-editor', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-i18n', 'wp-data', 'wp-api-fetch'],
                 ICAP_SEO_VERSION,
                 true
             );
