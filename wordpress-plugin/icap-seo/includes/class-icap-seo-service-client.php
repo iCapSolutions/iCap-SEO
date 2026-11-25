@@ -1457,6 +1457,7 @@ class ICap_SEO_Service_Client
                 'keywords' => [],
                 'total_keywords' => 0,
                 'keyword_totals' => ['clicks' => 0, 'top3' => 0, 'top10' => 0, 'avg_position' => 0.0],
+                'sitemaps' => null,
             ],
             'ga4' => [
                 'connected' => false,
@@ -1558,6 +1559,25 @@ class ICap_SEO_Service_Client
             }
         }
 
+        // null = Google couldn't be asked (unknown), [] = nothing submitted.
+        $gsc_sitemaps = null;
+        if (isset($gsc_raw['sitemaps']) && is_array($gsc_raw['sitemaps'])) {
+            $gsc_sitemaps = [];
+            foreach ($gsc_raw['sitemaps'] as $row) {
+                if (!is_array($row) || empty($row['path'])) {
+                    continue;
+                }
+                $gsc_sitemaps[] = [
+                    'path' => esc_url_raw((string) $row['path']),
+                    'errors' => isset($row['errors']) ? (int) $row['errors'] : 0,
+                    'warnings' => isset($row['warnings']) ? (int) $row['warnings'] : 0,
+                    'is_pending' => !empty($row['is_pending']),
+                    'last_submitted' => isset($row['last_submitted']) ? sanitize_text_field((string) $row['last_submitted']) : '',
+                    'last_downloaded' => isset($row['last_downloaded']) ? sanitize_text_field((string) $row['last_downloaded']) : '',
+                ];
+            }
+        }
+
         $gsc_keyword_totals_raw = isset($gsc_raw['keyword_totals']) && is_array($gsc_raw['keyword_totals']) ? $gsc_raw['keyword_totals'] : [];
 
         $ga4_channels = [];
@@ -1595,6 +1615,7 @@ class ICap_SEO_Service_Client
                     'top10' => isset($gsc_keyword_totals_raw['top10']) ? (int) $gsc_keyword_totals_raw['top10'] : 0,
                     'avg_position' => isset($gsc_keyword_totals_raw['avg_position']) ? (float) $gsc_keyword_totals_raw['avg_position'] : 0.0,
                 ],
+                'sitemaps' => $gsc_sitemaps,
             ],
             'ga4' => [
                 'connected' => !empty($ga4_raw['connected']),

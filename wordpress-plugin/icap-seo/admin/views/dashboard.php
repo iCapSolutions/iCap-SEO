@@ -394,6 +394,51 @@ if (!function_exists('icap_seo_render_just_changed_paragraphs')) {
     }
 }
 
+if (!function_exists('icap_seo_sitemap_findings')) {
+    // Compares the sitemaps Search Console has on file with this site's own sitemap.
+    // Returns ['site_sitemap' => url|'', 'submitted' => bool, 'problems' => [message, ...]],
+    // or null when Google's list isn't known.
+    function icap_seo_sitemap_findings($gsc_sitemaps): ?array
+    {
+        if (!is_array($gsc_sitemaps)) {
+            return null;
+        }
+        $site_sitemap = function_exists('get_sitemap_url') ? (string) get_sitemap_url('index') : '';
+        $normalize = static fn(string $url): string => strtolower(untrailingslashit(preg_replace('#^https?://#i', '', $url)));
+        $site_key = $site_sitemap !== '' ? $normalize($site_sitemap) : '';
+        $submitted = false;
+        $problems = [];
+        foreach ($gsc_sitemaps as $entry) {
+            $path = (string) ($entry['path'] ?? '');
+            $is_site_sitemap = $site_key !== '' && $normalize($path) === $site_key;
+            $submitted = $submitted || $is_site_sitemap;
+            if ((int) ($entry['errors'] ?? 0) > 0) {
+                $problems[] = $is_site_sitemap || $site_key === ''
+                    ? sprintf(
+                        /* translators: 1: sitemap URL, 2: number of errors */
+                        _n('Google reports %2$d error reading %1$s. Open it in Search Console to see what Google couldn\'t read.', 'Google reports %2$d errors reading %1$s. Open it in Search Console to see what Google couldn\'t read.', (int) $entry['errors'], 'icap-seo'),
+                        $path,
+                        (int) $entry['errors']
+                    )
+                    : sprintf(
+                        /* translators: 1: old sitemap URL, 2: this site's sitemap URL */
+                        __('Google can\'t read %1$s, an old sitemap this site no longer has. Remove it in Search Console; your sitemap is %2$s.', 'icap-seo'),
+                        $path,
+                        $site_sitemap
+                    );
+            }
+        }
+        if ($site_sitemap !== '' && !$submitted) {
+            $problems[] = sprintf(
+                /* translators: %s: this site's sitemap URL */
+                __('Your sitemap, %s, isn\'t submitted to Google. Submit it in Search Console so Google finds every page.', 'icap-seo'),
+                $site_sitemap
+            );
+        }
+        return ['site_sitemap' => $site_sitemap, 'submitted' => $submitted, 'problems' => $problems];
+    }
+}
+
 if (!function_exists('icap_seo_indexing_guidance')) {
     // What a Google Search Console coverage state means for this page, and which of the
     // plugin's fixes help. Google sends the state as display text, so it's matched on
@@ -1892,6 +1937,18 @@ if ($notice_code === 'remediation_apply_noop') {
                                 'note' => '',
                             ];
                         }
+                        // Google finds pages through the sitemap, so a missing or broken one
+                        // comes first. Read from the cached Search Console report only.
+                        $detail_sitemap_findings = icap_seo_sitemap_findings($detail_seo_performance['gsc']['sitemaps'] ?? null);
+                        if ($detail_sitemap_findings !== null && !empty($detail_sitemap_findings['problems'])) {
+                            $detail_indexing_steps[] = [
+                                'label' => $detail_sitemap_findings['submitted']
+                                    ? __('Fix your sitemap in Search Console', 'icap-seo')
+                                    : __('Submit your sitemap to Google', 'icap-seo'),
+                                'href' => add_query_arg(['page' => 'icap-seo', 'tab' => 'seo-performance'], admin_url('admin.php')) . '#icap-seo-sitemaps',
+                                'note' => '',
+                            ];
+                        }
                         foreach ($detail_indexing['fixes'] as $indexing_fix) {
                             if ($indexing_fix === 'content_depth') {
                                 $detail_indexing_steps[] = [
@@ -3115,6 +3172,68 @@ if ($notice_code === 'remediation_apply_noop') {
                         <p class="icap-seo-card-value"><?php echo esc_html(number_format((float) ($performance_gsc_totals['position'] ?? 0), 1)); ?></p>
                     </div>
                 </div>
+
+                <?php
+                $performance_sitemaps = $performance_gsc['sitemaps'] ?? null;
+                $performance_sitemap_findings = icap_seo_sitemap_findings($performance_sitemaps);
+                $performance_gsc_property = (string) ($google_connection_status['search_console_property_url'] ?? '');
+                $performance_sitemaps_report_url = $performance_gsc_property !== ''
+                    ? add_query_arg('resource_id', rawurlencode($performance_gsc_property), 'https://search.google.com/search-console/sitemaps')
+                    : 'https://search.google.com/search-console';
+                ?>
+                <?php if ($performance_sitemap_findings !== null) : ?>
+                    <div class="icap-seo-panel" id="icap-seo-sitemaps">
+                        <h3><?php esc_html_e('Sitemaps in Search Console', 'icap-seo'); ?></h3>
+                        <p class="description"><?php esc_html_e('A sitemap lists your pages so Google can find them. Google only reads the sitemaps submitted in Search Console.', 'icap-seo'); ?></p>
+                        <?php if (!empty($performance_sitemap_findings['problems'])) : ?>
+                            <div class="notice notice-warning inline">
+                                <?php foreach ($performance_sitemap_findings['problems'] as $sitemap_problem) : ?>
+                                    <p><?php echo esc_html($sitemap_problem); ?></p>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php elseif ($performance_sitemap_findings['submitted']) : ?>
+                            <p><span class="dashicons dashicons-yes-alt" aria-hidden="true"></span> <?php esc_html_e('Your sitemap is submitted and Google reads it without errors.', 'icap-seo'); ?></p>
+                        <?php endif; ?>
+                        <?php if (!empty($performance_sitemaps)) : ?>
+                            <table class="widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th><?php esc_html_e('Sitemap', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Last read by Google', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Status', 'icap-seo'); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($performance_sitemaps as $sitemap_row) : ?>
+                                        <?php $sitemap_read_ts = $sitemap_row['last_downloaded'] !== '' ? strtotime($sitemap_row['last_downloaded']) : false; ?>
+                                        <tr>
+                                            <td><?php echo esc_html($sitemap_row['path']); ?></td>
+                                            <td><?php echo $sitemap_read_ts ? esc_html(date_i18n(get_option('date_format'), $sitemap_read_ts)) : esc_html__('Not yet', 'icap-seo'); ?></td>
+                                            <td>
+                                                <?php
+                                                if ($sitemap_row['errors'] > 0) {
+                                                    /* translators: %d: number of errors */
+                                                    echo esc_html(sprintf(_n('%d error', '%d errors', $sitemap_row['errors'], 'icap-seo'), $sitemap_row['errors']));
+                                                } elseif ($sitemap_row['is_pending']) {
+                                                    esc_html_e('Waiting for Google', 'icap-seo');
+                                                } elseif ($sitemap_row['warnings'] > 0) {
+                                                    /* translators: %d: number of warnings */
+                                                    echo esc_html(sprintf(_n('%d warning', '%d warnings', $sitemap_row['warnings'], 'icap-seo'), $sitemap_row['warnings']));
+                                                } else {
+                                                    esc_html_e('OK', 'icap-seo');
+                                                }
+                                                ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php elseif ($performance_sitemap_findings['site_sitemap'] === '') : ?>
+                            <p><?php esc_html_e('No sitemaps are submitted, and WordPress\'s built-in sitemap is turned off on this site.', 'icap-seo'); ?></p>
+                        <?php endif; ?>
+                        <p><a class="button" href="<?php echo esc_url($performance_sitemaps_report_url); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Open Sitemaps in Search Console', 'icap-seo'); ?></a></p>
+                    </div>
+                <?php endif; ?>
 
                 <?php if (count($performance_gsc_daily) > 1) :
                     // One combined chart, not four - but clicks/impressions/CTR/position don't

@@ -489,6 +489,7 @@ class ICap_SEO_Admin
         $scan_status_data = [];
         $latest_content_scores_meta = [];
         $seo_performance = [];
+        $detail_seo_performance = [];
         $keywords_orderby = 'clicks';
         $keywords_order = 'desc';
         $seo_performance_pages_orderby = 'clicks';
@@ -669,6 +670,12 @@ class ICap_SEO_Admin
                         $detail_result = $this->service_client->get_content_score_detail($selected_content_key, $allow_live_fetch);
                         if (!empty($detail_result['success'])) {
                             $content_score_detail = isset($detail_result['data']) && is_array($detail_result['data']) ? $detail_result['data'] : [];
+                            // A page Google hasn't indexed gets a sitemap check in its indexing
+                            // panel, from the Search Console report (cached on both ends).
+                            $detail_coverage = (string) ($content_score_detail['google_verification']['coverage_state'] ?? '');
+                            if ($detail_coverage !== '' && stripos($detail_coverage, 'indexed') !== 0 && stripos($detail_coverage, 'submitted and indexed') !== 0) {
+                                $detail_seo_performance = $this->service_client->get_seo_performance($allow_live_fetch);
+                            }
                             $selected_post_id = $this->extract_post_id_from_content_key($selected_content_key);
                             if ($selected_post_id > 0) {
                                 $post_detail_state = $this->load_post_detail_state($selected_post_id);
