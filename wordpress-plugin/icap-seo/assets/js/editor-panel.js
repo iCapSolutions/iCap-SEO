@@ -14,7 +14,11 @@
 ( function ( wp ) {
 	'use strict';
 
-	if ( ! wp || ! wp.plugins || ! wp.editPost || ! wp.element || ! wp.components || ! wp.i18n || ! wp.data || ! wp.apiFetch ) {
+	// The sidebar slots live in wp.editor since WordPress 6.6; wp.editPost's copies
+	// are deprecated there, so use them only on older versions.
+	var sidebarApi = wp && wp.editor && wp.editor.PluginSidebar ? wp.editor : ( wp && wp.editPost );
+
+	if ( ! wp || ! wp.plugins || ! sidebarApi || ! sidebarApi.PluginSidebar || ! wp.element || ! wp.components || ! wp.i18n || ! wp.data || ! wp.apiFetch ) {
 		return;
 	}
 
@@ -23,8 +27,8 @@
 	var useState = wp.element.useState;
 	var useEffect = wp.element.useEffect;
 	var registerPlugin = wp.plugins.registerPlugin;
-	var PluginSidebar = wp.editPost.PluginSidebar;
-	var PluginSidebarMoreMenuItem = wp.editPost.PluginSidebarMoreMenuItem;
+	var PluginSidebar = sidebarApi.PluginSidebar;
+	var PluginSidebarMoreMenuItem = sidebarApi.PluginSidebarMoreMenuItem;
 	var Panel = wp.components.Panel;
 	var PanelBody = wp.components.PanelBody;
 	var Button = wp.components.Button;

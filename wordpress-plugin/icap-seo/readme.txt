@@ -2,9 +2,9 @@
 Contributors: icapsolutions, ikirko
 Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 0.1.160
+Stable tag: 0.1.161
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -135,6 +135,10 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.161 =
+* Tested with WordPress 7.2.
+* The iCap SEO sidebar in the block editor now uses the editor's current sidebar API, so WordPress 6.6 and later no longer log deprecation warnings for it.
 
 = 0.1.160 =
 * A page's Google indexing status now has its own panel on the page's Content Scores screen. It explains what Google's status means and links to the fixes that help, such as expanding the content with AI, adding internal links or adding a redirect, then to the page in Search Console so you can ask Google to index it again.
