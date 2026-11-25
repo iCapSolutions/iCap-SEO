@@ -1821,9 +1821,15 @@ if ($notice_code === 'remediation_apply_noop') {
                     <?php endif; ?>
                     <?php
                     $detail_coverage_state = $detail_google_verification !== null ? (string) ($detail_google_verification['coverage_state'] ?? '') : '';
-                    $detail_gsc_inspect_url = ($detail_gsc_property !== '' && $detail_permalink !== '')
-                        ? add_query_arg(['resource_id' => rawurlencode($detail_gsc_property), 'id' => rawurlencode($detail_permalink)], 'https://search.google.com/search-console/inspect')
-                        : 'https://search.google.com/search-console';
+                    // Search Console's inspect page only opens with the page id Google hands
+                    // out during a scan. Until a scan brings that link, open the property's
+                    // Pages report, where the page can be pasted into the inspect box.
+                    $detail_gsc_inspection_link = $detail_google_verification !== null ? (string) ($detail_google_verification['inspection_link'] ?? '') : '';
+                    $detail_gsc_inspect_url = $detail_gsc_inspection_link !== ''
+                        ? $detail_gsc_inspection_link
+                        : ($detail_gsc_property !== ''
+                            ? add_query_arg('resource_id', rawurlencode($detail_gsc_property), 'https://search.google.com/search-console/index')
+                            : 'https://search.google.com/search-console');
                     ?>
                     <?php if ($detail_coverage_state === '') : ?>
                         <div class="icap-seo-panel icap-seo-indexing is-unknown" id="icap-seo-indexing">
@@ -1945,7 +1951,9 @@ if ($notice_code === 'remediation_apply_noop') {
                                     <?php endforeach; ?>
                                     <li>
                                         <a href="<?php echo esc_url($detail_gsc_inspect_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html(empty($detail_indexing_steps) ? __('Open this page in Search Console', 'icap-seo') : __('Then ask Google to index it again in Search Console', 'icap-seo')); ?></a>
-                                        <span class="description"><?php esc_html_e('Click "Request indexing" there. Google only allows this from Search Console.', 'icap-seo'); ?></span>
+                                        <span class="description"><?php echo esc_html($detail_gsc_inspection_link !== ''
+                                            ? __('Click "Request indexing" there. Google only allows this from Search Console.', 'icap-seo')
+                                            : __('Paste this page\'s address into the search box at the top, then click "Request indexing". Google only allows this from Search Console.', 'icap-seo')); ?></span>
                                     </li>
                                 </ol>
                             <?php endif; ?>
@@ -2003,6 +2011,21 @@ if ($notice_code === 'remediation_apply_noop') {
                         && !in_array('content_depth', $detail_ai_actions, true)
                     ) {
                         $detail_ai_actions = array_values(array_intersect(array_keys(icap_seo_ai_action_catalog()), array_merge($detail_ai_actions, ['content_depth'])));
+                    }
+                    // Once a page has been rewritten and its sentence checks pass, only the
+                    // reading-ease score is left, and that comes down to long words and names.
+                    // Another rewrite rarely moves it, so stop suggesting one.
+                    $readability_rewrite_count = 0;
+                    foreach ((isset($remediation_audit_entries) && is_array($remediation_audit_entries) ? $remediation_audit_entries : []) as $audit_entry) {
+                        if (in_array('readability_score_low', (array) ($audit_entry['issue_codes'] ?? []), true)) {
+                            $readability_rewrite_count++;
+                        }
+                    }
+                    $readability_only_word_choice = in_array('readability_score_low', $open_detail_issue_codes, true)
+                        && !array_intersect(['readability_long_sentences_high', 'readability_low_transition_word_usage', 'readability_passive_voice_high'], $open_detail_issue_codes);
+                    $readability_ai_done = $readability_only_word_choice && $readability_rewrite_count > 0;
+                    if ($readability_ai_done) {
+                        $detail_ai_actions = array_values(array_diff($detail_ai_actions, ['readability_rewrite']));
                     }
                     $ai_action_catalog = icap_seo_ai_action_catalog();
                     $ai_drafts_tab_url = add_query_arg(
@@ -2250,6 +2273,8 @@ if ($notice_code === 'remediation_apply_noop') {
                                                         <div style="margin-top:6px;"><em><?php esc_html_e('This page\'s content isn\'t displayed here (see the notice above) — applying this fix would have no visible effect.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($is_content_depth_code) : ?>
                                                         <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use Content depth expansion on the AI Improvements tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Add more useful content to this page in the editor. Premium\'s AI Improvements can draft it for you.', 'icap-seo'); ?></em></div>
+                                                    <?php elseif ($is_readability_code && $readability_ai_done) : ?>
+                                                        <div style="margin-top:6px;"><em><?php esc_html_e('Sentences already pass after the AI rewrite. What\'s left is long words and names, which can stay. Edit by hand if you want a higher score.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($is_readability_code) : ?>
                                                         <div style="margin-top:6px;"><em><?php echo $service_is_premium ? esc_html__('Use the Readability rewrite on the AI Improvements tab. You review the draft before anything is published.', 'icap-seo') : esc_html__('Edit this page using shorter sentences and simpler words. Premium\'s AI Improvements can rewrite it for you.', 'icap-seo'); ?></em></div>
                                                     <?php elseif ($catalog_apply_type === 'auto') : ?>
@@ -2378,6 +2403,9 @@ if ($notice_code === 'remediation_apply_noop') {
                             if (!$service_is_premium) {
                                 $ai_action_state = $ai_action_suggested ? __('Suggested for this page', 'icap-seo') : __('Premium', 'icap-seo');
                                 $ai_action_href = '';
+                            } elseif ($ai_generator === 'readability_rewrite' && $readability_ai_done) {
+                                $ai_action_state = __('Done, sentences pass', 'icap-seo');
+                                $ai_action_href = '#icap-seo-ai-readability_rewrite';
                             } elseif (!$ai_action_ready) {
                                 $ai_action_state = __('Nothing to fix on this page', 'icap-seo');
                                 $ai_action_href = '';
@@ -2509,28 +2537,16 @@ if ($notice_code === 'remediation_apply_noop') {
                         // A page can pass the sentence checks and still score low on reading
                         // ease, which also weighs word length. Say so, so a repeat rewrite
                         // isn't a mystery, and note that names can't be shortened.
-                        $readability_open_codes = array_map(
-                            static fn($issue_row): string => is_array($issue_row) && isset($issue_row['issue_code']) ? sanitize_key((string) $issue_row['issue_code']) : '',
-                            $open_detail_issues
-                        );
-                        $readability_rewrite_count = 0;
-                        foreach ((isset($remediation_audit_entries) && is_array($remediation_audit_entries) ? $remediation_audit_entries : []) as $audit_entry) {
-                            if (in_array('readability_score_low', (array) ($audit_entry['issue_codes'] ?? []), true)) {
-                                $readability_rewrite_count++;
-                            }
-                        }
-                        $readability_only_word_choice = $readability_open
-                            && !array_intersect(['readability_long_sentences_high', 'readability_low_transition_word_usage', 'readability_passive_voice_high'], $readability_open_codes);
                         ?>
-                        <?php if ($readability_only_word_choice && $readability_rewrite_count > 0) : ?>
+                        <?php if ($readability_ai_done) : ?>
                             <div class="notice notice-info inline">
                                 <p>
                                     <?php
                                     echo esc_html(sprintf(
                                         /* translators: %d: number of times this page has been rewritten for readability */
                                         _n(
-                                            'This page has been rewritten for readability %d time, and its sentences now pass. What\'s left is word choice: long words such as "infrastructure" or "portfolio" lower the reading-ease score. Another rewrite swaps in plainer words. Names of people, products and companies stay as they are, so a page that mentions them often may not reach the target, and that\'s fine.',
-                                            'This page has been rewritten for readability %d times, and its sentences now pass. What\'s left is word choice: long words such as "infrastructure" or "portfolio" lower the reading-ease score. Another rewrite swaps in plainer words. Names of people, products and companies stay as they are, so a page that mentions them often may not reach the target, and that\'s fine.',
+                                            'Done: this page has been rewritten for readability %d time, and its sentences now pass. The reading-ease score that\'s left comes from long words and names (such as product and company names), which a rewrite keeps as written, so it isn\'t suggested again. You can still try another rewrite, or leave it.',
+                                            'Done: this page has been rewritten for readability %d times, and its sentences now pass. The reading-ease score that\'s left comes from long words and names (such as product and company names), which a rewrite keeps as written, so it isn\'t suggested again. You can still try another rewrite, or leave it.',
                                             $readability_rewrite_count,
                                             'icap-seo'
                                         ),
@@ -2576,7 +2592,11 @@ if ($notice_code === 'remediation_apply_noop') {
                                     <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
                                     <input type="hidden" name="detail_tab" value="ai-drafts">
                                     <?php wp_nonce_field('icap_seo_preview_readability_rewrite'); ?>
-                                    <button type="submit" class="button button-primary"><?php esc_html_e('Preview simplified paragraphs', 'icap-seo'); ?></button>
+                                    <?php if ($readability_ai_done) : ?>
+                                        <button type="submit" class="button"><?php esc_html_e('Try another rewrite anyway', 'icap-seo'); ?></button>
+                                    <?php else : ?>
+                                        <button type="submit" class="button button-primary"><?php esc_html_e('Preview simplified paragraphs', 'icap-seo'); ?></button>
+                                    <?php endif; ?>
                                 </form>
                             </div>
                         <?php else : ?>

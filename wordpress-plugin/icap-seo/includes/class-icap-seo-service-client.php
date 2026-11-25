@@ -534,6 +534,10 @@ class ICap_SEO_Service_Client
                     ? sanitize_text_field((string) $data['google_verification']['last_crawl_time']) : '',
                 'checked_at' => isset($data['google_verification']['checked_at'])
                     ? sanitize_text_field((string) $data['google_verification']['checked_at']) : '',
+                // Google's own link to this page in Search Console's URL Inspection.
+                'inspection_link' => isset($data['google_verification']['inspection_link'])
+                    && strpos((string) $data['google_verification']['inspection_link'], 'https://search.google.com/search-console/inspect?') === 0
+                    ? esc_url_raw((string) $data['google_verification']['inspection_link']) : '',
             ];
         }
 

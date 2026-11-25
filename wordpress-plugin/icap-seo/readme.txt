@@ -139,6 +139,8 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 = 0.1.160 =
 * A page's Google indexing status now has its own panel on the page's Content Scores screen. It explains what Google's status means and links to the fixes that help, such as expanding the content with AI, adding internal links or adding a redirect, then to the page in Search Console so you can ask Google to index it again.
 * The Google status on the Content Scores list now opens that panel.
+* The "ask Google to index it" link now opens the page straight in Search Console's URL Inspection, using the link Google provides during scans. Before the next scan it opens the site's Pages report instead.
+* Once a page has had a Readability rewrite and its sentences pass, the rewrite is no longer suggested again for the remaining reading-ease score, which comes from long words and names. You can still run another one.
 * After you preview an AI improvement or apply a fix, the page now returns to that section instead of the top, with the result message there.
 * After you accept and publish an AI improvement, or discard it, you're taken back to the top of the page's details, with a "What changed on the page" summary and a link to view the published page.
 * The buttons for each AI improvement, and for fixing everything at once, now sit inside their own box.
