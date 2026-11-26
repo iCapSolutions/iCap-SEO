@@ -1,6 +1,6 @@
-=== iCap SEO – SEO Audit & One-Click SEO Fixes, Schema & AI SEO ===
+=== iCap SEO – SEO Audit & Checker, One-Click Fixes, Orphan Pages & Schema ===
 Contributors: icapsolutions, ikirko
-Tags: seo, seo audit, schema, google search console, ai seo
+Tags: seo audit, seo checker, orphan pages, internal links, schema
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
@@ -8,7 +8,7 @@ Stable tag: 0.1.165
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-SEO audit for every page with one-click fixes for titles, meta descriptions, schema, alt text and links. Free Search Console reports. Optional AI SEO.
+SEO audit and checker with one-click fixes for titles, meta descriptions, schema, alt text, internal links and orphan pages. Free Search Console data.
 
 == Description ==
 
