@@ -21,6 +21,8 @@ class ICap_SEO_Admin
     private const JSONLD_SCHEMA_TYPE_META_KEY = '_icap_seo_jsonld_schema_type';
     private const JSONLD_SCHEMA_JSON_META_KEY = '_icap_seo_jsonld_schema_json';
     private const APPLIED_ISSUE_CODES_META_KEY = '_icap_seo_applied_issue_codes';
+    /** Related pages that get a link when a page nothing links to is fixed. */
+    private const INBOUND_LINK_SOURCES = 2;
     private const CONTENT_DEPTH_DRAFT_META_KEY = '_icap_seo_content_depth_draft';
     private const CONTENT_DEPTH_DRAFT_WORD_COUNT_META_KEY = '_icap_seo_content_depth_draft_word_count';
     private const CONTENT_DEPTH_TARGET_WORD_COUNT = 600;
@@ -1941,14 +1943,32 @@ class ICap_SEO_Admin
         $force_regenerate = isset($_POST['force_regenerate'])
             && sanitize_key((string) wp_unslash($_POST['force_regenerate'])) === '1';
 
+        // A page nothing links to is fixed on other pages, so it runs on its own, before this page's fixes.
+        $inbound_apply_result = null;
+        if (in_array('no_inbound_internal_links', $approved_issue_codes, true)) {
+            $inbound_apply_result = $this->add_inbound_links_to_post($this->extract_post_id_from_content_key($content_key));
+            $approved_issue_codes = array_values(array_diff($approved_issue_codes, ['no_inbound_internal_links']));
+        }
+        $inbound_linked_from = $inbound_apply_result !== null ? implode(',', $inbound_apply_result['linked_from']) : '';
+
         // Fixes are applied here on the site and don't depend on the iCap SEO service,
         // so they work the same whether or not the site is registered.
-        $local_apply_result = $this->apply_supported_local_remediation(
-            $content_key,
-            $approved_issue_codes,
-            $force_regenerate
-        );
+        $local_apply_result = empty($approved_issue_codes)
+            ? ['status' => 'no_op', 'reason' => $inbound_apply_result['reason'] ?? '']
+            : $this->apply_supported_local_remediation(
+                $content_key,
+                $approved_issue_codes,
+                $force_regenerate
+            );
         $status = isset($local_apply_result['status']) ? sanitize_key((string) $local_apply_result['status']) : '';
+        if ($inbound_linked_from !== '' && $status !== 'applied') {
+            ICap_SEO_Local_Checks::clear_cache_for_post($this->extract_post_id_from_content_key($content_key));
+            $this->redirect_with_notice('remediation_apply_title_updated', 'content-scores', [
+                'content_key' => $content_key,
+                'inbound_linked_from' => $inbound_linked_from,
+            ]);
+            return;
+        }
         if ($status === 'applied') {
             // Meta description and canonical are saved as post meta, which doesn't fire save_post.
             ICap_SEO_Local_Checks::clear_cache_for_post($this->extract_post_id_from_content_key($content_key));
@@ -1996,6 +2016,7 @@ class ICap_SEO_Admin
                     'paragraph_structure_after' => isset($local_apply_result['paragraph_structure_after']) ? (string) $local_apply_result['paragraph_structure_after'] : '',
                     'paragraph_structure_changed' => !empty($local_apply_result['paragraph_structure_changed']) ? '1' : '0',
                     'paragraphs_added_count' => isset($local_apply_result['paragraphs_added_count']) ? (string) $local_apply_result['paragraphs_added_count'] : '0',
+                    'inbound_linked_from' => $inbound_linked_from,
                     'regenerated' => $force_regenerate ? '1' : '0',
                 ]
             );
@@ -3856,6 +3877,138 @@ class ICap_SEO_Admin
         return $candidates;
     }
 
+    /**
+     * Fix for no_inbound_internal_links: add a "Related:" line linking to this page at the
+     * end of the most related published pages. Each page's content from before the edit is
+     * saved as a revision to restore from. Pages with nothing in common with this
+     * one aren't used, so a link never lands somewhere unrelated.
+     *
+     * @return array{status: string, reason: string, linked_from: int[]}
+     */
+    private function add_inbound_links_to_post(int $target_id): array
+    {
+        $target = get_post($target_id);
+        if (!$target instanceof WP_Post || $target->post_status !== 'publish' || !current_user_can('edit_post', $target_id)) {
+            return ['status' => 'failed', 'reason' => 'post_not_found', 'linked_from' => []];
+        }
+        $target_url = get_permalink($target);
+        if (!is_string($target_url) || $target_url === '') {
+            return ['status' => 'failed', 'reason' => 'post_not_found', 'linked_from' => []];
+        }
+
+        $link = '<a href="' . esc_url($target_url) . '">' . esc_html(wp_strip_all_tags(get_the_title($target))) . '</a>';
+        /* translators: %s: comma/and-joined list of linked page titles */
+        $paragraph = '<p>' . sprintf(__('Related: %s.', 'icap-seo'), $link) . '</p>';
+
+        $linked_from = [];
+        foreach ($this->get_inbound_link_sources($target, self::INBOUND_LINK_SOURCES) as $source) {
+            if (!current_user_can('edit_post', $source->ID)) {
+                continue;
+            }
+            $source_content = rtrim((string) $source->post_content);
+            $block = has_blocks($source_content) ? "<!-- wp:paragraph -->\n" . $paragraph . "\n<!-- /wp:paragraph -->" : $paragraph;
+            // The update saves a revision of the new content only, so save the current one
+            // first; that's the version to restore. Skipped when it's already the latest revision.
+            wp_save_post_revision($source->ID);
+            $updated = wp_update_post([
+                'ID' => $source->ID,
+                'post_content' => wp_slash($source_content === '' ? $block : $source_content . "\n\n" . $block),
+            ], true);
+            if (!is_wp_error($updated) && $updated > 0) {
+                $linked_from[] = $source->ID;
+            }
+        }
+
+        if (empty($linked_from)) {
+            return ['status' => 'no_op', 'reason' => 'no_related_pages_found', 'linked_from' => []];
+        }
+        $this->mark_issue_codes_applied($target_id, ['no_inbound_internal_links']);
+
+        return ['status' => 'applied', 'reason' => 'inbound_links_added', 'linked_from' => $linked_from];
+    }
+
+    /**
+     * The published pages most related to $target, best first: shared categories and
+     * tags, a parent or sibling page, and the target's title words appearing in their
+     * title or text. The home page, the blog page, and password-protected pages are left
+     * out, as are pages that already link to the target.
+     *
+     * @return WP_Post[]
+     */
+    private function get_inbound_link_sources(WP_Post $target, int $limit): array
+    {
+        $excluded_ids = [$target->ID, (int) get_option('page_on_front'), (int) get_option('page_for_posts')];
+        $default_category = (int) get_option('default_category');
+        $term_ids = static function (int $post_id) use ($default_category): array {
+            $ids = [];
+            foreach (['category', 'post_tag'] as $taxonomy) {
+                $terms = get_the_terms($post_id, $taxonomy);
+                foreach (is_array($terms) ? $terms : [] as $term) {
+                    // Every post starts in the default category, so sharing it says nothing.
+                    if ((int) $term->term_id !== $default_category) {
+                        $ids[] = (int) $term->term_id;
+                    }
+                }
+            }
+
+            return $ids;
+        };
+        $target_terms = $term_ids($target->ID);
+        $stop_words = ['about', 'after', 'also', 'and', 'best', 'from', 'have', 'here', 'home', 'into', 'more', 'only', 'page', 'that', 'their', 'them', 'they', 'this', 'what', 'when', 'where', 'which', 'with', 'your'];
+        $target_words = array_values(array_diff(array_unique(array_filter(
+            preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower(wp_strip_all_tags(get_the_title($target)))) ?: [],
+            static fn(string $word): bool => mb_strlen($word) >= 4
+        )), $stop_words));
+        $target_path = untrailingslashit((string) wp_parse_url((string) get_permalink($target), PHP_URL_PATH));
+
+        $candidates = get_posts([
+            'post_type' => ['post', 'page'],
+            'post_status' => 'publish',
+            'has_password' => false,
+            'posts_per_page' => 200,
+            'orderby' => 'modified',
+            'order' => 'DESC',
+            'no_found_rows' => true,
+        ]);
+
+        $scored = [];
+        foreach ($candidates as $order => $candidate) {
+            if (in_array($candidate->ID, $excluded_ids, true)) {
+                continue;
+            }
+            $content = (string) $candidate->post_content;
+            if ($target_path !== '' && stripos($content, $target_path) !== false) {
+                continue;
+            }
+
+            $score = 3 * count(array_intersect($target_terms, $term_ids($candidate->ID)));
+            if ($target->post_type === 'page' && $candidate->post_type === 'page'
+                && ($candidate->post_parent === $target->ID
+                    || $target->post_parent === $candidate->ID
+                    || ($target->post_parent > 0 && $candidate->post_parent === $target->post_parent))) {
+                $score += 2;
+            }
+            $candidate_title = mb_strtolower(wp_strip_all_tags(get_the_title($candidate)));
+            $candidate_text = mb_strtolower(mb_substr(wp_strip_all_tags($content), 0, 5000));
+            foreach ($target_words as $word) {
+                $pattern = '/\b' . preg_quote($word, '/') . '\b/u';
+                if (preg_match($pattern, $candidate_title) === 1) {
+                    $score += 2;
+                } elseif (preg_match($pattern, $candidate_text) === 1) {
+                    $score += 1;
+                }
+            }
+            if ($score > 0) {
+                $scored[] = ['score' => $score, 'order' => $order, 'post' => $candidate];
+            }
+        }
+
+        // Highest score first; ties go to the most recently updated page.
+        usort($scored, static fn(array $left, array $right): int => [$right['score'], $left['order']] <=> [$left['score'], $right['order']]);
+
+        return array_column(array_slice($scored, 0, $limit), 'post');
+    }
+
     private function join_link_list_with_and(array $parts): string
     {
         $count = count($parts);
@@ -5138,7 +5291,7 @@ class ICap_SEO_Admin
             ['issue_code' => 'broken_internal_link_detected', 'label' => __('Internal links resolve without errors', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_links_detected']],
             ['issue_code' => 'broken_external_link_detected', 'label' => __('External references resolve without errors', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
             ['issue_code' => 'nofollow_on_internal_link', 'label' => __('Internal links don\'t use rel="nofollow"', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
-            ['issue_code' => 'no_inbound_internal_links', 'label' => __('Other pages on your site link to this page', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance'],
+            ['issue_code' => 'no_inbound_internal_links', 'label' => __('Other pages on your site link to this page', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => false, 'apply_type' => 'auto'],
         ];
     }
 

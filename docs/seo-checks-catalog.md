@@ -89,7 +89,7 @@ Whether a page's links help visitors and search engines navigate your site — a
 |---|---|---|
 | Page includes crawlable links **(Free)** | Links are how search engines discover the rest of your site. A page with none is a dead end for crawlers. | Automatic fix |
 | Page links to enough related content **(Free)** | Internal links help visitors — and search engines — find more of your relevant content instead of leaving after one page. | Automatic fix |
-| Other pages on your site link to this page **(Free)** | Search engines find pages by following links. A page that no other page or menu links to is reachable only from the sitemap, so it's easy to miss. The home page and blog page are exempt. | Guidance only |
+| Other pages on your site link to this page **(Free)** | Search engines find pages by following links. A page that no other page or menu links to is reachable only from the sitemap, so it's easy to miss. The home page and blog page are exempt. | Automatic fix: adds a "Related:" link to this page on up to 2 related pages (shared category, tag or title words) |
 | Page cites at least one external source **(Free)** | Linking to credible outside sources is a trust signal that supports the page's claims. | Guidance only |
 | Internal links resolve without errors **(Premium)** | A broken link to your own content wastes the click and signals a poorly maintained site to visitors and search engines alike. | Guidance only |
 | External references resolve without errors **(Premium)** | A dead external link undermines the credibility of whatever you were citing and creates a poor visitor experience. | Guidance only |
@@ -104,6 +104,6 @@ Whether a page's links help visitors and search engines navigate your site — a
 
 ## Fix-type summary
 
-- **16 checks** get an automatic fix on approval, applied on your own site.
+- **17 checks** get an automatic fix on approval, applied on your own site.
 - **8 checks** (the content-depth family, plus the readability score and its three sub-checks) use preview & publish — a draft is generated and shown before anything is saved.
-- **15 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, or removing a noindex tag without human confirmation).
+- **14 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, or removing a noindex tag without human confirmation).

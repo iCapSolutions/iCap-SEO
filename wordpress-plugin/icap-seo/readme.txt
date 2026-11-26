@@ -4,7 +4,7 @@ Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 0.1.164
+Stable tag: 0.1.165
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -135,6 +135,9 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.165 =
+* One-click fix for pages nothing links to: iCap SEO adds a "Related:" link to the page on up to two related pages, chosen by shared categories, tags and title words. WordPress keeps a revision of each edited page, so the change can be undone.
 
 = 0.1.164 =
 * New free check: pages that no other page or menu on your site links to. Search engines find pages by following links, so these are easy for them to miss. The Google indexing panel suggests linking to them.
