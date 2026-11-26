@@ -838,8 +838,16 @@ if ($notice_code === 'remediation_apply_title_updated') {
             $paragraphs_added_count
         );
     }
+    $inbound_linked_from_ids = isset($_GET['inbound_linked_from']) ? array_filter(array_map('absint', explode(',', sanitize_text_field((string) wp_unslash($_GET['inbound_linked_from']))))) : []; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display state; changes nothing.
+    if (!empty($inbound_linked_from_ids)) {
+        $notice_override_message .= ' ' . sprintf(
+            /* translators: %s: comma-separated titles of the pages that now link to this one */
+            __('Added a link to this page from: %s. WordPress saved a revision of each, so you can undo it from that page\'s revision history.', 'icap-seo'),
+            implode(', ', array_map(static fn(int $linked_id): string => wp_strip_all_tags(get_the_title($linked_id)), $inbound_linked_from_ids))
+        );
+    }
     if ($notice_override_message !== '') {
-        $notice_override_message .= ' ' . __('Open this page again to see its new score.', 'icap-seo');
+        $notice_override_message = trim($notice_override_message) . ' ' . __('Open this page again to see its new score.', 'icap-seo');
     }
 }
 if ($notice_code === 'content_rescan_complete') {
@@ -896,6 +904,8 @@ if ($notice_code === 'remediation_apply_noop') {
         $notice_override_message = __('Nothing changed: this page already has enough H2/H3 headings.', 'icap-seo');
     } elseif ($noop_reason === 'internal_linking_already_sufficient') {
         $notice_override_message = __('Nothing changed: this page already has enough internal links.', 'icap-seo');
+    } elseif ($noop_reason === 'no_related_pages_found') {
+        $notice_override_message = __('Nothing changed: no other page shares a category, tag, or title words with this one. Link to it from a page you choose, or add it to a menu.', 'icap-seo');
     } elseif ($noop_reason === 'no_link_candidates_available') {
         $notice_override_message = __('Nothing changed: there are no other published pages to link to.', 'icap-seo');
     } elseif ($noop_reason === 'paragraph_structure_already_sufficient') {
@@ -1970,6 +1980,13 @@ if ($notice_code === 'remediation_apply_noop') {
                                         'label' => __('Link to this page from a related page or a menu (nothing on your site links here yet)', 'icap-seo'),
                                         'href' => add_query_arg('detail_tab', 'recommendations', $detail_indexing_base_url),
                                         'note' => '',
+                                        'form' => [
+                                            'action' => 'icap_seo_apply_remediation',
+                                            'codes' => ['no_inbound_internal_links'],
+                                            'fields' => ['return_to' => 'icap-seo-indexing'],
+                                            'button' => __('Add links to it', 'icap-seo'),
+                                            'progress' => __('Adding links…', 'icap-seo'),
+                                        ],
                                     ];
                                 }
                                 if (!array_intersect(['low_internal_linking', 'no_links_detected'], $detail_indexing_codes)) {
