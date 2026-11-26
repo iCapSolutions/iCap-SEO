@@ -4,7 +4,7 @@ Tags: seo, seo audit, schema, google search console, ai seo
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 0.1.162
+Stable tag: 0.1.163
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -135,6 +135,9 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.163 =
+* The Google indexing panel's steps now have buttons that do the fix right there: fix the title and meta description, add internal links, or write an AI draft that expands the content (Premium, reviewed before it publishes).
 
 = 0.1.162 =
 * Full scans of larger sites now finish: pages the first request doesn't reach are checked in the background, a few at a time, and the Overview tab shows how many are left.

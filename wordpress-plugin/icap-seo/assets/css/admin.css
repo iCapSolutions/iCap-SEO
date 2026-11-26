@@ -1111,6 +1111,12 @@ a.icap-seo-ai-card-state {
     display: block;
 }
 
+.icap-seo-indexing-step-form {
+    display: inline-block;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
 .icap-seo-landed {
     scroll-margin-top: 48px;
     animation: icap-seo-landed-glow 2.4s ease-out;

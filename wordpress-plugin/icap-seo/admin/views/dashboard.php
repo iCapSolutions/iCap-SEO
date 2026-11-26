@@ -1955,18 +1955,39 @@ if ($notice_code === 'remediation_apply_noop') {
                                     'label' => __('Expand the page\'s content with AI', 'icap-seo'),
                                     'href' => add_query_arg('detail_tab', 'ai-drafts', $detail_indexing_base_url) . '#icap-seo-ai-content_depth',
                                     'note' => $service_is_premium ? '' : __('Premium', 'icap-seo'),
+                                    // Writes a draft to review on the AI Improvements tab; nothing publishes yet.
+                                    'form' => $service_is_premium ? [
+                                        'action' => 'icap_seo_preview_content_depth',
+                                        'fields' => ['return_to' => 'icap-seo-ai-content_depth', 'detail_tab' => 'ai-drafts'],
+                                        'button' => __('Write a draft', 'icap-seo'),
+                                        'progress' => __('Writing expanded content…', 'icap-seo'),
+                                    ] : null,
                                 ];
                             } elseif ($indexing_fix === 'internal_links' && array_intersect(['low_internal_linking', 'no_links_detected'], $detail_indexing_codes)) {
                                 $detail_indexing_steps[] = [
                                     'label' => __('Add internal links to this page\'s content', 'icap-seo'),
                                     'href' => add_query_arg('detail_tab', 'recommendations', $detail_indexing_base_url),
                                     'note' => '',
+                                    'form' => [
+                                        'action' => 'icap_seo_apply_remediation',
+                                        'codes' => array_values(array_intersect(['no_links_detected', 'low_internal_linking'], $detail_indexing_codes)),
+                                        'fields' => ['return_to' => 'icap-seo-indexing'],
+                                        'button' => __('Add links', 'icap-seo'),
+                                        'progress' => __('Applying fixes…', 'icap-seo'),
+                                    ],
                                 ];
                             } elseif ($indexing_fix === 'title_meta' && array_intersect(['title_length_out_of_range', 'missing_title_tag', 'missing_meta_description', 'meta_description_length_out_of_range'], $detail_indexing_codes)) {
                                 $detail_indexing_steps[] = [
                                     'label' => __('Fix the title and meta description', 'icap-seo'),
                                     'href' => add_query_arg('detail_tab', 'recommendations', $detail_indexing_base_url),
                                     'note' => '',
+                                    'form' => [
+                                        'action' => 'icap_seo_apply_remediation',
+                                        'codes' => array_values(array_intersect(['missing_title_tag', 'title_length_out_of_range', 'missing_meta_description', 'meta_description_length_out_of_range'], $detail_indexing_codes)),
+                                        'fields' => ['return_to' => 'icap-seo-indexing'],
+                                        'button' => __('Fix them', 'icap-seo'),
+                                        'progress' => __('Applying fixes…', 'icap-seo'),
+                                    ],
                                 ];
                             } elseif ($indexing_fix === 'redirect' && $detail_permalink !== '') {
                                 $detail_indexing_path = (string) wp_parse_url($detail_permalink, PHP_URL_PATH);
@@ -2003,6 +2024,20 @@ if ($notice_code === 'remediation_apply_noop') {
                                             <?php endif; ?>
                                             <?php if ($indexing_step['note'] !== '') : ?>
                                                 <span class="icap-seo-ai-badge"><?php echo esc_html($indexing_step['note']); ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($indexing_step['form'])) : ?>
+                                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form icap-seo-indexing-step-form" data-progress-label="<?php echo esc_attr($indexing_step['form']['progress']); ?>">
+                                                    <input type="hidden" name="action" value="<?php echo esc_attr($indexing_step['form']['action']); ?>">
+                                                    <input type="hidden" name="content_key" value="<?php echo esc_attr($selected_content_key); ?>">
+                                                    <?php foreach (($indexing_step['form']['codes'] ?? []) as $indexing_step_code) : ?>
+                                                        <input type="hidden" name="approved_issue_codes[]" value="<?php echo esc_attr($indexing_step_code); ?>">
+                                                    <?php endforeach; ?>
+                                                    <?php foreach ($indexing_step['form']['fields'] as $indexing_field_name => $indexing_field_value) : ?>
+                                                        <input type="hidden" name="<?php echo esc_attr($indexing_field_name); ?>" value="<?php echo esc_attr($indexing_field_value); ?>">
+                                                    <?php endforeach; ?>
+                                                    <?php wp_nonce_field($indexing_step['form']['action']); ?>
+                                                    <button type="submit" class="button button-small"><?php echo esc_html($indexing_step['form']['button']); ?></button>
+                                                </form>
                                             <?php endif; ?>
                                         </li>
                                     <?php endforeach; ?>
