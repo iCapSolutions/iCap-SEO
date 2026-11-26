@@ -51,9 +51,18 @@ class ICap_SEO_Local_Checks
         'schema_missing_required_properties',
         'no_external_references',
         'nofollow_on_internal_link',
+        'no_inbound_internal_links',
     ];
 
     private const CACHE_SECONDS = 600;
+
+    /** Which published pages link to which, built from post content and menus. Cleared when content or a menu changes. */
+    private const INBOUND_INDEX_TRANSIENT = 'icap_seo_inbound_link_index';
+
+    private const INBOUND_INDEX_SECONDS = DAY_IN_SECONDS;
+
+    /** Posts read per query while building the inbound link index, to keep memory flat. */
+    private const INBOUND_INDEX_CHUNK = 200;
     // Limits shared with the editor panel's live checks, so the two can't disagree.
     public const TITLE_MIN_LENGTH = 20;
     public const TITLE_MAX_LENGTH = 65;
@@ -208,6 +217,15 @@ class ICap_SEO_Local_Checks
             'no_links_detected', 'low_internal_linking', 'no_external_references', 'nofollow_on_internal_link',
             'limited_paragraph_structure',
         ]);
+
+        // Inbound links come from the rest of the site, so they only mean something for a published page.
+        if ($post !== null && $post->post_status === 'publish') {
+            $inbound = self::inbound_link_issues($post);
+            if ($inbound !== null) {
+                $issues = array_merge($issues, $inbound);
+                $ran[] = 'no_inbound_internal_links';
+            }
+        }
 
         if ($partial) {
             $unknown_codes = (new ICap_SEO_Output())->is_another_seo_plugin_active()
@@ -399,6 +417,7 @@ class ICap_SEO_Local_Checks
             'schema_missing_required_properties' => __('Structured data includes required properties for its type', 'icap-seo'),
             'no_external_references' => __('Page cites at least one external source', 'icap-seo'),
             'nofollow_on_internal_link' => __('Internal links don\'t use rel="nofollow"', 'icap-seo'),
+            'no_inbound_internal_links' => __('Other pages on your site link to this page', 'icap-seo'),
         ];
     }
 
@@ -1206,6 +1225,185 @@ class ICap_SEO_Local_Checks
         }
 
         return array_keys($urls);
+    }
+
+    /**
+     * Flags a published page that no other published page or menu links to. Search
+     * engines find pages by following links, so a page reachable only from the sitemap
+     * is easy to miss. The home page and the blog page are reached without a link, so
+     * they're skipped. Returns null when the check can't answer: the site has more
+     * pages than the index reads, so a link from an older page could be missed.
+     *
+     * @return array<int, array<string, string>>|null
+     */
+    public static function inbound_link_issues(WP_Post $post): ?array
+    {
+        if (in_array($post->ID, [(int) get_option('page_on_front'), (int) get_option('page_for_posts')], true)) {
+            return [];
+        }
+
+        $index = self::inbound_link_index();
+        if (empty($index['complete'])) {
+            return null;
+        }
+        if (!empty($index['linked'][$post->ID])) {
+            return [];
+        }
+
+        return [self::issue(
+            'no_inbound_internal_links',
+            'medium',
+            'No other published page or menu on this site links to this page.',
+            'Add a link to this page from a related post or page, or add it to a menu, so visitors and search engines can find it.'
+        )];
+    }
+
+    /**
+     * Drop the inbound link index. Runs when a post is saved or deleted and when a menu changes.
+     */
+    public static function clear_inbound_link_index(): void
+    {
+        delete_transient(self::INBOUND_INDEX_TRANSIENT);
+    }
+
+    /**
+     * For each published post or page, how many other pages and menus link to it.
+     * Reads saved post content (not the rendered page, so theme and widget links
+     * aren't seen), classic menus, and block theme navigation menus.
+     *
+     * @return array{complete: bool, linked: array<int, int>}
+     */
+    private static function inbound_link_index(): array
+    {
+        $cached = get_transient(self::INBOUND_INDEX_TRANSIENT);
+        if (is_array($cached) && isset($cached['complete'], $cached['linked'])) {
+            return $cached;
+        }
+
+        $site_host = strtolower((string) wp_parse_url(home_url('/'), PHP_URL_HOST));
+        $query_args = [
+            'post_type' => ['post', 'page'],
+            'post_status' => 'publish',
+            'posts_per_page' => self::INBOUND_INDEX_CHUNK,
+            'orderby' => 'ID',
+            'order' => 'ASC',
+            'update_post_meta_cache' => false,
+        ];
+
+        // One pass over published content: each page's path, so a link can be matched to the
+        // page it points at, and the links it holds. Password-protected pages can still be
+        // linked to, but their own links don't count: visitors and crawlers can't see them.
+        $path_to_id = [];
+        $hrefs_by_source = [];
+        $total = 0;
+        for ($page = 1; ($page - 1) * self::INBOUND_INDEX_CHUNK < self::MAX_PAGES; $page++) {
+            $query = new WP_Query($query_args + ['paged' => $page]);
+            $total = (int) $query->found_posts;
+            foreach ($query->posts as $source_post) {
+                $permalink = get_permalink($source_post);
+                // Plain permalinks (?p=12) are matched by their query instead, in link_target_id.
+                if (is_string($permalink) && $permalink !== '' && (string) wp_parse_url($permalink, PHP_URL_QUERY) === '') {
+                    $path_to_id[self::link_path($permalink)] = $source_post->ID;
+                }
+                if ($source_post->post_password === ''
+                    && preg_match_all('/<a\b[^>]*\bhref=["\']([^"\']+)["\']/i', (string) $source_post->post_content, $matches)) {
+                    $hrefs_by_source[$source_post->ID] = array_unique($matches[1]);
+                }
+            }
+            if ($page >= $query->max_num_pages) {
+                break;
+            }
+        }
+
+        $sources = [];
+        $add_link = static function (string $source, int $target_id) use (&$sources): void {
+            if ($target_id > 0) {
+                $sources[$target_id][$source] = true;
+            }
+        };
+
+        foreach ($hrefs_by_source as $source_id => $hrefs) {
+            foreach ($hrefs as $href) {
+                $target_id = self::link_target_id($href, $site_host, $path_to_id);
+                if ($target_id !== $source_id) {
+                    $add_link('post-' . $source_id, $target_id);
+                }
+            }
+        }
+
+        // Classic menus.
+        foreach (wp_get_nav_menus() as $menu) {
+            $items = wp_get_nav_menu_items($menu->term_id);
+            foreach (is_array($items) ? $items : [] as $item) {
+                $target_id = $item->type === 'post_type'
+                    ? (int) $item->object_id
+                    : self::link_target_id((string) $item->url, $site_host, $path_to_id);
+                $add_link('menu-' . $menu->term_id, $target_id);
+            }
+        }
+
+        // Block theme navigation menus store each link as a block with the page's ID or URL.
+        $navigation_posts = get_posts([
+            'post_type' => 'wp_navigation',
+            'post_status' => 'publish',
+            'posts_per_page' => 50,
+            'no_found_rows' => true,
+        ]);
+        foreach ($navigation_posts as $navigation_post) {
+            preg_match_all('/<!--\s+wp:navigation-(?:link|submenu)\s+(\{.*?\})\s+\/?-->/s', (string) $navigation_post->post_content, $blocks);
+            foreach ($blocks[1] as $block_json) {
+                $attributes = json_decode($block_json, true);
+                if (!is_array($attributes)) {
+                    continue;
+                }
+                $target_id = isset($attributes['id']) && is_numeric($attributes['id']) && ($attributes['kind'] ?? '') === 'post-type'
+                    ? (int) $attributes['id']
+                    : self::link_target_id((string) ($attributes['url'] ?? ''), $site_host, $path_to_id);
+                $add_link('navigation-' . $navigation_post->ID, $target_id);
+            }
+        }
+
+        $index = [
+            'complete' => $total <= self::MAX_PAGES,
+            'linked' => array_map('count', $sources),
+        ];
+        set_transient(self::INBOUND_INDEX_TRANSIENT, $index, self::INBOUND_INDEX_SECONDS);
+
+        return $index;
+    }
+
+    /**
+     * The post a link points at, or 0 for external, unknown, or non-page links.
+     * Matches pretty permalinks by path and plain ones by their ?p= or ?page_id= query.
+     *
+     * @param array<string, int> $path_to_id
+     */
+    private static function link_target_id(string $href, string $site_host, array $path_to_id): int
+    {
+        $href = trim(html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if ($href === '' || strpos($href, '#') === 0 || preg_match('/^(javascript|mailto|tel):/i', $href) === 1) {
+            return 0;
+        }
+        $url = WP_Http::make_absolute_url($href, home_url('/'));
+        $host = strtolower((string) wp_parse_url($url, PHP_URL_HOST));
+        if ($host !== $site_host) {
+            return 0;
+        }
+
+        parse_str((string) wp_parse_url($url, PHP_URL_QUERY), $query);
+        foreach (['p', 'page_id'] as $query_key) {
+            if (isset($query[$query_key]) && is_numeric($query[$query_key])) {
+                return (int) $query[$query_key];
+            }
+        }
+
+        return $path_to_id[self::link_path($url)] ?? 0;
+    }
+
+    /** A URL's path for matching: lowercase, without the trailing slash. */
+    private static function link_path(string $url): string
+    {
+        return untrailingslashit(strtolower(rawurldecode((string) wp_parse_url($url, PHP_URL_PATH))));
     }
 
     /**

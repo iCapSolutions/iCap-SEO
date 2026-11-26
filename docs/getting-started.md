@@ -15,7 +15,7 @@ your WordPress admin go to **Plugins → Add New → Upload Plugin** and activat
 
 ## Use the free checks (no account needed)
 
-Open **iCap SEO → Content Scores** and pick a page. The 35 free checks run on your own site, and **Apply this
+Open **iCap SEO → Content Scores** and pick a page. The 36 free checks run on your own site, and **Apply this
 recommendation** (or **Apply all open recommendations**) fixes them there. Nothing is sent to any service.
 **Redirects**, **Local SEO**, social sharing tags, `/llms.txt`, and the editor panel also work without an
 account. The rest of this guide is only needed for the iCap SEO service.

@@ -39,6 +39,10 @@ class ICap_SEO_Plugin
         add_action('template_redirect', [$this, 'maybe_log_404'], 5);
         add_action('save_post', [$this, 'ping_indexnow_on_publish'], 20, 3);
         add_action('save_post', ['ICap_SEO_Local_Checks', 'clear_cache_for_post']);
+        // Any page or menu change can add or remove a link to another page.
+        add_action('save_post', ['ICap_SEO_Local_Checks', 'clear_inbound_link_index']);
+        add_action('deleted_post', ['ICap_SEO_Local_Checks', 'clear_inbound_link_index']);
+        add_action('wp_update_nav_menu', ['ICap_SEO_Local_Checks', 'clear_inbound_link_index']);
         add_action('before_delete_post', [$this, 'ping_indexnow_on_delete']);
         add_action('wp_trash_post', [$this, 'ping_indexnow_on_delete']);
         add_action(ICap_SEO_Service_Client::SCAN_CONTINUATION_HOOK, [$this->service_client, 'continue_scan']);

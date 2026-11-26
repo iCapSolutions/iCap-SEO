@@ -5138,6 +5138,7 @@ class ICap_SEO_Admin
             ['issue_code' => 'broken_internal_link_detected', 'label' => __('Internal links resolve without errors', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'preview', 'preempted_by' => ['no_links_detected']],
             ['issue_code' => 'broken_external_link_detected', 'label' => __('External references resolve without errors', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => true, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
             ['issue_code' => 'nofollow_on_internal_link', 'label' => __('Internal links don\'t use rel="nofollow"', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance', 'preempted_by' => ['no_links_detected']],
+            ['issue_code' => 'no_inbound_internal_links', 'label' => __('Other pages on your site link to this page', 'icap-seo'), 'layer' => __('Internal and broken links', 'icap-seo'), 'premium' => false, 'apply_type' => 'guidance'],
         ];
     }
 
