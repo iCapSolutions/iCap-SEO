@@ -5,7 +5,7 @@ mirrors what you'll see in the plugin's **Content Scores** tab.
 
 ## How to read this
 
-- **Plan** — checks marked **(Free)** run on your own WordPress site, with or without registering, and their fixes are applied there too. 35 of the 38 checks are Free. The other 3 are **Premium**: they need an outside view of your site, so the iCap SEO scan service runs them from its own servers, and they need an active subscription.
+- **Plan** — checks marked **(Free)** run on your own WordPress site, with or without registering, and their fixes are applied there too. 36 of the 39 checks are Free. The other 3 are **Premium**: they need an outside view of your site, so the iCap SEO scan service runs them from its own servers, and they need an active subscription.
 - **Fix** — how the issue gets resolved once found:
   - **Automatic fix** — iCap SEO writes the fix directly (title, meta description, alt text, schema markup, etc.) the moment you approve it. No manual editing required.
   - **Preview & publish** — iCap SEO drafts the fix and shows it to you first; nothing is saved or published until you explicitly approve it. Used only where auto-writing risky content (like new paragraphs) without review isn't safe.
@@ -89,6 +89,7 @@ Whether a page's links help visitors and search engines navigate your site — a
 |---|---|---|
 | Page includes crawlable links **(Free)** | Links are how search engines discover the rest of your site. A page with none is a dead end for crawlers. | Automatic fix |
 | Page links to enough related content **(Free)** | Internal links help visitors — and search engines — find more of your relevant content instead of leaving after one page. | Automatic fix |
+| Other pages on your site link to this page **(Free)** | Search engines find pages by following links. A page that no other page or menu links to is reachable only from the sitemap, so it's easy to miss. The home page and blog page are exempt. | Guidance only |
 | Page cites at least one external source **(Free)** | Linking to credible outside sources is a trust signal that supports the page's claims. | Guidance only |
 | Internal links resolve without errors **(Premium)** | A broken link to your own content wastes the click and signals a poorly maintained site to visitors and search engines alike. | Guidance only |
 | External references resolve without errors **(Premium)** | A dead external link undermines the credibility of whatever you were citing and creates a poor visitor experience. | Guidance only |
@@ -98,11 +99,11 @@ Whether a page's links help visitors and search engines navigate your site — a
 
 ## Free vs. Premium at a glance
 
-- **Free (35 checks)**: title, meta description, H1, HTTPS, robots meta rules and robots.txt, security headers, content depth, readability, heading and paragraph structure, canonical URL, structured data (presence, @type, and required properties), images, internal links, external references, and internal nofollow links. They run on your own site and need no account.
+- **Free (36 checks)**: title, meta description, H1, HTTPS, robots meta rules and robots.txt, security headers, content depth, readability, heading and paragraph structure, canonical URL, structured data (presence, @type, and required properties), images, internal links, external references, internal nofollow links, and pages nothing else links to. They run on your own site and need no account.
 - **Premium (3 checks)**: whether the scan service can reach the page, and broken internal and external links, found by requesting every linked URL. These run from the iCap SEO scan service's servers.
 
 ## Fix-type summary
 
 - **16 checks** get an automatic fix on approval, applied on your own site.
 - **8 checks** (the content-depth family, plus the readability score and its three sub-checks) use preview & publish — a draft is generated and shown before anything is saved.
-- **14 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, or removing a noindex tag without human confirmation).
+- **15 checks** are guidance-only — either because the fix lives outside WordPress content entirely (server headers, DNS, robots.txt), or because automating it safely isn't possible (fabricating a citation, sourcing a stock image, or removing a noindex tag without human confirmation).

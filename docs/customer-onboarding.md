@@ -24,7 +24,7 @@ active, registered site. For step-by-step technical instructions, see [Getting s
 
 Everything that runs on your own site works without an account:
 
-- The 35 free checks across your site with **Check all pages** in **Content Scores**, with a site-wide score
+- The 36 free checks across your site with **Check all pages** in **Content Scores**, with a site-wide score
   and one-click fixes.
 - On-page output (meta description, canonical URL, JSON-LD schema, social sharing tags) generated from your
   existing content.

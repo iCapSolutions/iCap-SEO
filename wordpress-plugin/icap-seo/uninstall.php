@@ -33,6 +33,7 @@ if ($icap_seo_site_id !== '') {
 }
 
 delete_transient('icap_seo_local_robots_txt');
+delete_transient('icap_seo_inbound_link_index');
 delete_option('icap_seo_settings');
 delete_option('icap_seo_indexnow_key');
 delete_option('icap_seo_indexnow_enabled');

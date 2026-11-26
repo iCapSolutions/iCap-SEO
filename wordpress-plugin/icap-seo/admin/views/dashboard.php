@@ -466,7 +466,7 @@ if (!function_exists('icap_seo_indexing_guidance')) {
             ['forbidden', false, [], __('Your server refused Google access to this page (403). A security plugin or firewall may be blocking Google.', 'icap-seo')],
             ['4xx', false, [], __('Your server returned an error when Google tried to read this page. Check the page loads for logged-out visitors.', 'icap-seo')],
             ['removal tool', false, [], __('This page was hidden with Search Console\'s Removals tool. Cancel the request in Search Console if it should come back.', 'icap-seo')],
-            ['unknown to google', false, [], __('Google hasn\'t found this page yet. Link to it from your other pages, then ask Google to index it.', 'icap-seo')],
+            ['unknown to google', false, ['internal_links'],__('Google hasn\'t found this page yet. Link to it from your other pages, then ask Google to index it.', 'icap-seo')],
             ['indexed', true, [], __('This page is in Google\'s search results.', 'icap-seo')],
         ];
         foreach ($rules as [$phrase, $indexed, $fixes, $meaning]) {
@@ -1963,7 +1963,18 @@ if ($notice_code === 'remediation_apply_noop') {
                                         'progress' => __('Writing expanded content…', 'icap-seo'),
                                     ] : null,
                                 ];
-                            } elseif ($indexing_fix === 'internal_links' && array_intersect(['low_internal_linking', 'no_links_detected'], $detail_indexing_codes)) {
+                            } elseif ($indexing_fix === 'internal_links') {
+                                // Links from other pages are how Google finds this one; that's done by hand on those pages.
+                                if (in_array('no_inbound_internal_links', $detail_indexing_codes, true)) {
+                                    $detail_indexing_steps[] = [
+                                        'label' => __('Link to this page from a related page or a menu (nothing on your site links here yet)', 'icap-seo'),
+                                        'href' => add_query_arg('detail_tab', 'recommendations', $detail_indexing_base_url),
+                                        'note' => '',
+                                    ];
+                                }
+                                if (!array_intersect(['low_internal_linking', 'no_links_detected'], $detail_indexing_codes)) {
+                                    continue;
+                                }
                                 $detail_indexing_steps[] = [
                                     'label' => __('Add internal links to this page\'s content', 'icap-seo'),
                                     'href' => add_query_arg('detail_tab', 'recommendations', $detail_indexing_base_url),
