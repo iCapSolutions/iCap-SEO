@@ -43,7 +43,10 @@ plugin refreshes your billing status.
 ## 4. Connect Google and run your first scan
 
 Connect Google Search Console and Google Analytics on the **Account** tab to fill the **SEO Performance**,
-**Site Analytics**, and **Keywords** tabs — free on any registered site. With Premium active, click
+**Site Analytics**, and **Keywords** tabs — free on any registered site. **SEO Performance** also lists
+**Near page one** pages: ones Google shows at positions 8 to 20 for real searches, the quickest traffic to win.
+With AI Improvements, **Optimize title and description** writes suggestions aimed at those searches for you
+to review before anything changes. With Premium active, click
 **Trigger Full Scan** in **Overview**. Scans cover up to 100 pages and include the 3 checks run from
 outside your site (page reachability, and broken internal and external links). Scan status updates in place.
 

@@ -642,6 +642,16 @@ $notice_map = [
     'remediation_auth_error' => ['type' => 'error', 'message' => __('Remediation request failed authentication. Re-register the site credentials and retry.', 'icap-seo')],
     'remediation_preview_unavailable' => ['type' => 'error', 'message' => __('Remediation preview is temporarily unavailable. Please retry shortly.', 'icap-seo')],
     'remediation_preview_failed' => ['type' => 'error', 'message' => __('Remediation preview failed with an unexpected response.', 'icap-seo')],
+    'near_page_one_suggestions_ready' => ['type' => 'updated', 'message' => __('Suggestions are ready. Review them below; nothing changes on the page until you apply them.', 'icap-seo')],
+    'near_page_one_applied' => ['type' => 'updated', 'message' => __('Applied. Google usually takes a few days to a few weeks to show the change; this list will show the position before and after.', 'icap-seo')],
+    'near_page_one_undone' => ['type' => 'updated', 'message' => __('Undone. The page has its previous search title and description again.', 'icap-seo')],
+    'near_page_one_discarded' => ['type' => 'updated', 'message' => __('Suggestions discarded. Nothing on the page changed.', 'icap-seo')],
+    'near_page_one_nothing_selected' => ['type' => 'error', 'message' => __('Nothing applied: tick the title, the description, or both.', 'icap-seo')],
+    'near_page_one_no_draft' => ['type' => 'error', 'message' => __('There is nothing to apply or undo for this page any more. Refresh the page and try again.', 'icap-seo')],
+    'near_page_one_not_listed' => ['type' => 'error', 'message' => __('This page is not in the Near page one list right now, so there are no searches to aim at.', 'icap-seo')],
+    'near_page_one_no_credits' => ['type' => 'error', 'message' => __('Not enough AI credits left to write suggestions. Add credits on the Account tab, then try again.', 'icap-seo')],
+    'near_page_one_suggest_failed' => ['type' => 'error', 'message' => __('The AI could not write suggestions just now. Please try again shortly.', 'icap-seo')],
+    'near_page_one_failed' => ['type' => 'error', 'message' => __('That page could not be found, or you cannot edit it.', 'icap-seo')],
     'content_depth_preview_ready' => ['type' => 'updated', 'message' => __('Content depth draft generated. Review it below before publishing.', 'icap-seo')],
     'content_depth_already_sufficient' => ['type' => 'info', 'message' => __('Nothing changed: this page already meets the word-count target.', 'icap-seo')],
     'content_depth_published' => ['type' => 'updated', 'message' => __('Content depth draft published to this page. Open this page again to see its new score.', 'icap-seo')],
@@ -2212,6 +2222,26 @@ if ($notice_code === 'remediation_apply_noop') {
                         </div>
                     <?php endif; ?>
                     <?php if ($content_detail_tab === 'recommendations') : ?>
+                    <?php
+                    $detail_near_page_one = $this->near_page_one_entry_for_post((int) $local_post_id);
+                    if ($detail_near_page_one !== null) :
+                        $detail_near_query = $detail_near_page_one['queries'][0] ?? null;
+                        ?>
+                        <div class="icap-seo-panel">
+                            <h4><?php esc_html_e('Close to Google\'s first page', 'icap-seo'); ?></h4>
+                            <p><?php
+                            echo esc_html(is_array($detail_near_query)
+                                ? sprintf(
+                                    /* translators: 1: average position, 2: a search */
+                                    __('Google shows this page at about #%1$s for "%2$s". A title, description or section aimed at that search could move it onto page one.', 'icap-seo'),
+                                    number_format_i18n((float) $detail_near_page_one['position'], 1),
+                                    (string) $detail_near_query['query']
+                                )
+                                : __('Google shows this page just past its first page for some searches.', 'icap-seo'));
+                            ?></p>
+                            <a class="button" href="<?php echo esc_url(add_query_arg(['page' => 'icap-seo', 'tab' => 'seo-performance', 'near_page_one_post' => (string) $local_post_id], admin_url('admin.php')) . '#icap-seo-near-page-one'); ?>"><?php esc_html_e('Improve it on SEO Performance', 'icap-seo'); ?></a>
+                        </div>
+                    <?php endif; ?>
                     <?php if (!empty($detail_category_scores)) : ?>
                         <div class="icap-seo-panel">
                         <h4><?php esc_html_e('Scores by category', 'icap-seo'); ?></h4>
@@ -3428,6 +3458,236 @@ if ($notice_code === 'remediation_apply_noop') {
                         <p class="description icap-seo-performance-chart-caption"><?php esc_html_e('Each line is shown relative to its own high/low for the window, not a shared value scale. Hover the chart for exact values on any day.', 'icap-seo'); ?></p>
                     </div>
                 <?php endif; ?>
+
+                <?php
+                $near_page_one = isset($performance_gsc['near_page_one']) && is_array($performance_gsc['near_page_one'])
+                    ? $performance_gsc['near_page_one']
+                    : ICap_SEO_Service_Client::empty_near_page_one();
+                $near_page_one_pages = is_array($near_page_one['pages'] ?? null) ? $near_page_one['pages'] : [];
+                $near_page_one_brand = is_array($near_page_one['brand'] ?? null) ? $near_page_one['brand'] : [];
+                $near_page_one_next_up = is_array($near_page_one['next_up'] ?? null) ? $near_page_one['next_up'] : [];
+                // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only: which row to highlight after an action.
+                $near_page_one_focus = isset($_GET['near_page_one_post']) ? absint(wp_unslash($_GET['near_page_one_post'])) : 0;
+                // Optimize asks for a title and a description.
+                $near_page_one_cost_estimate = (float) ($ai_credit_pricing['estimates']['page_title'] ?? 0) + (float) ($ai_credit_pricing['estimates']['meta_description'] ?? 0);
+                $near_page_one_cost_text = !empty($ai_credit_pricing['metered']) && $near_page_one_cost_estimate > 0
+                    /* translators: %s: typical number of AI credits */
+                    ? sprintf(__('Usually about %s AI credits.', 'icap-seo'), icap_seo_format_credits($near_page_one_cost_estimate))
+                    : sprintf(_n('Uses %d AI credit.', 'Uses %d AI credits.', 2, 'icap-seo'), 2);
+                $near_page_one_section_cost_text = icap_seo_ai_credit_cost_text($ai_credit_pricing, 'content_depth', 4);
+                $near_page_one_changed_posts = get_posts([
+                    'post_type' => 'any',
+                    'post_status' => 'publish',
+                    'posts_per_page' => 20,
+                    'meta_key' => '_icap_seo_near_page_one_applied', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- at most 20 posts that carry this key.
+                    'fields' => 'ids',
+                ]);
+                $near_page_one_position_by_post = [];
+                foreach (array_merge($near_page_one_pages, $near_page_one_brand, $near_page_one_next_up) as $near_page_one_row) {
+                    $near_page_one_row_post = $this->near_page_one_post_id((string) ($near_page_one_row['url'] ?? ''));
+                    if ($near_page_one_row_post > 0 && !isset($near_page_one_position_by_post[$near_page_one_row_post])) {
+                        $near_page_one_position_by_post[$near_page_one_row_post] = (float) ($near_page_one_row['position'] ?? 0);
+                    }
+                }
+                $near_page_one_query_list = static function (array $row): string {
+                    $parts = [];
+                    foreach (array_slice(is_array($row['queries'] ?? null) ? $row['queries'] : [], 0, 3) as $query_row) {
+                        /* translators: 1: a search, 2: its average position */
+                        $parts[] = sprintf(__('"%1$s" (#%2$s)', 'icap-seo'), (string) $query_row['query'], number_format_i18n((float) $query_row['position'], 1));
+                    }
+                    return implode(', ', $parts);
+                };
+                ?>
+                <div class="icap-seo-panel" id="icap-seo-near-page-one">
+                    <h3 class="icap-seo-section-heading"><?php esc_html_e('Near page one', 'icap-seo'); ?></h3>
+                    <p class="description"><?php esc_html_e('Pages Google shows just past its first page (positions 8 to 20) for searches people really make. Moving one of these into the top 5 usually brings several times the clicks, so they are the quickest traffic to win.', 'icap-seo'); ?></p>
+
+                    <?php if (empty($near_page_one['available'])) : ?>
+                        <p><?php esc_html_e('These could not be loaded from Search Console just now. They will show up the next time this tab refreshes.', 'icap-seo'); ?></p>
+                    <?php elseif (empty($near_page_one_pages)) : ?>
+                        <p><strong><?php esc_html_e('No pages are close to page one yet.', 'icap-seo'); ?></strong> <?php esc_html_e('That is normal for a newer site: Google needs to show your pages for a while before there is enough to work with.', 'icap-seo'); ?></p>
+                        <?php if (!empty($near_page_one_next_up)) : ?>
+                            <p><?php esc_html_e('Closest so far:', 'icap-seo'); ?></p>
+                            <ul class="ul-disc">
+                                <?php foreach ($near_page_one_next_up as $next_up_row) :
+                                    $next_up_url = (string) ($next_up_row['url'] ?? ''); ?>
+                                    <li><a href="<?php echo esc_url($next_up_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html(wp_parse_url($next_up_url, PHP_URL_PATH) ?: $next_up_url); ?></a>: <?php echo esc_html($near_page_one_query_list($next_up_row)); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    <?php else : ?>
+                        <p class="description"><?php
+                        echo esc_html(sprintf(
+                            /* translators: %d: minimum impressions over 28 days */
+                            __('Searches with at least %d impressions in the last 28 days. "Extra clicks" estimates what reaching about #4 would add each month.', 'icap-seo'),
+                            (int) $near_page_one['min_impressions']
+                        ));
+                        ?></p>
+                        <div class="icap-seo-table-wrap">
+                            <table class="wp-list-table widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th><?php esc_html_e('Page', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Searches it nearly ranks for', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Position', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Impressions', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Extra clicks a month', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Improve it', 'icap-seo'); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($near_page_one_pages as $near_row) :
+                                        $near_url = (string) ($near_row['url'] ?? '');
+                                        $near_post_id = $this->near_page_one_post_id($near_url);
+                                        $near_post = $near_post_id > 0 ? get_post($near_post_id) : null;
+                                        $near_can_edit = $near_post instanceof WP_Post && current_user_can('edit_post', $near_post_id);
+                                        $near_draft = $near_can_edit ? $this->near_page_one_draft_for_post($near_post_id) : null;
+                                        $near_applied = $near_can_edit ? $this->near_page_one_applied_for_post($near_post_id) : null;
+                                        $near_label = $near_post instanceof WP_Post && trim((string) $near_post->post_title) !== ''
+                                            ? (string) $near_post->post_title
+                                            : (wp_parse_url($near_url, PHP_URL_PATH) ?: $near_url);
+                                        ?>
+                                        <tr<?php echo $near_post_id > 0 && $near_post_id === $near_page_one_focus ? ' class="icap-seo-row-focus"' : ''; ?>>
+                                            <td><a href="<?php echo esc_url($near_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($near_label); ?></a></td>
+                                            <td><?php echo esc_html($near_page_one_query_list($near_row)); ?></td>
+                                            <td><?php echo esc_html('#' . number_format_i18n((float) ($near_row['position'] ?? 0), 1)); ?></td>
+                                            <td><?php echo esc_html(number_format_i18n((int) ($near_row['impressions'] ?? 0))); ?></td>
+                                            <td><?php echo esc_html('+' . number_format_i18n((int) ($near_row['est_extra_clicks'] ?? 0))); ?></td>
+                                            <td>
+                                                <?php if (!$near_can_edit) : ?>
+                                                    <em><?php esc_html_e('Not a page you can edit here.', 'icap-seo'); ?></em>
+                                                <?php elseif ($near_draft !== null) : ?>
+                                                    <strong><?php esc_html_e('Suggestions ready below', 'icap-seo'); ?></strong>
+                                                <?php else : ?>
+                                                    <?php if ($near_applied !== null) : ?>
+                                                        <div><?php
+                                                        echo esc_html(sprintf(
+                                                            /* translators: 1: date, 2: position then */
+                                                            __('Changed %1$s, at #%2$s then.', 'icap-seo'),
+                                                            (string) $near_applied['applied_at'],
+                                                            number_format_i18n((float) $near_applied['position'], 1)
+                                                        ));
+                                                        ?></div>
+                                                    <?php endif; ?>
+                                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" style="display:inline-block;margin:2px 4px 2px 0;" data-progress-label="<?php esc_attr_e('Writing suggestions…', 'icap-seo'); ?>">
+                                                        <input type="hidden" name="action" value="icap_seo_near_page_one_suggest">
+                                                        <input type="hidden" name="post_id" value="<?php echo esc_attr((string) $near_post_id); ?>">
+                                                        <?php wp_nonce_field('icap_seo_near_page_one_suggest'); ?>
+                                                        <button type="submit" class="button button-primary icap-seo-ai-button" title="<?php echo esc_attr($near_page_one_cost_text); ?>"><?php esc_html_e('Optimize title and description', 'icap-seo'); ?></button>
+                                                    </form>
+                                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="icap-seo-async-scan-form" style="display:inline-block;margin:2px 0;" data-progress-label="<?php esc_attr_e('Writing a section…', 'icap-seo'); ?>">
+                                                        <input type="hidden" name="action" value="icap_seo_near_page_one_section">
+                                                        <input type="hidden" name="post_id" value="<?php echo esc_attr((string) $near_post_id); ?>">
+                                                        <?php wp_nonce_field('icap_seo_near_page_one_section'); ?>
+                                                        <button type="submit" class="button" title="<?php echo esc_attr($near_page_one_section_cost_text); ?>"><?php esc_html_e('Add a section for these searches', 'icap-seo'); ?></button>
+                                                    </form>
+                                                    <div class="description"><?php echo esc_html($near_page_one_cost_text); ?></div>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                        <?php if ($near_draft !== null) :
+                                            $near_current_title = $this->effective_search_title($near_post);
+                                            $near_current_description = (string) get_post_meta($near_post_id, '_icap_seo_meta_description', true);
+                                            ?>
+                                            <tr class="icap-seo-row-focus">
+                                                <td colspan="6">
+                                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                                        <input type="hidden" name="action" value="icap_seo_near_page_one_apply">
+                                                        <input type="hidden" name="post_id" value="<?php echo esc_attr((string) $near_post_id); ?>">
+                                                        <?php wp_nonce_field('icap_seo_near_page_one_apply'); ?>
+                                                        <p><?php esc_html_e('Suggestions aimed at these searches. Edit them if you like, then apply either or both. The search title replaces what search results and the browser tab show; the heading on the page stays as it is.', 'icap-seo'); ?></p>
+                                                        <?php if ($near_draft['title'] !== '') : ?>
+                                                            <p>
+                                                                <label><input type="checkbox" name="apply_title" value="1" checked> <strong><?php esc_html_e('Search title', 'icap-seo'); ?></strong></label><br>
+                                                                <span class="description"><?php
+                                                                /* translators: %s: current title */
+                                                                echo esc_html(sprintf(__('Now: %s', 'icap-seo'), $near_current_title !== '' ? $near_current_title : __('(none)', 'icap-seo')));
+                                                                ?></span><br>
+                                                                <input type="text" class="large-text" name="search_title" maxlength="70" value="<?php echo esc_attr((string) $near_draft['title']); ?>">
+                                                            </p>
+                                                        <?php endif; ?>
+                                                        <?php if ($near_draft['description'] !== '') : ?>
+                                                            <p>
+                                                                <label><input type="checkbox" name="apply_description" value="1" checked> <strong><?php esc_html_e('Meta description', 'icap-seo'); ?></strong></label><br>
+                                                                <span class="description"><?php
+                                                                /* translators: %s: current meta description */
+                                                                echo esc_html(sprintf(__('Now: %s', 'icap-seo'), $near_current_description !== '' ? $near_current_description : __('(none)', 'icap-seo')));
+                                                                ?></span><br>
+                                                                <textarea class="large-text" rows="2" name="meta_description" maxlength="160"><?php echo esc_textarea((string) $near_draft['description']); ?></textarea>
+                                                            </p>
+                                                        <?php endif; ?>
+                                                        <button type="submit" class="button button-primary"><?php esc_html_e('Apply', 'icap-seo'); ?></button>
+                                                    </form>
+                                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:6px;">
+                                                        <input type="hidden" name="action" value="icap_seo_near_page_one_discard">
+                                                        <input type="hidden" name="post_id" value="<?php echo esc_attr((string) $near_post_id); ?>">
+                                                        <?php wp_nonce_field('icap_seo_near_page_one_discard'); ?>
+                                                        <button type="submit" class="button-link"><?php esc_html_e('Discard suggestions', 'icap-seo'); ?></button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($near_page_one_brand)) : ?>
+                        <h4><?php esc_html_e('Searches for your site\'s own name', 'icap-seo'); ?></h4>
+                        <p class="description"><?php esc_html_e('When a search for your own name is not #1, Google usually does not know the site well yet; a rewrite will not fix that. Check that your home page is indexed (Content Scores shows each page\'s Google status), that your site name is set in Settings > General, and that your business profiles and social accounts link to the site.', 'icap-seo'); ?></p>
+                        <ul class="ul-disc">
+                            <?php foreach ($near_page_one_brand as $brand_row) :
+                                $brand_url = (string) ($brand_row['url'] ?? ''); ?>
+                                <li><a href="<?php echo esc_url($brand_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html(wp_parse_url($brand_url, PHP_URL_PATH) ?: $brand_url); ?></a>: <?php echo esc_html($near_page_one_query_list($brand_row)); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+
+                    <?php if (!empty($near_page_one_changed_posts)) : ?>
+                        <h4><?php esc_html_e('Pages you changed', 'icap-seo'); ?></h4>
+                        <div class="icap-seo-table-wrap">
+                            <table class="wp-list-table widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th><?php esc_html_e('Page', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Changed', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Position then', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Position now', 'icap-seo'); ?></th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($near_page_one_changed_posts as $changed_post_id) :
+                                        $changed_post_id = (int) $changed_post_id;
+                                        $changed = $this->near_page_one_applied_for_post($changed_post_id);
+                                        if ($changed === null || !current_user_can('edit_post', $changed_post_id)) {
+                                            continue;
+                                        }
+                                        $changed_now = $near_page_one_position_by_post[$changed_post_id] ?? null;
+                                        ?>
+                                        <tr>
+                                            <td><a href="<?php echo esc_url((string) get_permalink($changed_post_id)); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html(get_the_title($changed_post_id)); ?></a></td>
+                                            <td><?php echo esc_html((string) $changed['applied_at']); ?></td>
+                                            <td><?php echo esc_html('#' . number_format_i18n((float) $changed['position'], 1)); ?></td>
+                                            <td><?php echo $changed_now !== null
+                                                ? esc_html('#' . number_format_i18n((float) $changed_now, 1))
+                                                : esc_html__('Not in these lists now (it may have reached page one, or dropped further)', 'icap-seo'); ?></td>
+                                            <td>
+                                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                                    <input type="hidden" name="action" value="icap_seo_near_page_one_undo">
+                                                    <input type="hidden" name="post_id" value="<?php echo esc_attr((string) $changed_post_id); ?>">
+                                                    <?php wp_nonce_field('icap_seo_near_page_one_undo'); ?>
+                                                    <button type="submit" class="button-link"><?php esc_html_e('Undo', 'icap-seo'); ?></button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
 
                 <?php if (!empty($performance_gsc_pages)) : ?>
                 <div class="icap-seo-panel">

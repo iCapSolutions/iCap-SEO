@@ -17,6 +17,14 @@ class ICap_SEO_Admin
     private const REMEDIATION_HISTORY_META_KEY = '_icap_seo_remediation_history';
     private const REMEDIATION_SUMMARY_META_KEY = 'icap_seo_last_remediation_summary';
     private const META_DESCRIPTION_META_KEY = '_icap_seo_meta_description';
+    // Read by ICap_SEO_Output, which uses the literal key.
+    private const SEARCH_TITLE_META_KEY = '_icap_seo_search_title';
+    // Near page one: suggestions waiting for review, and what was applied with the
+    // page's position that day, for the before/after on the SEO Performance tab.
+    private const NEAR_PAGE_ONE_DRAFT_META_KEY = '_icap_seo_near_page_one_draft';
+    private const NEAR_PAGE_ONE_APPLIED_META_KEY = '_icap_seo_near_page_one_applied';
+    private const NEAR_PAGE_ONE_TITLE_MAX_LENGTH = 70;
+    private const NEAR_PAGE_ONE_DESCRIPTION_MAX_LENGTH = 160;
     private const CANONICAL_URL_META_KEY = '_icap_seo_canonical_url';
     private const JSONLD_SCHEMA_TYPE_META_KEY = '_icap_seo_jsonld_schema_type';
     private const JSONLD_SCHEMA_JSON_META_KEY = '_icap_seo_jsonld_schema_json';
@@ -280,6 +288,11 @@ class ICap_SEO_Admin
         add_action('admin_post_icap_seo_start_ai_credit_checkout', [$this, 'handle_start_ai_credit_checkout']);
         add_action('admin_post_icap_seo_preview_remediation', [$this, 'handle_preview_remediation']);
         add_action('admin_post_icap_seo_apply_remediation', [$this, 'handle_apply_remediation']);
+        add_action('admin_post_icap_seo_near_page_one_suggest', [$this, 'handle_near_page_one_suggest']);
+        add_action('admin_post_icap_seo_near_page_one_apply', [$this, 'handle_near_page_one_apply']);
+        add_action('admin_post_icap_seo_near_page_one_discard', [$this, 'handle_near_page_one_discard']);
+        add_action('admin_post_icap_seo_near_page_one_undo', [$this, 'handle_near_page_one_undo']);
+        add_action('admin_post_icap_seo_near_page_one_section', [$this, 'handle_near_page_one_section']);
         add_action('admin_post_icap_seo_preview_content_depth', [$this, 'handle_preview_content_depth']);
         add_action('admin_post_icap_seo_publish_content_depth', [$this, 'handle_publish_content_depth']);
         add_action('admin_post_icap_seo_discard_content_depth', [$this, 'handle_discard_content_depth']);
@@ -2041,6 +2054,300 @@ class ICap_SEO_Admin
             return;
         }
         $this->redirect_with_notice('remediation_apply_noop', 'content-scores', ['content_key' => $content_key]);
+    }
+
+    /**
+     * The post a Search Console page URL belongs to. The home page has no permalink
+     * of its own, so a URL for the site root maps to the static front page.
+     */
+    public function near_page_one_post_id(string $url): int
+    {
+        $post_id = url_to_postid($url);
+        if ($post_id > 0) {
+            return $post_id;
+        }
+        $path = (string) wp_parse_url($url, PHP_URL_PATH);
+        $home_path = (string) wp_parse_url(home_url('/'), PHP_URL_PATH);
+        if (untrailingslashit($path) === untrailingslashit($home_path) && get_option('show_on_front') === 'page') {
+            return (int) get_option('page_on_front');
+        }
+        return 0;
+    }
+
+    /**
+     * This post's row in the Near page one list, from the cached Search Console
+     * data only (no request to the service).
+     */
+    public function near_page_one_entry_for_post(int $post_id): ?array
+    {
+        if ($post_id <= 0) {
+            return null;
+        }
+        $performance = $this->service_client->get_seo_performance(false);
+        $near_page_one = $performance['gsc']['near_page_one'] ?? [];
+        foreach ((is_array($near_page_one['pages'] ?? null) ? $near_page_one['pages'] : []) as $page) {
+            if (is_array($page) && $this->near_page_one_post_id((string) ($page['url'] ?? '')) === $post_id) {
+                return $page;
+            }
+        }
+        return null;
+    }
+
+    private function near_page_one_queries(array $entry): array
+    {
+        return array_values(array_filter(array_map(
+            static fn($row): string => is_array($row) ? sanitize_text_field((string) ($row['query'] ?? '')) : '',
+            isset($entry['queries']) && is_array($entry['queries']) ? $entry['queries'] : []
+        )));
+    }
+
+    /**
+     * The title search results show for this post: its search title when one is
+     * set, otherwise the post title.
+     */
+    public function effective_search_title(WP_Post $post): string
+    {
+        $search_title = get_post_meta($post->ID, self::SEARCH_TITLE_META_KEY, true);
+        return is_string($search_title) && trim($search_title) !== '' ? trim($search_title) : trim((string) $post->post_title);
+    }
+
+    public function near_page_one_draft_for_post(int $post_id): ?array
+    {
+        $draft = get_post_meta($post_id, self::NEAR_PAGE_ONE_DRAFT_META_KEY, true);
+        return is_array($draft) && (!empty($draft['title']) || !empty($draft['description'])) ? $draft : null;
+    }
+
+    public function near_page_one_applied_for_post(int $post_id): ?array
+    {
+        $applied = get_post_meta($post_id, self::NEAR_PAGE_ONE_APPLIED_META_KEY, true);
+        return is_array($applied) && !empty($applied['applied_at']) ? $applied : null;
+    }
+
+    /** Checks shared by the Near page one actions: capability, nonce, a post the user can edit. */
+    private function near_page_one_post_from_request(string $nonce_action): ?WP_Post
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do that.', 'icap-seo'));
+        }
+        check_admin_referer($nonce_action);
+
+        $post_id = isset($_POST['post_id']) ? absint(wp_unslash($_POST['post_id'])) : 0;
+        $post = $post_id > 0 ? get_post($post_id) : null;
+        if (!$post instanceof WP_Post || !current_user_can('edit_post', $post_id)) {
+            $this->redirect_with_notice('near_page_one_failed', 'seo-performance');
+            return null;
+        }
+        return $post;
+    }
+
+    private function redirect_to_near_page_one(string $notice_code, int $post_id): void
+    {
+        $this->redirect_with_notice($notice_code, 'seo-performance', ['near_page_one_post' => (string) $post_id]);
+    }
+
+    public function handle_near_page_one_suggest(): void
+    {
+        $post = $this->near_page_one_post_from_request('icap_seo_near_page_one_suggest');
+        if ($post === null) {
+            return;
+        }
+        $entry = $this->near_page_one_entry_for_post($post->ID);
+        $queries = $entry !== null ? $this->near_page_one_queries($entry) : [];
+        if (empty($queries)) {
+            $this->redirect_to_near_page_one('near_page_one_not_listed', $post->ID);
+            return;
+        }
+
+        $content_key = $this->service_client->get_saved_content_score($post->ID)['content_key'] ?? sprintf('post_%d', $post->ID);
+        $context = [
+            'title' => $this->effective_search_title($post),
+            'existing_content_text' => mb_substr(wp_strip_all_tags((string) $post->post_content), 0, 4000),
+            'site_name' => sanitize_text_field((string) get_bloginfo('name')),
+            'post_type' => (string) $post->post_type,
+            'target_queries' => $queries,
+        ];
+
+        $suggestions = [];
+        $error_code = '';
+        foreach (['page_title' => 'title', 'meta_description' => 'description'] as $generator => $field) {
+            $result = $this->service_client->request_ai_content_draft((string) $content_key, $generator, $context);
+            if (!$result['success'] || empty($result['data']['draft_text'])) {
+                $error_code = $error_code !== '' ? $error_code : $this->extract_error_code($result);
+                continue;
+            }
+            $text = trim((string) $result['data']['draft_text'], " \t\n\r\0\x0B\"'");
+            $suggestions[$field] = trim((string) preg_replace('/\s+/', ' ', $text));
+        }
+
+        if (empty($suggestions)) {
+            $this->redirect_to_near_page_one(
+                in_array($error_code, ['ai_credits_exhausted', 'ai_monthly_limit_reached', 'ai_draft_daily_limit_reached'], true)
+                    ? 'near_page_one_no_credits'
+                    : 'near_page_one_suggest_failed',
+                $post->ID
+            );
+            return;
+        }
+
+        update_post_meta($post->ID, self::NEAR_PAGE_ONE_DRAFT_META_KEY, [
+            'title' => $suggestions['title'] ?? '',
+            'description' => $suggestions['description'] ?? '',
+            'queries' => $queries,
+            'position' => (float) ($entry['position'] ?? 0),
+            'impressions' => (int) ($entry['impressions'] ?? 0),
+            'created_at' => current_time('mysql'),
+        ]);
+        $this->redirect_to_near_page_one('near_page_one_suggestions_ready', $post->ID);
+    }
+
+    public function handle_near_page_one_apply(): void
+    {
+        $post = $this->near_page_one_post_from_request('icap_seo_near_page_one_apply');
+        if ($post === null) {
+            return;
+        }
+        $draft = $this->near_page_one_draft_for_post($post->ID);
+        if ($draft === null) {
+            $this->redirect_to_near_page_one('near_page_one_no_draft', $post->ID);
+            return;
+        }
+
+        // The admin may have edited the suggestions before applying them.
+        $new_title = isset($_POST['search_title']) ? sanitize_text_field((string) wp_unslash($_POST['search_title'])) : '';
+        $new_description = isset($_POST['meta_description']) ? sanitize_text_field((string) wp_unslash($_POST['meta_description'])) : '';
+        $apply_title = !empty($_POST['apply_title']) && $new_title !== '';
+        $apply_description = !empty($_POST['apply_description']) && $new_description !== '';
+        if (!$apply_title && !$apply_description) {
+            $this->redirect_to_near_page_one('near_page_one_nothing_selected', $post->ID);
+            return;
+        }
+
+        $title_before = $this->effective_search_title($post);
+        $stored_description = get_post_meta($post->ID, self::META_DESCRIPTION_META_KEY, true);
+        $description_before = is_string($stored_description) ? $stored_description : '';
+        $search_title_before = get_post_meta($post->ID, self::SEARCH_TITLE_META_KEY, true);
+
+        if ($apply_title) {
+            update_post_meta($post->ID, self::SEARCH_TITLE_META_KEY, mb_substr($new_title, 0, self::NEAR_PAGE_ONE_TITLE_MAX_LENGTH));
+        }
+        if ($apply_description) {
+            update_post_meta($post->ID, self::META_DESCRIPTION_META_KEY, mb_substr($new_description, 0, self::NEAR_PAGE_ONE_DESCRIPTION_MAX_LENGTH));
+        }
+
+        $previous = $this->near_page_one_applied_for_post($post->ID);
+        update_post_meta($post->ID, self::NEAR_PAGE_ONE_APPLIED_META_KEY, [
+            'applied_at' => current_time('Y-m-d'),
+            // The position when the first change went in stays the baseline.
+            'position' => $previous !== null ? (float) $previous['position'] : (float) ($draft['position'] ?? 0),
+            'queries' => isset($draft['queries']) && is_array($draft['queries']) ? $draft['queries'] : [],
+            'title_changed' => $apply_title || !empty($previous['title_changed']),
+            'description_changed' => $apply_description || !empty($previous['description_changed']),
+            // For Undo: what was there before.
+            'search_title_before' => $previous !== null ? (string) ($previous['search_title_before'] ?? '') : (is_string($search_title_before) ? $search_title_before : ''),
+            'description_before' => $previous !== null ? (string) ($previous['description_before'] ?? '') : $description_before,
+        ]);
+        delete_post_meta($post->ID, self::NEAR_PAGE_ONE_DRAFT_META_KEY);
+
+        $this->store_remediation_history_entry($post->ID, ['near_page_one'], [
+            'title_before' => $title_before,
+            'title_after' => $apply_title ? $new_title : $title_before,
+            'title_changed' => $apply_title,
+            'excerpt_before' => $description_before,
+            'excerpt_after' => $apply_description ? $new_description : $description_before,
+            'excerpt_changed' => $apply_description,
+        ]);
+        ICap_SEO_Local_Checks::clear_cache_for_post($post->ID);
+        $this->redirect_to_near_page_one('near_page_one_applied', $post->ID);
+    }
+
+    public function handle_near_page_one_discard(): void
+    {
+        $post = $this->near_page_one_post_from_request('icap_seo_near_page_one_discard');
+        if ($post === null) {
+            return;
+        }
+        delete_post_meta($post->ID, self::NEAR_PAGE_ONE_DRAFT_META_KEY);
+        $this->redirect_to_near_page_one('near_page_one_discarded', $post->ID);
+    }
+
+    public function handle_near_page_one_undo(): void
+    {
+        $post = $this->near_page_one_post_from_request('icap_seo_near_page_one_undo');
+        if ($post === null) {
+            return;
+        }
+        $applied = $this->near_page_one_applied_for_post($post->ID);
+        if ($applied === null) {
+            $this->redirect_to_near_page_one('near_page_one_no_draft', $post->ID);
+            return;
+        }
+
+        $title_before = $this->effective_search_title($post);
+        $stored_description = get_post_meta($post->ID, self::META_DESCRIPTION_META_KEY, true);
+        $description_now = is_string($stored_description) ? $stored_description : '';
+        if (!empty($applied['title_changed'])) {
+            $restore_title = (string) ($applied['search_title_before'] ?? '');
+            if ($restore_title === '') {
+                delete_post_meta($post->ID, self::SEARCH_TITLE_META_KEY);
+            } else {
+                update_post_meta($post->ID, self::SEARCH_TITLE_META_KEY, $restore_title);
+            }
+        }
+        if (!empty($applied['description_changed'])) {
+            $restore_description = (string) ($applied['description_before'] ?? '');
+            if ($restore_description === '') {
+                delete_post_meta($post->ID, self::META_DESCRIPTION_META_KEY);
+            } else {
+                update_post_meta($post->ID, self::META_DESCRIPTION_META_KEY, $restore_description);
+            }
+        }
+        delete_post_meta($post->ID, self::NEAR_PAGE_ONE_APPLIED_META_KEY);
+
+        $post = get_post($post->ID);
+        $restored_description = get_post_meta($post->ID, self::META_DESCRIPTION_META_KEY, true);
+        $this->store_remediation_history_entry($post->ID, ['near_page_one_undo'], [
+            'title_before' => $title_before,
+            'title_after' => $this->effective_search_title($post),
+            'title_changed' => !empty($applied['title_changed']),
+            'excerpt_before' => $description_now,
+            'excerpt_after' => is_string($restored_description) ? $restored_description : '',
+            'excerpt_changed' => !empty($applied['description_changed']),
+        ]);
+        ICap_SEO_Local_Checks::clear_cache_for_post($post->ID);
+        $this->redirect_to_near_page_one('near_page_one_undone', $post->ID);
+    }
+
+    /**
+     * A new section aimed at the page's searches, written by the content-depth
+     * generator. It lands as a content-depth draft, so the page's AI Drafts tab
+     * reviews and publishes it like any other.
+     */
+    public function handle_near_page_one_section(): void
+    {
+        $post = $this->near_page_one_post_from_request('icap_seo_near_page_one_section');
+        if ($post === null) {
+            return;
+        }
+        $entry = $this->near_page_one_entry_for_post($post->ID);
+        $queries = $entry !== null ? $this->near_page_one_queries($entry) : [];
+        if (empty($queries)) {
+            $this->redirect_to_near_page_one('near_page_one_not_listed', $post->ID);
+            return;
+        }
+
+        $content_key = (string) ($this->service_client->get_saved_content_score($post->ID)['content_key'] ?? sprintf('post_%d', $post->ID));
+        $html = $this->build_content_depth_draft_via_ai($post, $content_key, trim((string) get_bloginfo('name')), $queries);
+        if ($html === null || trim($html) === '') {
+            $this->redirect_to_near_page_one('near_page_one_suggest_failed', $post->ID);
+            return;
+        }
+
+        update_post_meta($post->ID, self::CONTENT_DEPTH_DRAFT_META_KEY, $html);
+        update_post_meta($post->ID, self::CONTENT_DEPTH_DRAFT_WORD_COUNT_META_KEY, $this->count_words_in_html($html));
+        $this->redirect_with_notice('content_depth_preview_ready', 'content-scores', [
+            'content_key' => $content_key,
+            'detail_tab' => 'ai-drafts',
+        ]);
     }
 
     public function handle_preview_content_depth(): void
@@ -4845,7 +5152,7 @@ class ICap_SEO_Admin
         ];
     }
 
-    private function build_content_depth_draft_via_ai(WP_Post $post, string $content_key, string $site_name): ?string
+    private function build_content_depth_draft_via_ai(WP_Post $post, string $content_key, string $site_name, array $target_queries = []): ?string
     {
         if ($content_key === '') {
             return null;
@@ -4866,6 +5173,7 @@ class ICap_SEO_Admin
                 'site_name' => $site_name,
                 'post_type' => (string) $post->post_type,
                 'target_word_count' => $target_word_count,
+                'target_queries' => $target_queries,
             ]
         );
 

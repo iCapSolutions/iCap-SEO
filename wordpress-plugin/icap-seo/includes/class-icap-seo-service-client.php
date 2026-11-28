@@ -727,6 +727,11 @@ class ICap_SEO_Service_Client
                 'paragraphs' => isset($context['paragraphs']) && is_array($context['paragraphs'])
                     ? array_values(array_map(static fn($text): string => sanitize_text_field((string) $text), $context['paragraphs']))
                     : [],
+                // Searches the rewrite should aim at (Near page one). Ignored by
+                // generators that don't use them.
+                'target_queries' => isset($context['target_queries']) && is_array($context['target_queries'])
+                    ? array_values(array_slice(array_filter(array_map(static fn($query): string => sanitize_text_field((string) $query), $context['target_queries'])), 0, 5))
+                    : [],
             ],
         ];
 
@@ -1605,6 +1610,7 @@ class ICap_SEO_Service_Client
                 'total_keywords' => 0,
                 'keyword_totals' => ['clicks' => 0, 'top3' => 0, 'top10' => 0, 'avg_position' => 0.0],
                 'sitemaps' => null,
+                'near_page_one' => self::empty_near_page_one(),
             ],
             'ga4' => [
                 'connected' => false,
@@ -1615,6 +1621,75 @@ class ICap_SEO_Service_Client
                 'pages' => [],
                 'channels' => [],
             ],
+        ];
+    }
+
+    public static function empty_near_page_one(): array
+    {
+        return [
+            'available' => false,
+            'pages' => [],
+            'brand' => [],
+            'next_up' => [],
+            'min_impressions' => 0,
+            'total_pages' => 0,
+        ];
+    }
+
+    /**
+     * Pages that rank just past Google's first page, from the service's Search
+     * Console data. Each list holds pages with their top searches.
+     */
+    private function normalize_near_page_one(array $raw): array
+    {
+        if (empty($raw)) {
+            return self::empty_near_page_one();
+        }
+
+        $normalize_pages = static function ($rows): array {
+            $pages = [];
+            if (!is_array($rows)) {
+                return $pages;
+            }
+            foreach ($rows as $row) {
+                if (!is_array($row) || empty($row['url'])) {
+                    continue;
+                }
+                $queries = [];
+                foreach ((isset($row['queries']) && is_array($row['queries']) ? $row['queries'] : []) as $query_row) {
+                    if (!is_array($query_row) || !isset($query_row['query'])) {
+                        continue;
+                    }
+                    $query = sanitize_text_field((string) $query_row['query']);
+                    if ($query === '') {
+                        continue;
+                    }
+                    $queries[] = [
+                        'query' => $query,
+                        'position' => isset($query_row['position']) ? (float) $query_row['position'] : 0.0,
+                        'impressions' => isset($query_row['impressions']) ? (int) $query_row['impressions'] : 0,
+                        'clicks' => isset($query_row['clicks']) ? (int) $query_row['clicks'] : 0,
+                    ];
+                }
+                $pages[] = [
+                    'url' => esc_url_raw((string) $row['url']),
+                    'position' => isset($row['position']) ? (float) $row['position'] : 0.0,
+                    'impressions' => isset($row['impressions']) ? (int) $row['impressions'] : 0,
+                    'clicks' => isset($row['clicks']) ? (int) $row['clicks'] : 0,
+                    'est_extra_clicks' => isset($row['est_extra_clicks']) ? max(0, (int) $row['est_extra_clicks']) : 0,
+                    'queries' => $queries,
+                ];
+            }
+            return $pages;
+        };
+
+        return [
+            'available' => !empty($raw['available']),
+            'pages' => $normalize_pages($raw['pages'] ?? []),
+            'brand' => $normalize_pages($raw['brand'] ?? []),
+            'next_up' => $normalize_pages($raw['next_up'] ?? []),
+            'min_impressions' => isset($raw['min_impressions']) ? (int) $raw['min_impressions'] : 0,
+            'total_pages' => isset($raw['total_pages']) ? (int) $raw['total_pages'] : 0,
         ];
     }
 
@@ -1763,6 +1838,9 @@ class ICap_SEO_Service_Client
                     'avg_position' => isset($gsc_keyword_totals_raw['avg_position']) ? (float) $gsc_keyword_totals_raw['avg_position'] : 0.0,
                 ],
                 'sitemaps' => $gsc_sitemaps,
+                'near_page_one' => $this->normalize_near_page_one(
+                    isset($gsc_raw['near_page_one']) && is_array($gsc_raw['near_page_one']) ? $gsc_raw['near_page_one'] : []
+                ),
             ],
             'ga4' => [
                 'connected' => !empty($ga4_raw['connected']),

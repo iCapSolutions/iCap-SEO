@@ -26,6 +26,31 @@ if (!class_exists('ICap_SEO_Output')) {
             add_action('wp_head', [$this, 'output_jsonld_schema_fallback'], 20);
             add_action('wp_head', [$this, 'output_social_meta_fallback'], 20);
             add_action('wp_head', [$this, 'output_local_business_schema_fallback'], 20);
+            add_filter('pre_get_document_title', [$this, 'filter_document_title'], 20);
+        }
+
+        /**
+         * The page's search title, when one was set: what search results and the
+         * browser tab show. The page's own title, shown on the page, is unchanged.
+         */
+        public function get_search_title(WP_Post $post): string
+        {
+            $search_title = get_post_meta((int) $post->ID, '_icap_seo_search_title', true);
+            return is_string($search_title) ? trim($search_title) : '';
+        }
+
+        public function filter_document_title($title)
+        {
+            if (is_admin() || !$this->is_singular_or_posts_page() || $this->is_another_seo_plugin_active()) {
+                return $title;
+            }
+            $post = get_queried_object();
+            if (!$post instanceof WP_Post) {
+                return $title;
+            }
+            $search_title = $this->get_search_title($post);
+            // WordPress prints this filter's value into <title> as given, unescaped.
+            return $search_title !== '' ? esc_html($search_title) : $title;
         }
 
         /**
@@ -324,7 +349,10 @@ if (!class_exists('ICap_SEO_Output')) {
                 return;
             }
 
-            $title = trim((string) $post->post_title);
+            $title = $this->get_search_title($post);
+            if ($title === '') {
+                $title = trim((string) $post->post_title);
+            }
             if ($title === '') {
                 $title = get_bloginfo('name');
             }
