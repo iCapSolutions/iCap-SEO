@@ -1179,3 +1179,8 @@ a.icap-seo-ai-card-state {
 .icap-seo-card.is-empty .icap-seo-card-icon {
     opacity: 0.6;
 }
+
+/* Near page one: the row an action just touched, and its suggestions. */
+.icap-seo-row-focus > td {
+    background: #f0f6fc;
+}

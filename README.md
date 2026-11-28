@@ -63,10 +63,11 @@ activation and troubleshooting.
   pages, with a site-wide score and one-click fixes or guidance, a broken-link check for any page, plus social sharing previews, redirects with a 404 log, optional IndexNow pings, llms.txt,
   and Local SEO.
 - **Free with registration**: Google Search Console and Google Analytics reports (SEO Performance,
-  Site Analytics, Keywords), connected with your own Google account.
+  Site Analytics, Keywords), connected with your own Google account, including Near page one: pages Google
+  shows just past its first page for real searches.
 - **Premium** ($59.95/year): scans run by the iCap SEO service from outside your site, up to 100 pages per scan; 3
-  checks run from outside your site — page reachability, and broken internal and external links; and AI Improvements, with 25 AI
-  credits included each year.
+  checks run from outside your site — page reachability, and broken internal and external links; and AI Improvements (including search titles,
+  descriptions and sections aimed at Near page one searches), with 25 AI credits included each year.
 
 ## Support
 

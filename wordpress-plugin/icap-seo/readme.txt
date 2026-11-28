@@ -4,7 +4,7 @@ Tags: seo audit, seo checker, orphan pages, internal links, schema
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 0.1.165
+Stable tag: 0.1.166
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,7 @@ iCap SEO checks your pages for common SEO problems, explains what it finds in pl
 Registering the site (free) connects it to the iCap SEO service, which runs on our servers and adds:
 
 * **Google Search Console and Google Analytics reports**: search performance, traffic, and keywords, from your own Google account.
+* **Near page one**: the pages Google shows just past its first page (positions 8 to 20) for real searches, with the extra clicks reaching the top would bring.
 
 **Optional Premium service**
 
@@ -35,7 +36,7 @@ A Premium subscription adds, on top of that:
 
 * **Scans from outside your site**: up to 100 pages per scan, requested from our servers.
 * **3 checks that need an outside view of your site**: whether each page is reachable by a crawler, and broken links across your pages, requested from our servers, within a limit per scan.
-* **AI Improvements**: AI-drafted titles, descriptions, headings, alt text, internal links, expanded content, rewrites, and grammar fixes. Premium is billed yearly or monthly; the yearly plan includes 25 AI credits a year, and anyone on Premium can buy more.
+* **AI Improvements**: AI-drafted titles, descriptions, headings, alt text, internal links, expanded content, rewrites, and grammar fixes, plus search titles, descriptions and new sections aimed at a Near page one page's searches. Premium is billed yearly or monthly; the yearly plan includes 25 AI credits a year, and anyone on Premium can buy more.
 
 Everything in the "Runs on your site" list above works the same with or without Premium, and without registering.
 
@@ -50,7 +51,7 @@ Everything in the "Runs on your site" list above works the same with or without 
 
 = Do I need an account to use this plugin? =
 
-No. The 35 on-page checks, their fixes, the editor panel, redirects, social tags, llms.txt, and Local SEO all work without an account. An account (free) is only needed for the Google reports and for Premium: AI Improvements, and outside scans and checks.
+No. The 36 on-page checks, their fixes, the editor panel, redirects, social tags, llms.txt, and Local SEO all work without an account. An account (free) is only needed for the Google reports and for Premium: AI Improvements, and outside scans and checks.
 
 = Will this plugin change my content without asking? =
 
@@ -135,6 +136,10 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.166 =
+* Near page one, on the SEO Performance tab: pages Google shows at positions 8 to 20 for real searches, ranked by the extra clicks reaching about #4 would bring. Searches for your own site name are listed separately, with what to check instead.
+* With AI Improvements, one click writes a search title and meta description aimed at those searches, to review and edit before applying; another writes a new section for them. A search title changes what search results and the browser tab show, not the heading on the page. Each change can be undone, and the list keeps the position the page had when you changed it.
 
 = 0.1.165 =
 * One-click fix for pages nothing links to: iCap SEO adds a "Related:" link to the page on up to two related pages, chosen by shared categories, tags and title words. WordPress keeps a revision of each edited page, so the change can be undone.
