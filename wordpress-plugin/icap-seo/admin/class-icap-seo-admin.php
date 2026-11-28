@@ -2093,6 +2093,46 @@ class ICap_SEO_Admin
         return null;
     }
 
+    /** Each search's position when the suggestions were written: the baseline to compare against later. */
+    private function near_page_one_query_positions(array $entry): array
+    {
+        $positions = [];
+        foreach ((isset($entry['queries']) && is_array($entry['queries']) ? $entry['queries'] : []) as $row) {
+            if (is_array($row) && isset($row['query'], $row['position'])) {
+                $positions[sanitize_text_field((string) $row['query'])] = round((float) $row['position'], 1);
+            }
+        }
+        return $positions;
+    }
+
+    /**
+     * Before and after for each page changed through Near page one: each search's
+     * position then (when its suggestions were written) and now, from the service.
+     *
+     * @return array<int, array{post_id: int, applied: array, now: ?array}>
+     */
+    public function near_page_one_results(array $post_ids): array
+    {
+        $rows = [];
+        $request = [];
+        foreach ($post_ids as $post_id) {
+            $post_id = (int) $post_id;
+            $applied = $this->near_page_one_applied_for_post($post_id);
+            $url = $applied !== null ? (string) get_permalink($post_id) : '';
+            if ($applied === null || $url === '' || !current_user_can('edit_post', $post_id)) {
+                continue;
+            }
+            $rows[] = ['post_id' => $post_id, 'url' => $url, 'applied' => $applied, 'now' => null];
+            $request[] = ['url' => $url, 'queries' => isset($applied['queries']) && is_array($applied['queries']) ? $applied['queries'] : []];
+        }
+        $positions = $this->service_client->get_page_positions($request) ?? [];
+        foreach ($rows as &$row) {
+            $row['now'] = $positions[esc_url_raw($row['url'])] ?? null;
+        }
+        unset($row);
+        return $rows;
+    }
+
     private function near_page_one_queries(array $entry): array
     {
         return array_values(array_filter(array_map(
@@ -2193,6 +2233,7 @@ class ICap_SEO_Admin
             'title' => $suggestions['title'] ?? '',
             'description' => $suggestions['description'] ?? '',
             'queries' => $queries,
+            'query_positions' => $this->near_page_one_query_positions($entry),
             'position' => (float) ($entry['position'] ?? 0),
             'impressions' => (int) ($entry['impressions'] ?? 0),
             'created_at' => current_time('mysql'),
@@ -2240,6 +2281,9 @@ class ICap_SEO_Admin
             // The position when the first change went in stays the baseline.
             'position' => $previous !== null ? (float) $previous['position'] : (float) ($draft['position'] ?? 0),
             'queries' => isset($draft['queries']) && is_array($draft['queries']) ? $draft['queries'] : [],
+            'query_positions' => $previous !== null && !empty($previous['query_positions'])
+                ? (array) $previous['query_positions']
+                : (isset($draft['query_positions']) && is_array($draft['query_positions']) ? $draft['query_positions'] : []),
             'title_changed' => $apply_title || !empty($previous['title_changed']),
             'description_changed' => $apply_description || !empty($previous['description_changed']),
             // For Undo: what was there before.
