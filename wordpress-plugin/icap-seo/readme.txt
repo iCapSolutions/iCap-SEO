@@ -4,7 +4,7 @@ Tags: seo audit, seo checker, orphan pages, internal links, schema
 Requires at least: 6.0
 Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 0.1.166
+Stable tag: 0.1.167
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -136,6 +136,9 @@ Optional, off by default. Only if you tick "IndexNow pings" under Advanced on th
 6. Account — your plan, Google connection and billing in one place.
 
 == Changelog ==
+
+= 0.1.167 =
+* Near page one: "Pages you changed" now shows each search's position when its suggestions were written and over the last 28 days, with how far it moved, plus the page's position across all searches. Pages that leave the Near page one list keep showing their results.
 
 = 0.1.166 =
 * Near page one, on the SEO Performance tab: pages Google shows at positions 8 to 20 for real searches, ranked by the extra clicks reaching about #4 would bring. Searches for your own site name are listed separately, with what to check instead.

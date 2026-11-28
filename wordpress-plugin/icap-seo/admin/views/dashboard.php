@@ -3482,13 +3482,6 @@ if ($notice_code === 'remediation_apply_noop') {
                     'meta_key' => '_icap_seo_near_page_one_applied', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- at most 20 posts that carry this key.
                     'fields' => 'ids',
                 ]);
-                $near_page_one_position_by_post = [];
-                foreach (array_merge($near_page_one_pages, $near_page_one_brand, $near_page_one_next_up) as $near_page_one_row) {
-                    $near_page_one_row_post = $this->near_page_one_post_id((string) ($near_page_one_row['url'] ?? ''));
-                    if ($near_page_one_row_post > 0 && !isset($near_page_one_position_by_post[$near_page_one_row_post])) {
-                        $near_page_one_position_by_post[$near_page_one_row_post] = (float) ($near_page_one_row['position'] ?? 0);
-                    }
-                }
                 $near_page_one_query_list = static function (array $row): string {
                     $parts = [];
                     foreach (array_slice(is_array($row['queries'] ?? null) ? $row['queries'] : [], 0, 3) as $query_row) {
@@ -3644,44 +3637,91 @@ if ($notice_code === 'remediation_apply_noop') {
                         </ul>
                     <?php endif; ?>
 
-                    <?php if (!empty($near_page_one_changed_posts)) : ?>
+                    <?php if (!empty($near_page_one_changed_posts)) :
+                        $near_page_one_results = $this->near_page_one_results($near_page_one_changed_posts);
+                        $near_page_one_format_position = static function ($position): string {
+                            return $position === null ? '—' : '#' . number_format_i18n((float) $position, 1);
+                        };
+                        ?>
                         <h4><?php esc_html_e('Pages you changed', 'icap-seo'); ?></h4>
+                        <p class="description"><?php esc_html_e('Each search\'s position when the suggestions were written, and over the last 28 days. Google takes a few days to a few weeks to reflect a change, and the 28-day figure still includes days before it until four weeks have passed.', 'icap-seo'); ?></p>
                         <div class="icap-seo-table-wrap">
                             <table class="wp-list-table widefat striped">
                                 <thead>
                                     <tr>
                                         <th><?php esc_html_e('Page', 'icap-seo'); ?></th>
                                         <th><?php esc_html_e('Changed', 'icap-seo'); ?></th>
-                                        <th><?php esc_html_e('Position then', 'icap-seo'); ?></th>
-                                        <th><?php esc_html_e('Position now', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Search', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Then', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Now', 'icap-seo'); ?></th>
+                                        <th><?php esc_html_e('Change', 'icap-seo'); ?></th>
                                         <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($near_page_one_changed_posts as $changed_post_id) :
-                                        $changed_post_id = (int) $changed_post_id;
-                                        $changed = $this->near_page_one_applied_for_post($changed_post_id);
-                                        if ($changed === null || !current_user_can('edit_post', $changed_post_id)) {
-                                            continue;
+                                    <?php foreach ($near_page_one_results as $result_row) :
+                                        $result_applied = $result_row['applied'];
+                                        $result_now = $result_row['now'];
+                                        $result_then_by_query = isset($result_applied['query_positions']) && is_array($result_applied['query_positions']) ? $result_applied['query_positions'] : [];
+                                        $result_queries = isset($result_applied['queries']) && is_array($result_applied['queries']) ? array_slice($result_applied['queries'], 0, 3) : [];
+                                        if (empty($result_queries)) {
+                                            $result_queries = [''];
                                         }
-                                        $changed_now = $near_page_one_position_by_post[$changed_post_id] ?? null;
-                                        ?>
-                                        <tr>
-                                            <td><a href="<?php echo esc_url((string) get_permalink($changed_post_id)); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html(get_the_title($changed_post_id)); ?></a></td>
-                                            <td><?php echo esc_html((string) $changed['applied_at']); ?></td>
-                                            <td><?php echo esc_html('#' . number_format_i18n((float) $changed['position'], 1)); ?></td>
-                                            <td><?php echo $changed_now !== null
-                                                ? esc_html('#' . number_format_i18n((float) $changed_now, 1))
-                                                : esc_html__('Not in these lists now (it may have reached page one, or dropped further)', 'icap-seo'); ?></td>
-                                            <td>
-                                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                                                    <input type="hidden" name="action" value="icap_seo_near_page_one_undo">
-                                                    <input type="hidden" name="post_id" value="<?php echo esc_attr((string) $changed_post_id); ?>">
-                                                    <?php wp_nonce_field('icap_seo_near_page_one_undo'); ?>
-                                                    <button type="submit" class="button-link"><?php esc_html_e('Undo', 'icap-seo'); ?></button>
-                                                </form>
-                                            </td>
-                                        </tr>
+                                        foreach ($result_queries as $result_index => $result_query) :
+                                            $result_query = (string) $result_query;
+                                            // Changes made before 0.1.167 kept one position for the page, not one per search.
+                                            $result_then = $result_then_by_query[$result_query] ?? ($result_index === 0 ? (float) ($result_applied['position'] ?? 0) : null);
+                                            $result_then = $result_then !== null && (float) $result_then > 0 ? (float) $result_then : null;
+                                            $result_current = $result_now !== null && $result_query !== '' ? ($result_now['queries'][$result_query] ?? null) : null;
+                                            $result_delta = $result_then !== null && $result_current !== null ? $result_then - $result_current : null;
+                                            ?>
+                                            <tr>
+                                                <?php if ($result_index === 0) : ?>
+                                                    <td rowspan="<?php echo esc_attr((string) count($result_queries)); ?>">
+                                                        <a href="<?php echo esc_url($result_row['url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html(get_the_title($result_row['post_id'])); ?></a>
+                                                        <?php if ($result_now !== null && $result_now['position'] !== null) : ?>
+                                                            <br><span class="description"><?php
+                                                            /* translators: %s: the page's average position over all searches */
+                                                            echo esc_html(sprintf(__('All searches: %s', 'icap-seo'), $near_page_one_format_position($result_now['position'])));
+                                                            ?></span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td rowspan="<?php echo esc_attr((string) count($result_queries)); ?>"><?php echo esc_html((string) $result_applied['applied_at']); ?></td>
+                                                <?php endif; ?>
+                                                <td><?php echo esc_html($result_query !== '' ? $result_query : '—'); ?></td>
+                                                <td><?php echo esc_html($near_page_one_format_position($result_then)); ?></td>
+                                                <td><?php
+                                                if ($result_now === null) {
+                                                    esc_html_e('Not available right now', 'icap-seo');
+                                                } elseif ($result_current === null) {
+                                                    esc_html_e('Not shown for this search in the last 28 days', 'icap-seo');
+                                                } else {
+                                                    echo esc_html($near_page_one_format_position($result_current));
+                                                }
+                                                ?></td>
+                                                <td><?php
+                                                if ($result_delta === null || abs($result_delta) < 0.05) {
+                                                    echo esc_html($result_delta === null ? '—' : __('No change', 'icap-seo'));
+                                                } elseif ($result_delta > 0) {
+                                                    /* translators: %s: number of positions */
+                                                    echo '<span style="color:#008a20;">' . esc_html(sprintf(__('Up %s', 'icap-seo'), number_format_i18n($result_delta, 1))) . '</span>';
+                                                } else {
+                                                    /* translators: %s: number of positions */
+                                                    echo '<span style="color:#b32d2e;">' . esc_html(sprintf(__('Down %s', 'icap-seo'), number_format_i18n(abs($result_delta), 1))) . '</span>';
+                                                }
+                                                ?></td>
+                                                <?php if ($result_index === 0) : ?>
+                                                    <td rowspan="<?php echo esc_attr((string) count($result_queries)); ?>">
+                                                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                                            <input type="hidden" name="action" value="icap_seo_near_page_one_undo">
+                                                            <input type="hidden" name="post_id" value="<?php echo esc_attr((string) $result_row['post_id']); ?>">
+                                                            <?php wp_nonce_field('icap_seo_near_page_one_undo'); ?>
+                                                            <button type="submit" class="button-link"><?php esc_html_e('Undo', 'icap-seo'); ?></button>
+                                                        </form>
+                                                    </td>
+                                                <?php endif; ?>
+                                            </tr>
+                                        <?php endforeach; ?>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>

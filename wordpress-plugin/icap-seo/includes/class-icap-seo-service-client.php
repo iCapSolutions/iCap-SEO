@@ -12,6 +12,8 @@ class ICap_SEO_Service_Client
     // reporting lag - a longer TTL than content scores avoids hitting the API on every
     // dashboard page load without making the tab noticeably stale.
     private const SEO_PERFORMANCE_CACHE_TTL_SECONDS = 1800;
+    // The service caches page positions for 6 hours too; Search Console data moves daily.
+    private const PAGE_POSITIONS_CACHE_TTL_SECONDS = 6 * HOUR_IN_SECONDS;
     // How long a cached billing state is trusted on dashboard loads before it's re-read, so an
     // upgrade or a lapse shows up without anyone clicking Check Billing Status.
     private const BILLING_STATE_MAX_AGE_SECONDS = 900;
@@ -1622,6 +1624,79 @@ class ICap_SEO_Service_Client
                 'channels' => [],
             ],
         ];
+    }
+
+    /**
+     * Where the given pages rank now in Search Console (last 28 days), overall and
+     * for each of their searches. $pages: [['url' => ..., 'queries' => [...]], ...].
+     * Returns [url => ['position' => ?float, 'impressions' => int, 'queries' => [query => ?float]]],
+     * or null when the service or Search Console can't answer.
+     */
+    public function get_page_positions(array $pages, bool $allow_live_fetch = true): ?array
+    {
+        $settings = $this->get_connection_settings();
+        if (empty($settings['site_id']) || empty($settings['site_token']) || empty($pages)) {
+            return null;
+        }
+        $request = [];
+        foreach (array_slice($pages, 0, 20) as $page) {
+            $url = esc_url_raw((string) ($page['url'] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+            $request[] = [
+                'url' => $url,
+                'queries' => array_values(array_slice(array_filter(array_map(
+                    static fn($query): string => sanitize_text_field((string) $query),
+                    is_array($page['queries'] ?? null) ? $page['queries'] : []
+                )), 0, 5)),
+            ];
+        }
+        if (empty($request)) {
+            return null;
+        }
+
+        $cache_key = sprintf('icap_seo_page_positions_%s', md5($settings['site_id'] . wp_json_encode($request)));
+        $cached = get_transient($cache_key);
+        if (is_array($cached) || !$allow_live_fetch) {
+            return is_array($cached) ? $cached : null;
+        }
+
+        $result = $this->api_request(
+            'POST',
+            sprintf('/v1/sites/%s/search-console/page-positions', rawurlencode((string) $settings['site_id'])),
+            ['pages' => $request],
+            [],
+            true,
+            [],
+            15
+        );
+        $data = $result['success'] && isset($result['data']) && is_array($result['data']) ? $result['data'] : [];
+        if (empty($data['connected']) || empty($data['available'])) {
+            return null;
+        }
+
+        $positions = [];
+        foreach ((is_array($data['pages'] ?? null) ? $data['pages'] : []) as $row) {
+            if (!is_array($row) || empty($row['url'])) {
+                continue;
+            }
+            $queries = [];
+            foreach ((is_array($row['queries'] ?? null) ? $row['queries'] : []) as $query_row) {
+                if (is_array($query_row) && isset($query_row['query'])) {
+                    $queries[sanitize_text_field((string) $query_row['query'])] = isset($query_row['position']) && is_numeric($query_row['position'])
+                        ? (float) $query_row['position']
+                        : null;
+                }
+            }
+            $positions[esc_url_raw((string) $row['url'])] = [
+                'position' => isset($row['position']) && is_numeric($row['position']) ? (float) $row['position'] : null,
+                'impressions' => (int) ($row['impressions'] ?? 0),
+                'queries' => $queries,
+            ];
+        }
+        set_transient($cache_key, $positions, self::PAGE_POSITIONS_CACHE_TTL_SECONDS);
+        return $positions;
     }
 
     public static function empty_near_page_one(): array
